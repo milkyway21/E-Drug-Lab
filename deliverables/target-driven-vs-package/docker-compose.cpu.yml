@@ -1,6 +1,0 @@
-services:
-  target-driven-vs:
-    runtime: null
-    environment:
-      NVIDIA_VISIBLE_DEVICES: ""
-      NVIDIA_DRIVER_CAPABILITIES: ""
