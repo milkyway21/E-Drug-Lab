@@ -1,0 +1,9 @@
+{
+  "project": "e-drug lab",
+  "status": "recovered-starter",
+  "notes": [
+    "This file replaces a previous all-null placeholder.",
+    "Runtime state should be written by the application when persistence is implemented."
+  ],
+  "updated_at": "2026-05-26"
+}
