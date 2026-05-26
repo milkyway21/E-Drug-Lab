@@ -133,3 +133,5 @@ venv/
 **/.tox/
 
 tools/Target-driven-ML-enabled-VS/
+
+deliverables/target-driven-vs-package/
