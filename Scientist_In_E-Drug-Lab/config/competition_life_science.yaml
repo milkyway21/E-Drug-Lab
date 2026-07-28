@@ -1,0 +1,121 @@
+competition_name: "AI4S Life Science / 书生国智科探挑战赛—生命科学赛道"
+competition_url: "https://ai4scompetition.intern-ai.org.cn/detail/life_science"
+home_url: "https://ai4scompetition.intern-ai.org.cn/"
+rules_url: "https://openxlab.oss-cn-shanghai.aliyuncs.com/ai4scomp/track_details_latest/life_zh.md"
+brief_local: "config/briefs/life_zh.md"
+disease_default: MASLD
+allowed_diseases: [MASLD, HCC]
+
+competition_scope_warning: >
+  competition_scope_warning: The public competition page emphasizes MASLD
+  (hepatic lipid overload / lipotoxicity and low-toxicity lipid-lowering),
+  while some submission materials mention HCC / new liver-cancer targets.
+  Do NOT conflate these disease directions. Confirm final scope with organizers.
+  Default runtime disease is MASLD.
+
+verbatim_excerpts:
+  - "针对 MASLD 早期肝细胞脂质过载和脂毒性压力，发现可实验验证的低毒降脂靶点及小分子化合物。"
+  - "有效命中：在不明显损伤细胞活力的前提下降低脂质蓄积。"
+  - "降脂效应与细胞毒性须分别评估。"
+
+scope_conflicts:
+  - "Public brief focuses on MASLD lipid overload; some templates mention HCC new targets."
+
+hard_constraints:
+  C1: "Compound Top10 must come from official library SDF (handled by external library nomination; this agent provides CSV template + validation only)."
+  C2: "Dual readout: lipid lowering AND cell viability (exclude cytotoxicity false positives)."
+  C4: "Mechanism / target hypothesis + validation plan required."
+  C5: "Reproducible agent methodology required."
+
+agent_role: "target_hypothesis_and_mechanism"
+compound_nomination_pipeline: "external official SDF library → Top10 CSV (pending_library_nomination until filled)"
+
+scoring_dimensions:
+  discovery_and_reasoning:
+    weight: 60
+    description: "提名分子在实验验证中被确认为有效低毒命中的效果得分 × 新颖性得分"
+  mechanism_and_validation:
+    weight: 20
+    description: "机制/通路假说的合理性与可检验性；后续验证方案的科学性与可行性"
+  methodology_and_reproducibility:
+    weight: 20
+    description: "方法创新性与合理性；智能体工作流完整度；可复现性与工程化"
+
+submission_artifacts:
+  - id: top10_csv
+    label: "候选分子提名清单（CSV）"
+    required: true
+    notes: "排序后的 Top 10；含提名依据、降脂与潜在毒性判断"
+  - id: mechanism_validation_pdf
+    label: "机制与验证方案（PDF）"
+    required: true
+    notes: "可由 proposal.md + hepg2-plan 导出；本仓库产出 Markdown 骨架"
+  - id: methodology_repro
+    label: "方法学与复现材料"
+    required: true
+    notes: "method.md / Docker / GitHub / API 择一或组合"
+  - id: other
+    label: "其他材料"
+    required: false
+    notes: "运行日志、数据使用声明等"
+
+experimental_readouts:
+  system: "HepG2-FFA lipid accumulation"
+  readouts:
+    - id: lipid_accumulation
+      label: "脂质蓄积 / 降脂效应"
+      keywords: [lipid, 降脂, 脂滴, lipid droplet, Nile Red, steatosis, FFA, 脂质蓄积]
+    - id: cell_viability
+      label: "细胞活力 / 细胞毒性对照"
+      keywords: [viability, 活力, 毒性, cytotoxicity, CellTiter, MTT, 细胞杀伤, 假阳性]
+  effective_hit_definition: >
+    仅在未明显损伤细胞活力的前提下实现脂质蓄积降低的分子，方计为有效命中。
+    只看脂滴下降而忽略毒性，易将杀伤细胞的化合物误判为有效。
+
+mechanisms_of_interest:
+  - SREBP-1c
+  - ACC
+  - FASN
+  - SCD1
+  - PPAR_alpha
+  - AMPK
+  - CPT1
+  - fatty_acid_uptake_efflux
+  - autophagy
+  - lipid_droplet
+  - de_novo_lipogenesis
+  - lipotoxicity
+  - mitochondrial_stress
+  - ferroptosis
+  - ER_stress
+
+resources:
+  competition_home: "https://ai4scompetition.intern-ai.org.cn/"
+  life_science_track: "https://ai4scompetition.intern-ai.org.cn/detail/life_science"
+  official_brief: "https://openxlab.oss-cn-shanghai.aliyuncs.com/ai4scomp/track_details_latest/life_zh.md"
+  origene: "https://origene.lglab.ac.cn/"
+  origene_skill_hub: "https://origene.lglab.ac.cn/skill-hub"
+  origene_mcp: "https://github.com/GENTEL-lab/OrigeneMCP"
+  scp_hub: "https://discovery.intern-ai.org.cn/"
+  intern_s1_note: "书生 Intern 系列科学大模型 / 科学发现平台（报名后可领 API）"
+
+schedule_notes:
+  nomination_window: "2026-07-17 – 2026-07-31（以官网最新公告为准）"
+  expert_review: "约 2026-08-01 – 2026-08-15"
+  wetlab_validation: "约 2026-08-15 – 2026-09-20"
+  results: "约 2026-09-30"
+
+hermes_eval_mode:
+  disable_auto_skill_mutation: true
+  disable_auto_workflow_update: true
+  disable_uncontrolled_long_term_memory: true
+
+top10_csv_columns:
+  - rank
+  - id_or_name
+  - smiles_or_inchikey
+  - lipid_rationale
+  - tox_rationale
+  - mechanism_hypothesis
+  - evidence_refs
+  - library_source

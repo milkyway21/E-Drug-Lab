@@ -1,0 +1,486 @@
+{
+  "ddfast": [
+    "ddfast-00-pipeline-brief",
+    "ddfast-01-input-gate",
+    "ddfast-02-fast-denovo",
+    "ddfast-03-fast-scaffold",
+    "ddfast-04-extract-novina",
+    "ddfast-05-smiles-dedup",
+    "ddfast-06-qikprop-admet",
+    "ddfast-07-glide-sp",
+    "ddfast-08-glide-xp",
+    "ddfast-09-mmgbsa-ifd",
+    "ddfast-10-rank-manual"
+  ],
+  "drug_design_20": [
+    "diffdynamic-generation",
+    "diffdynamic-paper-plots-2",
+    "modelbatchsampleandcomparsion-2",
+    "molecular-docking-autodock-2",
+    "mol-render-2",
+    "pocket-comparison",
+    "rdkit-2",
+    "chemistry-query-2",
+    "pubchem-database-2",
+    "find-topk-similiar-chemicals-rdkit",
+    "find-topk-similiar-chemicals-pubchem-database",
+    "active-ligands",
+    "drug-team-2",
+    "admet-filter",
+    "ligand-pipeline",
+    "bio-orchestrator-2",
+    "Bioinformatics-2",
+    "academic-search",
+    "nature-academic-search",
+    "mfds-drug-safety"
+  ],
+  "writing_10": [
+    "nature-writing",
+    "nature-polishing",
+    "nature-citation",
+    "nature-figure",
+    "nature-data",
+    "nature-reader",
+    "nature-response",
+    "nature-paper2ppt",
+    "nature-academic-search",
+    "academic-search"
+  ],
+  "self_written": [
+    "s00-competition-brief",
+    "s01-library-ingest-qc",
+    "s02-reference-actives",
+    "s03-physchem-tox-filter",
+    "s04-similarity-pharmacophore",
+    "s05-target-evidence-scoring",
+    "s06-dual-objective-rank",
+    "s07-mechanism-hypothesis",
+    "s08-submission-export",
+    "scientist-in-e-drug-lab",
+    "hsv-00-pipeline-brief",
+    "hsv-01-diffdynamic-generate",
+    "hsv-02-receptor-grid",
+    "hsv-03-sp-fill-rank",
+    "hsv-04-seed-ifd",
+    "hsv-05-shape-screen",
+    "hsv-06-shape-candidate-sp",
+    "hsv-07-shape-top200-ifd"
+  ],
+  "installed": [
+    {
+      "name": "ddfast-00-pipeline-brief",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-00-pipeline-brief",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-00-pipeline-brief",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-01-input-gate",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-01-input-gate",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-01-input-gate",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-02-fast-denovo",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-02-fast-denovo",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-02-fast-denovo",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-03-fast-scaffold",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-03-fast-scaffold",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-03-fast-scaffold",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-04-extract-novina",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-04-extract-novina",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-04-extract-novina",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-05-smiles-dedup",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-05-smiles-dedup",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-05-smiles-dedup",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-06-qikprop-admet",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-06-qikprop-admet",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-06-qikprop-admet",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-07-glide-sp",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-07-glide-sp",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-07-glide-sp",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-08-glide-xp",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-08-glide-xp",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-08-glide-xp",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-09-mmgbsa-ifd",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-09-mmgbsa-ifd",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-09-mmgbsa-ifd",
+      "action": "symlinked"
+    },
+    {
+      "name": "ddfast-10-rank-manual",
+      "category": "ddfast",
+      "source": "/home/user/.cursor/skills/ddfast-10-rank-manual",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/ddfast/ddfast-10-rank-manual",
+      "action": "symlinked"
+    },
+    {
+      "name": "diffdynamic-generation",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/diffdynamic-generation",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/diffdynamic-generation",
+      "action": "symlinked"
+    },
+    {
+      "name": "diffdynamic-paper-plots-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/diffdynamic-paper-plots-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/diffdynamic-paper-plots-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "modelbatchsampleandcomparsion-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/modelbatchsampleandcomparsion-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/modelbatchsampleandcomparsion-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "molecular-docking-autodock-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/molecular-docking-autodock-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/molecular-docking-autodock-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "mol-render-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/mol-render-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/mol-render-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "pocket-comparison",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/pocket-comparison",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/pocket-comparison",
+      "action": "symlinked"
+    },
+    {
+      "name": "rdkit-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/rdkit-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/rdkit-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "chemistry-query-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/chemistry-query-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/chemistry-query-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "pubchem-database-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/pubchem-database-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/pubchem-database-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "find-topk-similiar-chemicals-rdkit",
+      "category": "drug-design",
+      "source": "/home/user/.openclaw/workspace/skills/find-topk-similiar-chemicals-rdkit",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/find-topk-similiar-chemicals-rdkit",
+      "action": "symlinked"
+    },
+    {
+      "name": "find-topk-similiar-chemicals-pubchem-database",
+      "category": "drug-design",
+      "source": "/home/user/.openclaw/workspace/skills/find-topk-similiar-chemicals-pubchem-database",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/find-topk-similiar-chemicals-pubchem-database",
+      "action": "symlinked"
+    },
+    {
+      "name": "active-ligands",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/active-ligands",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/active-ligands",
+      "action": "symlinked"
+    },
+    {
+      "name": "drug-team-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/drug-team-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/drug-team-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "admet-filter",
+      "category": "drug-design",
+      "source": "/data/ye/e-drug-lab/skills/admet-filter",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/admet-filter",
+      "action": "symlinked"
+    },
+    {
+      "name": "ligand-pipeline",
+      "category": "drug-design",
+      "source": "/data/ye/.claude/skills/ligand-pipeline",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/ligand-pipeline",
+      "action": "symlinked"
+    },
+    {
+      "name": "bio-orchestrator-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/bio-orchestrator-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/bio-orchestrator-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "Bioinformatics-2",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/Bioinformatics-2",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/Bioinformatics-2",
+      "action": "symlinked"
+    },
+    {
+      "name": "academic-search",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/academic-search",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/academic-search",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-academic-search",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/nature-academic-search",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/nature-academic-search",
+      "action": "symlinked"
+    },
+    {
+      "name": "mfds-drug-safety",
+      "category": "drug-design",
+      "source": "/home/user/.skills-manager/skills/mfds-drug-safety",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/drug-design/mfds-drug-safety",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-writing",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-writing",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-writing",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-polishing",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-polishing",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-polishing",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-citation",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-citation",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-citation",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-figure",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-figure",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-figure",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-data",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-data",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-data",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-reader",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-reader",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-reader",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-response",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-response",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-response",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-paper2ppt",
+      "category": "writing",
+      "source": "/data/ye/e-drug-lab/nature-skills/skills/nature-paper2ppt",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-paper2ppt",
+      "action": "symlinked"
+    },
+    {
+      "name": "nature-academic-search",
+      "category": "writing",
+      "source": "/home/user/.skills-manager/skills/nature-academic-search",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/nature-academic-search",
+      "action": "symlinked"
+    },
+    {
+      "name": "academic-search",
+      "category": "writing",
+      "source": "/home/user/.skills-manager/skills/academic-search",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/writing/academic-search",
+      "action": "symlinked"
+    },
+    {
+      "name": "s00-competition-brief",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s00-competition-brief",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s00-competition-brief",
+      "action": "symlinked"
+    },
+    {
+      "name": "s01-library-ingest-qc",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s01-library-ingest-qc",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s01-library-ingest-qc",
+      "action": "symlinked"
+    },
+    {
+      "name": "s02-reference-actives",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s02-reference-actives",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s02-reference-actives",
+      "action": "symlinked"
+    },
+    {
+      "name": "s03-physchem-tox-filter",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s03-physchem-tox-filter",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s03-physchem-tox-filter",
+      "action": "symlinked"
+    },
+    {
+      "name": "s04-similarity-pharmacophore",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s04-similarity-pharmacophore",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s04-similarity-pharmacophore",
+      "action": "symlinked"
+    },
+    {
+      "name": "s05-target-evidence-scoring",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s05-target-evidence-scoring",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s05-target-evidence-scoring",
+      "action": "symlinked"
+    },
+    {
+      "name": "s06-dual-objective-rank",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s06-dual-objective-rank",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s06-dual-objective-rank",
+      "action": "symlinked"
+    },
+    {
+      "name": "s07-mechanism-hypothesis",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s07-mechanism-hypothesis",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s07-mechanism-hypothesis",
+      "action": "symlinked"
+    },
+    {
+      "name": "s08-submission-export",
+      "category": "masld-ai4s",
+      "source": "/home/user/.cursor/skills/s08-submission-export",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/s08-submission-export",
+      "action": "symlinked"
+    },
+    {
+      "name": "scientist-in-e-drug-lab",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/scientist-in-e-drug-lab",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-00-pipeline-brief",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-00-pipeline-brief",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-00-pipeline-brief",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-01-diffdynamic-generate",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-01-diffdynamic-generate",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-01-diffdynamic-generate",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-02-receptor-grid",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-02-receptor-grid",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-02-receptor-grid",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-03-sp-fill-rank",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-03-sp-fill-rank",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-03-sp-fill-rank",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-04-seed-ifd",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-04-seed-ifd",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-04-seed-ifd",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-05-shape-screen",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-05-shape-screen",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-05-shape-screen",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-06-shape-candidate-sp",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-06-shape-candidate-sp",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-06-shape-candidate-sp",
+      "action": "symlinked"
+    },
+    {
+      "name": "hsv-07-shape-top200-ifd",
+      "category": "masld-ai4s",
+      "source": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/skills/scientist-in-e-drug-lab/hsv-07-shape-top200-ifd",
+      "dest": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills/masld-ai4s/hsv-07-shape-top200-ifd",
+      "action": "symlinked"
+    }
+  ],
+  "missing": [],
+  "hermes_skills_root": "/data/ye/e-drug-lab/Scientist_In_E-Drug-Lab/.hermes/skills"
+}

@@ -1,0 +1,14 @@
+Scientist_In_E-Drug-Lab
+Copyright 2026 E-Drug-Lab contributors
+
+This project is designed to extend Nous Research Hermes Agent via official
+plugin / Skill / MCP extension points and does not modify Hermes core source.
+
+Third-party notices:
+- Hermes Agent (MIT) — https://github.com/NousResearch/hermes-agent
+- RDKit — https://www.rdkit.org/
+- Pydantic, Typer, httpx, and other dependencies — see their respective licenses
+  after `pip install -e .`
+
+Competition context: AI4S / 书生国智科探挑战赛 — 生命科学赛道
+https://ai4scompetition.intern-ai.org.cn/detail/life_science

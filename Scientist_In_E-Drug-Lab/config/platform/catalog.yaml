@@ -1,0 +1,378 @@
+# Authoritative capability catalog for DiffDynamic / e-drug-lab / Schrödinger.
+# Each entry: id, system (dd|ed|sz), stage, summary, inputs, outputs, env, invoke, risks, skill_ref
+
+version: 1
+systems:
+  dd: DiffDynamic
+  ed: e-drug-lab backend
+  sz: Schrödinger
+
+entries:
+  # ---------- DiffDynamic ----------
+  - id: dd.env
+    system: dd
+    stage: env
+    summary: Conda env, PYTHONPATH, pretrained weights
+    env:
+      conda_env: /home/user/anaconda3/envs/diffdynamic
+      conda_name: diffdynamic
+      root: /data/ye/DiffDynamic
+      pythonpath: /data/ye/DiffDynamic
+      weights: /data/ye/DiffDynamic/pretrained_models/pretrained_diffusion.pt
+    invoke: "conda activate diffdynamic; export PYTHONPATH=/data/ye/DiffDynamic:$PYTHONPATH; cd /data/ye/DiffDynamic"
+    risks: [wrong_python, missing_weights]
+    skill_ref: [diffdynamic-generation, ddfast-00-pipeline-brief]
+
+  - id: dd.cfg.sampling
+    system: dd
+    stage: config
+    summary: Website-default sampling.yml (TBR on; scaffold dynamic_locked)
+    inputs: [/data/ye/DiffDynamic/configs/sampling.yml]
+    invoke: "Use as base; runner copies per-run with overrides"
+    risks: [do_not_edit_in_place_during_jobs]
+    skill_ref: [ddfast-02-fast-denovo]
+
+  - id: dd.cfg.fast_denovo
+    system: dd
+    stage: config
+    summary: DDFast de novo Fast YAML (website-default + scaffold.num_samples 100)
+    inputs:
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/pipeline_templates/sampling_web_default_fast.yml
+    risks: [prudent_must_stay_off]
+    skill_ref: [ddfast-02-fast-denovo]
+
+  - id: dd.cfg.fast_scaffold
+    system: dd
+    stage: config
+    summary: DDFast scaffold Fast YAML (~20k with molecule_path)
+    inputs:
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/pipeline_templates/sampling_web_default_fast_scaffold20k.yml
+    risks: [requires_molecule_path]
+    skill_ref: [ddfast-03-fast-scaffold]
+
+  - id: dd.cfg.prudent
+    system: dd
+    stage: config
+    summary: Prudent templates (high-quality small libraries; mutually exclusive with Fast funnel)
+    inputs:
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/pipeline_templates/sampling_denovo_prudent_10pick2_1round.yml
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/pipeline_templates/sampling_denovo_prudent_batch50_10pick2.yml
+    risks: [do_not_mix_with_ddfast_fast]
+    skill_ref: [diffdynamic-generation]
+
+  - id: dd.script.sample
+    system: dd
+    stage: generate
+    summary: scripts/sample_diffusion.py single-job sampling
+    inputs: [protein_path, ligand_path, optional molecule_path, config yml, device]
+    outputs: [result_*.pt]
+    invoke: "python scripts/sample_diffusion.py <cfg.yml> --protein_path R.pdb --ligand_path L.sdf [--molecule_path S.sdf] --device cuda:N --result_path <dir>"
+    skill_ref: [diffdynamic-generation]
+
+  - id: dd.script.batch
+    system: dd
+    stage: generate
+    summary: batch_sampleandeval_parallel.py multi-GPU sample/eval
+    inputs: [config, protein/ligand or data_ids, gpus]
+    outputs: [pt, eval dirs]
+    invoke: "python batch_sampleandeval_parallel.py --config ... --gpus 1-5 --sample-only [--protein_path --ligand_path]"
+    risks: [oom_if_huge_batch, prefer_gpus_1_to_5]
+    skill_ref: [ddfast-02-fast-denovo]
+
+  - id: dd.script.eval
+    system: dd
+    stage: evaluate
+    summary: evaluate_pt_with_correct_reconstruct / split_and_eval_parallel
+    inputs: [pt_file, receptor, optional vina modes]
+    outputs: [eval dir, sdf, metrics]
+    invoke: "python evaluate_pt_with_correct_reconstruct.py <pt> [--vina-modes none|dock,score_only,minimize]"
+    skill_ref: [ddfast-04-extract-novina]
+
+  - id: dd.script.extract
+    system: dd
+    stage: extract
+    summary: extract_pt_to_sdf_excel.py PT to SDF/Excel
+    inputs: [pt_file]
+    outputs: [sdf, xlsx]
+    invoke: "python extract_pt_to_sdf_excel.py <pt> -- --vina-modes none"
+    skill_ref: [ddfast-04-extract-novina]
+
+  - id: dd.script.pocket_quality
+    system: dd
+    stage: evaluate
+    summary: evaluate_pocket_quality.py eight-dimension pocket scoring
+    inputs: [pocket_pdb or pt_file]
+    outputs: [evaluation_records.csv, optional vis]
+    skill_ref: [diffdynamic-generation]
+
+  - id: dd.mode.denovo_fast
+    system: dd
+    stage: mode
+    summary: Fast de novo — do NOT pass --molecule_path; Murcko from reference ligand
+    risks: [do_not_pass_scaffold_sdf]
+    skill_ref: [ddfast-02-fast-denovo]
+
+  - id: dd.mode.scaffold_fast
+    system: dd
+    stage: mode
+    summary: Fast scaffold growth — MUST pass --molecule_path scaffold.sdf
+    risks: [missing_scaffold_blocks_job]
+    skill_ref: [ddfast-03-fast-scaffold]
+
+  - id: dd.mode.prudent
+    system: dd
+    stage: mode
+    summary: Prudent iterative generation with embedded Vina selection
+    risks: [cpu_heavy_vina_inside_sampling]
+    skill_ref: [diffdynamic-generation]
+
+  - id: dd.gpu.policy
+    system: dd
+    stage: policy
+    summary: DDFast sampling uses GPUs 1-5; split seeds; avoid single 20k job
+    risks: [oom, gpu0_often_busy]
+    skill_ref: [ddfast-00-pipeline-brief]
+
+  - id: dd.inputs
+    system: dd
+    stage: inputs
+    summary: receptor original PDB, ligand SDF, optional scaffold SDF, pocket/radius, target_name
+    inputs: [receptor_pdb, ligand_sdf, scaffold_sdf, pocket_or_radius, target_name]
+    skill_ref: [ddfast-01-input-gate]
+
+  - id: dd.outputs
+    system: dd
+    stage: outputs
+    summary: .pt, reconstructed_molecules/*.sdf, xlsx/csv, eval_* dirs, DDFast funnel folders
+    outputs: [pt, sdf, xlsx, csv, eval_dir]
+    skill_ref: [ddfast-04-extract-novina]
+
+  - id: dd.funnel.link
+    system: dd
+    stage: funnel
+    summary: After extract+dedup, handoff to QikProp then Glide (ddfast-05+)
+    skill_ref: [ddfast-05-smiles-dedup, ddfast-06-qikprop-admet]
+
+  # ---------- e-drug-lab ----------
+  - id: ed.root
+    system: ed
+    stage: env
+    summary: Platform root /data/ye/e-drug-lab; Scientist_In_E-Drug-Lab is a subproject
+    env:
+      root: /data/ye/e-drug-lab
+      backend: /data/ye/e-drug-lab/backend
+      scientist: /data/ye/e-drug-lab/Scientist_In_E-Drug-Lab
+
+  - id: ed.svc.diffdynamic
+    system: ed
+    stage: service
+    summary: DiffDynamicRunner library API
+    invoke: "from app.services.diffdynamic_runner import DiffDynamicRunner; DiffDynamicRunner(settings).status|run_generate|run_custom|run_prudent|evaluate|extract_pt|auto_chain"
+    env:
+      module: /data/ye/e-drug-lab/backend/app/services/diffdynamic_runner.py
+    risks: [needs_conda_diffdynamic, needs_settings]
+    skill_ref: [diffdynamic-generation]
+
+  - id: ed.svc.schrodinger
+    system: ed
+    stage: service
+    summary: schrodinger_service run_pipeline_dock / mmgbsa / local_health
+    invoke: "from app.services.schrodinger_service import local_health, run_pipeline_dock, run_mmgbsa_on_pose"
+    env:
+      module: /data/ye/e-drug-lab/backend/app/services/schrodinger_service.py
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: ed.svc.vina
+    system: ed
+    stage: service
+    summary: VinaService via affinity routes — independent of DiffDynamic internal Vina
+    invoke: "POST /api/v1/affinity/docking/vina (or VinaService CLI)"
+    risks: [vina_binary_may_be_missing]
+    skill_ref: []
+
+  - id: ed.local.schrodinger
+    system: ed
+    stage: service
+    summary: schrodinger_local.py CLI wrappers prepwizard/ligprep/grid/glide/mmgbsa
+    env:
+      module: /data/ye/e-drug-lab/backend/app/pipelines/vav1_rl/schrodinger_local.py
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: ed.http.diffdynamic
+    system: ed
+    stage: http
+    summary: Optional FastAPI /api/v1/diffdynamic/* (often not running locally)
+    invoke: "GET /api/v1/diffdynamic/status; POST /generate|/evaluate|/extract"
+    risks: [server_often_down_prefer_library]
+    skill_ref: []
+
+  - id: ed.http.affinity
+    system: ed
+    stage: http
+    summary: /api/v1/affinity vina|glide|schrodinger/dock|mmgbsa
+    risks: [server_often_down_prefer_library]
+    skill_ref: []
+
+  - id: ed.integrations.stub
+    system: ed
+    stage: forbidden
+    summary: app/api/integrations/* remote stubs — NOT mounted, NOT production
+    risks: [never_use_as_production]
+    invoke: "DO NOT CALL"
+    skill_ref: []
+
+  - id: ed.cfg
+    system: ed
+    stage: config
+    summary: Nested env diffdynamic__* schrodinger__* tool_paths__*
+    env:
+      example: /data/ye/e-drug-lab/backend/.env.example
+      install_path_default: /opt/schrodinger2023-3
+      conda_env_default: diffdynamic
+    skill_ref: []
+
+  - id: ed.pipelines.vav1
+    system: ed
+    stage: pipeline
+    summary: VAV1 RL docking pipeline reference (not default Scientist path)
+    env:
+      path: /data/ye/e-drug-lab/backend/app/pipelines/vav1_rl
+    skill_ref: []
+
+  # ---------- Schrödinger ----------
+  - id: sz.env
+    system: sz
+    stage: env
+    summary: SCHRODINGER install and temp dir
+    env:
+      SCHRODINGER: /opt/schrodinger2023-3
+      SCHRODINGER_TEMPDIR: optional_large_disk
+    invoke: "export SCHRODINGER=/opt/schrodinger2023-3"
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: sz.bin.glide
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/glide
+    env: {path: /opt/schrodinger2023-3/glide}
+  - id: sz.bin.ligprep
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/ligprep
+    env: {path: /opt/schrodinger2023-3/ligprep}
+  - id: sz.bin.qikprop
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/qikprop
+    env: {path: /opt/schrodinger2023-3/qikprop}
+  - id: sz.bin.prime_mmgbsa
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/prime_mmgbsa
+    env: {path: /opt/schrodinger2023-3/prime_mmgbsa}
+  - id: sz.bin.ifd
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/ifd
+    env: {path: /opt/schrodinger2023-3/ifd}
+  - id: sz.bin.prepwizard
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/utilities/prepwizard
+    env: {path: /opt/schrodinger2023-3/utilities/prepwizard}
+  - id: sz.bin.run
+    system: sz
+    stage: binary
+    summary: $SCHRODINGER/run python launcher
+    env: {path: /opt/schrodinger2023-3/run}
+
+  - id: sz.prepwizard
+    system: sz
+    stage: prep
+    summary: PDB → mae for Glide; DiffDynamic must use ORIGINAL PDB not prep mae
+    inputs: [receptor_pdb]
+    outputs: [receptor.mae]
+    risks: [do_not_feed_prep_mae_to_diffdynamic]
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: sz.ligprep
+    system: sz
+    stage: prep
+    summary: Ligand prep; -nt means no tautomer sampling NOT thread count
+    inputs: [sdf_or_smi]
+    outputs: [mae_or_sdf]
+    risks: [nt_is_not_threads]
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: sz.grid
+    system: sz
+    stage: dock
+    summary: Glide grid from prep receptor + GRID_CENTER
+    inputs: [recep_mae, grid_center, inner_outer_box]
+    outputs: [grid.zip]
+    examples:
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/VS_refine/glide-grid_3/glide-grid_3.in
+    risks: [do_not_reuse_hsv_centers_on_new_targets]
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: sz.glide_sp
+    system: sz
+    stage: dock
+    summary: Glide SP; sort r_i_glide_gscore ascending (more negative better)
+    inputs: [grid.zip, ligprep_out]
+    outputs: [pv.maegz, sp_results.csv]
+    skill_ref: [ddfast-07-glide-sp]
+
+  - id: sz.glide_xp
+    system: sz
+    stage: dock
+    summary: Glide XP on SP Top500; template glide-dock_XP_better.in
+    inputs: [grid, top500_ligands]
+    outputs: [xp_results.csv]
+    examples:
+      - /home/user/Desktop/Ye/DiffDynamic/hsvpol/VS_refine/glide-dock_XP_better/glide-dock_XP_better.in
+    skill_ref: [ddfast-08-glide-xp]
+
+  - id: sz.qikprop
+    system: sz
+    stage: admet
+    summary: QikProp ADMET; DDFast uses MODERATE filter not STRICT
+    inputs: [merged_sdf]
+    outputs: [qikprop_csv, admet_pass_sdf]
+    risks: [use_moderate_not_strict_for_ddfast]
+    skill_ref: [ddfast-06-qikprop-admet]
+
+  - id: sz.mmgbsa
+    system: sz
+    stage: refine
+    summary: Prime MMGBSA on Glide poses → dG_Bind
+    inputs: [pose_pv.maegz]
+    outputs: [mmgbsa_csv]
+    skill_ref: [ddfast-09-mmgbsa-ifd]
+
+  - id: sz.ifd
+    system: sz
+    stage: refine
+    summary: Induced Fit Docking; single system; 1:1 redock only — forbid N×N
+    inputs: [complex, ligands_mae]
+    outputs: [ifd_poses]
+    risks: [forbid_NxN_batchglide, ligand_naming_Z1000]
+    skill_ref: [ddfast-09-mmgbsa-ifd]
+
+  - id: sz.funnel.ddfast
+    system: sz
+    stage: funnel
+    summary: ddfast-06→07→08→09→10 order and product dirs under TARGET/
+    skill_ref:
+      - ddfast-06-qikprop-admet
+      - ddfast-07-glide-sp
+      - ddfast-08-glide-xp
+      - ddfast-09-mmgbsa-ifd
+      - ddfast-10-rank-manual
+
+  - id: sz.pitfalls
+    system: sz
+    stage: policy
+    summary: Absolute paths; never copy HSV grid centers; IFD 1:1; -nt≠threads
+    risks: [absolute_paths, grid_center_reuse, ifd_NxN, ligprep_nt]
+    skill_ref: [ddfast-00-pipeline-brief]

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MachineReadableReport",
+  "type": "object",
+  "required": ["competition", "targets", "competition_scope_warning"],
+  "properties": {
+    "competition_scope_warning": { "type": "string", "minLength": 20 },
+    "competition": { "type": "object" },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["gene_symbol", "novelty_class", "scores"],
+        "properties": {
+          "gene_symbol": { "type": "string" },
+          "uniprot_id": { "type": ["string", "null"] },
+          "novelty_class": {
+            "type": "string",
+            "enum": ["established_target", "emerging_target", "novel_hypothesis"]
+          }
+        }
+      }
+    }
+  }
+}

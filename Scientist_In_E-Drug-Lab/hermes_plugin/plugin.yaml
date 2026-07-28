@@ -1,0 +1,14 @@
+name: scientist-in-e-drug-lab
+version: 0.1.0
+description: >
+  E-Drug Lab drug-discovery scientist (Hermes plugin). Cross-disease target /
+  mechanism workflows; AI4S/MASLD competition tools (brief/validate/pack) are
+  optional presets — identity stays SOUL.md.
+provides_tools:
+  - masld_offline_demo
+  - masld_run_pipeline
+  - masld_competition_brief
+  - masld_validate_submission
+  - masld_pack_submission
+provides_hooks: []
+requires_env: []

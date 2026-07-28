@@ -1,4 +1,4 @@
-﻿"""
+"""
 e-drug lab SQLAlchemy 数据库模型
 """
 from datetime import datetime
@@ -41,9 +41,11 @@ class Target(Base):
     __tablename__ = 'targets'
     id = Column(SAString(36), primary_key=True, default=generate_uuid)
     project_id = Column(SAString(36), ForeignKey('projects.id', ondelete='CASCADE'))
+    name = Column(String(255))
     pdb_id = Column(String(10))
     source = Column(String(50))
-    structure_path = Column(Text, nullable=False)
+    status = Column(String(20), default='created')
+    structure_path = Column(Text)
     resolution = Column(String(20))
     chains = Column(JSON)
     residues = Column(Integer)
@@ -97,6 +99,7 @@ class CandidateMolecule(Base):
     task_id = Column(SAString(36), ForeignKey('screening_tasks.id', ondelete='CASCADE'))
     smiles = Column(Text, nullable=False)
     name = Column(String(255))
+    standard_name = Column(String(255))
     docking_score = Column(Float)
     admet_profile = Column(JSON)
     binding_energy = Column(Float)
@@ -138,6 +141,7 @@ class SDFMolecule(Base):
     logp = Column(Float)
     tpsa = Column(Float)
     qed = Column(Float)
+    sa_score = Column(Float)
     sdf_properties = Column(JSON)
     tags = Column(JSON)
     notes = Column(Text)
@@ -177,7 +181,80 @@ class APICredential(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class RLRound(Base):
+    __tablename__ = 'rl_rounds'
+    id = Column(SAString(36), primary_key=True, default=generate_uuid)
+    round_id = Column(Integer, nullable=False, unique=True, index=True)
+    target_id = Column(SAString(36), ForeignKey('targets.id', ondelete='SET NULL'), nullable=True)
+    status = Column(String(30), nullable=False, default='created')
+    checkpoint_path = Column(Text)
+    wetlab_count = Column(Integer, default=0)
+    config_json = Column(JSON, default=dict)
+    step_log_json = Column(JSON, default=dict)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    artifacts = relationship('RLRoundArtifact', back_populates='round', cascade='all, delete-orphan')
+    __table_args__ = (Index('idx_rl_rounds_status', 'status'),)
+
+
+class RLRoundArtifact(Base):
+    __tablename__ = 'rl_round_artifacts'
+    id = Column(SAString(36), primary_key=True, default=generate_uuid)
+    round_id = Column(Integer, ForeignKey('rl_rounds.round_id', ondelete='CASCADE'), nullable=False)
+    step = Column(String(50), nullable=False)
+    artifact_type = Column(String(30), nullable=False)
+    path = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    round = relationship('RLRound', back_populates='artifacts')
+    __table_args__ = (Index('idx_rl_artifacts_round', 'round_id'),)
+
+
+class PipelineRun(Base):
+    __tablename__ = 'pipeline_runs'
+    id = Column(SAString(36), primary_key=True, default=generate_uuid)
+    project_id = Column(SAString(36), ForeignKey('projects.id', ondelete='SET NULL'), nullable=True)
+    target_id = Column(SAString(36), ForeignKey('targets.id', ondelete='SET NULL'), nullable=True)
+    recipe_json = Column(JSON, nullable=False, default=dict)
+    status = Column(String(20), nullable=False, default='pending')
+    current_step_id = Column(String(50))
+    context_json = Column(JSON, default=dict)
+    error_message = Column(Text)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    step_runs = relationship('PipelineStepRun', back_populates='pipeline_run', cascade='all, delete-orphan')
+    __table_args__ = (
+        Index('idx_pipeline_runs_status', 'status'),
+        Index('idx_pipeline_runs_target', 'target_id'),
+    )
+
+
+class PipelineStepRun(Base):
+    __tablename__ = 'pipeline_step_runs'
+    id = Column(SAString(36), primary_key=True, default=generate_uuid)
+    pipeline_run_id = Column(SAString(36), ForeignKey('pipeline_runs.id', ondelete='CASCADE'), nullable=False)
+    step_id = Column(String(50), nullable=False)
+    tool_ids = Column(JSON, default=list)
+    status = Column(String(20), nullable=False, default='pending')
+    progress = Column(Float, default=0.0)
+    params_json = Column(JSON, default=dict)
+    result_json = Column(JSON)
+    error_message = Column(Text)
+    screening_task_id = Column(SAString(36), ForeignKey('screening_tasks.id', ondelete='SET NULL'), nullable=True)
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    pipeline_run = relationship('PipelineRun', back_populates='step_runs')
+    __table_args__ = (
+        Index('idx_pipeline_step_runs_run', 'pipeline_run_id'),
+        Index('idx_pipeline_step_runs_status', 'status'),
+    )
+
+
 @event.listens_for(Project, 'before_update')
+@event.listens_for(RLRound, 'before_update')
+@event.listens_for(PipelineRun, 'before_update')
 @event.listens_for(ToolConfiguration, 'before_update')
 @event.listens_for(APICredential, 'before_update')
 @event.listens_for(SDFMolecule, 'before_update')

@@ -1,0 +1,3 @@
+disease: MASLD
+fixture: tests/fixtures/hsd17b13
+notes: Offline demo configuration for HSD17B13 (not a hardcoded final answer).
