@@ -1,0 +1,83 @@
+# Hermes skin for Scientist_In_E-Drug-Lab (e-drug-lab scientist)
+# Synced into $HERMES_HOME/skins/ by scripts/sync_providers_from_ccswitch.py
+# Activate via display.skin: edrug-scientist
+
+name: edrug-scientist
+description: E-Drug Lab scientist — ice-teal lab theme (cross-disease drug discovery)
+
+colors:
+  background: "#0B1C24"
+  banner_border: "#00838F"
+  banner_title: "#4FC3F7"
+  banner_accent: "#26C6DA"
+  banner_dim: "#546E7A"
+  banner_text: "#E0F7FA"
+  ui_accent: "#26C6DA"
+  ui_label: "#4FC3F7"
+  ui_ok: "#66BB6A"
+  ui_error: "#EF5350"
+  ui_warn: "#FFA726"
+  prompt: "#E0F7FA"
+  input_rule: "#00838F"
+  response_border: "#4FC3F7"
+  status_bar_bg: "#0B1C24"
+  status_bar_text: "#B0BEC5"
+  status_bar_strong: "#4FC3F7"
+  status_bar_dim: "#546E7A"
+  status_bar_good: "#66BB6A"
+  status_bar_warn: "#FFA726"
+  status_bar_bad: "#EF5350"
+  status_bar_critical: "#E53935"
+  session_label: "#26C6DA"
+  session_border: "#455A64"
+  completion_menu_bg: "#0B1C24"
+  completion_menu_current_bg: "#1A3A44"
+  selection_bg: "#1A3A44"
+  shell_dollar: "#29B6F6"
+  voice_status_bg: "#0B1C24"
+
+light_colors:
+  banner_title: "#0277BD"
+  banner_accent: "#00838F"
+  banner_dim: "#607D8B"
+  banner_text: "#263238"
+  ui_accent: "#00838F"
+  ui_label: "#0277BD"
+  prompt: "#263238"
+  response_border: "#0277BD"
+  session_label: "#00838F"
+  status_bar_bg: "#ECEFF1"
+  status_bar_text: "#546E7A"
+  completion_menu_bg: "#ECEFF1"
+  completion_menu_current_bg: "#B2EBF2"
+  selection_bg: "#B2EBF2"
+
+branding:
+  agent_name: Scientist_In_E-Drug-Lab
+  welcome: "Welcome to E-Drug Lab Scientist — drug discovery across targets & diseases. Type /help for commands."
+  goodbye: "Goodbye — keep the evidence chain reproducible."
+  response_label: " 🔬 Scientist "
+  prompt_symbol: "❯"
+  help_header: "(🔬) Available Commands"
+
+tool_prefix: "┊"
+
+banner_logo: |
+  [bold #4FC3F7]███████╗ ██████╗██╗███████╗███╗   ██╗████████╗██╗███████╗████████╗[/]
+  [bold #29B6F6]██╔════╝██╔════╝██║██╔════╝████╗  ██║╚══██╔══╝██║██╔════╝╚══██╔══╝[/]
+  [bold #26C6DA]███████╗██║     ██║█████╗  ██╔██╗ ██║   ██║   ██║███████╗   ██║   [/]
+  [bold #00ACC1]╚════██║██║     ██║██╔══╝  ██║╚██╗██║   ██║   ██║╚════██║   ██║   [/]
+  [bold #00838F]███████║╚██████╗██║███████╗██║ ╚████║   ██║   ██║███████║   ██║   [/]
+  [bold #006064]╚══════╝ ╚═════╝╚═╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚══════╝   ╚═╝   [/]
+  [bold #80DEEA]   E - D R U G   L A B     ·     d r u g   d i s c o v e r y[/]
+
+banner_hero: |
+  [#26C6DA]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣀⣤⣤⣤⣀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#4FC3F7]⠀⠀⠀⠀⠀⠀⠀⢀⣴⣾⣿⣿⣿⣿⣿⣿⣿⣷⣦⡀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#29B6F6]⠀⠀⠀⠀⠀⠀⣰⣿⣿⡿⠟⠋⠉⠉⠉⠙⠻⢿⣿⣿⣆⠀⠀⠀⠀⠀⠀[/]
+  [#00ACC1]⠀⠀⠀⠀⠀⢠⣿⣿⠏⠀⠀🔬  lab ⠀⠀⠹⣿⣿⡄⠀⠀⠀⠀⠀[/]
+  [#00838F]⠀⠀⠀⠀⠀⢸⣿⣿⠀⠀target · drug⠀⠀⣿⣿⡇⠀⠀⠀⠀⠀[/]
+  [#006064]⠀⠀⠀⠀⠀⠘⣿⣿⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⠃⠀⠀⠀⠀⠀[/]
+  [#546E7A]⠀⠀⠀⠀⠀⠀⠹⣿⣿⣷⣤⣀⠀⠀⣀⣤⣾⣿⣿⠏⠀⠀⠀⠀⠀⠀[/]
+  [#80DEEA]⠀⠀⠀⠀⠀⠀⠀⠈⠻⢿⣿⣿⣿⣿⣿⣿⡿⠟⠁⠀⠀⠀⠀⠀⠀⠀[/]
+  [dim #546E7A]         e-drug-lab scientist         [/]

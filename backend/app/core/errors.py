@@ -83,6 +83,13 @@ class ConfigurationError(AppError):
                          status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, details={"reason": reason}, is_operational=False)
 
 
+class AdmetPredictionError(AppError):
+    def __init__(self, reason: str, smiles: Optional[str] = None):
+        super().__init__(message=f"ADMET 预测失败：{reason}", code="ADMET_PREDICTION_ERROR",
+                         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                         details={"reason": reason, "smiles": smiles}, is_operational=True)
+
+
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
     logger.error(f"业务错误 [{exc.code}]", extra={
         "request_id": getattr(request.state, "request_id", None),

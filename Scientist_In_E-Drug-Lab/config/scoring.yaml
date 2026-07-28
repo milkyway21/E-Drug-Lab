@@ -1,0 +1,12 @@
+weights:
+  human_genetics_evidence: 0.20
+  disease_mechanism_relevance: 0.15
+  hepatocyte_or_liver_specificity: 0.10
+  druggability: 0.15
+  structure_availability: 0.10
+  ligand_precedent: 0.10
+  safety_rationale: 0.10
+  novelty: 0.10
+
+# Missing dimension policy: exclude from renormalized total; never fill with 1.0
+missing_policy: exclude_and_renormalize

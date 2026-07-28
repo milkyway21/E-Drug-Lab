@@ -135,3 +135,20 @@ venv/
 tools/Target-driven-ML-enabled-VS/
 
 deliverables/target-driven-vs-package/
+
+# Local agent / IDE noise (do not publish)
+.claude/worktrees/
+.codegraph/
+C*tmpadmet_result.json
+
+# Extensionless license files
+!LICENSE
+!NOTICE
+!**/LICENSE
+!**/NOTICE
+
+# Live secrets (examples stay allowed via *.example)
+**/.env
+**/providers.yaml
+!**/.env.example
+!**/providers.example.yaml

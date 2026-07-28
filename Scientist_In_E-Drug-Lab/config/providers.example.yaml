@@ -1,0 +1,39 @@
+# Example OpenAI-compatible providers — do not hardcode secrets.
+# Set the env var named in api_key_env before use.
+# Active copy with Volcano Coding Plan: config/providers.yaml (+ secrets in .env)
+
+providers:
+  openai_compatible_default:
+    base_url: "https://api.openai.com/v1"
+    api_key_env: "MASLD_LLM_API_KEY"
+    model: "gpt-4o-mini"
+    timeout: 60
+    temperature: 0.2
+
+  # Volcano / 方舟 Coding Plan (CC-Switch: 火山Agentplan)
+  # OpenAI wire: /api/coding/v3 — NOT /api/v3 (pay-as-you-go).
+  volcano_agentplan_openai:
+    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+    api_key_env: "MASLD_LLM_API_KEY"
+    model: "ark-code-latest"
+    timeout: 90
+    temperature: 0.2
+
+  volcano_agentplan_anthropic:
+    base_url: "https://ark.cn-beijing.volces.com/api/coding"
+    api_key_env: "ANTHROPIC_AUTH_TOKEN"
+    model: "ark-code-latest"
+    api_format: "anthropic"
+    timeout: 90
+
+  # Placeholder for Intern / domestic OpenAI-compatible endpoints.
+  intern_compatible_example:
+    base_url: "https://YOUR_INTERN_COMPATIBLE_ENDPOINT/v1"
+    api_key_env: "MASLD_LLM_API_KEY"
+    model: "REPLACE_WITH_CONFIRMED_MODEL_NAME"
+    timeout: 90
+    temperature: 0.2
+
+notes:
+  - "Hermes native providers remain available when running under Hermes."
+  - "Scientific DB calls and RDKit must use masld_agent tools, not the LLM."

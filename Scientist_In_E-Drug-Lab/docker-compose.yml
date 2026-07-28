@@ -1,0 +1,10 @@
+services:
+  masld-agent:
+    build: .
+    volumes:
+      - ./runs:/app/runs
+      - ./config:/app/config:ro
+    environment:
+      - MASLD_COMPETITION_EVAL_MODE=true
+      - MASLD_HTTP_CACHE_DIR=/app/.cache/http
+    command: ["masld-agent", "offline-demo", "--fixture", "tests/fixtures/hsd17b13", "--output", "runs"]

@@ -1,0 +1,83 @@
+# Project Hermes home template — copied to $PROJECT/.hermes/config.yaml by
+# scripts/sync_providers_from_ccswitch.py (secrets stay in .hermes/.env).
+#
+# Multi-provider chat uses Hermes runtime (not masld-agent). Switch with:
+#   hermes chat --provider volcengine-plan
+#   hermes chat --provider volcano-anthropic
+#   hermes chat --provider anthropic|openrouter|custom|...
+#   hermes model
+
+model:
+  provider: volcengine-plan
+  default: ark-code-latest
+
+providers:
+  # OpenAI-compatible Volcano Coding Plan (CC-Switch: 火山Agentplan)
+  volcengine-plan:
+    name: volcengine-plan
+    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+    key_env: OPENAI_API_KEY
+    api_mode: chat_completions
+    default_model: ark-code-latest
+    models:
+      ark-code-latest: {}
+
+  # Anthropic Messages wire for the same Coding Plan key
+  volcano-anthropic:
+    name: volcano-anthropic
+    base_url: "https://ark.cn-beijing.volces.com/api/coding"
+    key_env: ANTHROPIC_AUTH_TOKEN
+    api_mode: anthropic_messages
+    default_model: ark-code-latest
+    models:
+      ark-code-latest: {}
+
+# Competition eval mode: disable uncontrolled long-term memory writes
+memory:
+  memory_enabled: false
+  user_profile_enabled: false
+  nudge_interval: 0
+  flush_min_turns: 0
+
+agent:
+  max_turns: 40
+  disabled_toolsets:
+    - memory
+
+mcp_servers:
+  scientist_in_e_drug_lab:
+    command: "python"
+    args: ["-m", "masld_agent.mcp_server"]
+    tools:
+      include:
+        - masld_offline_demo
+        - masld_run
+        - platform_catalog
+        - platform_health
+        - diffdynamic_status
+        - diffdynamic_generate
+        - diffdynamic_extract
+        - schrodinger_status
+        - schrodinger_dock
+        - schrodinger_mmgbsa
+
+# Pip entry-point plugin (pyproject hermes_agent.plugins)
+plugins:
+  enabled:
+    - scientist_in_e_drug_lab
+
+# Local drug-design / writing / self-written skills (see scripts/import_drug_skills.py)
+skills:
+  creation_enabled: true
+  external_dirs:
+    - skills_pack
+
+# DiffDynamic / e-drug-lab / Schrödinger capability catalog (synced into .hermes/)
+# Does not change SOUL identity — knowledge + gated tools only.
+platform:
+  overview: PLATFORM.md
+  catalog: platform/catalog.yaml
+
+# Branding: SCIENTIST ASCII + e-drug-lab hero (not Hermes gold caduceus)
+display:
+  skin: edrug-scientist
