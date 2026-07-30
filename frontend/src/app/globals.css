@@ -1,11 +1,23 @@
-﻿@tailwind base;
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
-  background: #f4f7f6;
-  color: #172026;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafb;
+  --bg-elevated: #ffffff;
+  --border-subtle: #e5ebf0;
+  --border-default: #d5dde5;
+  --text-primary: #1a2332;
+  --text-secondary: #5a6a7a;
+  --text-tertiary: #90a4ae;
+  --accent-primary: #1565C0;
+  --accent-teal: #00897B;
+  --accent-amber: #F9A825;
+  --accent-rose: #C62828;
 }
 
 * {
@@ -16,11 +28,11 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(rgba(22, 133, 117, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(49, 95, 174, 0.035) 1px, transparent 1px),
-    #f4f7f6;
-  background-size: 32px 32px;
-  color: #172026;
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(21, 101, 192, 0.07), transparent 55%),
+    linear-gradient(180deg, #eef3f8 0%, #f0f4f8 40%, #e8eef4 100%);
+  color: var(--text-primary);
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -33,52 +45,382 @@ input,
 select,
 textarea {
   font: inherit;
+  color: inherit;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d5dde5;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0bec5;
+}
+
+::selection {
+  background: rgba(21, 101, 192, 0.15);
+  color: #1a2332;
 }
 
 @layer components {
+  /* White card with subtle border and shadow */
   .panel {
-    @apply border border-slate-200/80 bg-white shadow-panel;
-    border-radius: 8px;
+    background: #ffffff;
+    border: 1px solid #e5ebf0;
+    border-radius: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
   }
 
+  /* Surface variant — slightly off-white */
   .surface {
-    @apply border border-slate-200/80 bg-paper shadow-soft;
+    background: #f8fafb;
+    border: 1px solid #e5ebf0;
     border-radius: 8px;
   }
 
+  /* Hairline border only */
   .hairline {
-    @apply border border-slate-200/80;
+    border: 1px solid #e5ebf0;
     border-radius: 8px;
   }
 
+  /* Stat label */
   .stat-label {
-    @apply text-xs font-semibold uppercase tracking-normal text-slate-500;
+    @apply text-xs font-semibold uppercase tracking-wider;
+    color: var(--text-tertiary);
+    letter-spacing: 0.06em;
   }
 
+  /* Muted text */
   .muted {
-    @apply text-sm leading-6 text-slate-600;
+    @apply text-sm leading-6;
+    color: var(--text-secondary);
   }
 
+  /* Primary button — scientific blue */
   .btn-primary {
-    @apply inline-flex h-10 items-center gap-2 bg-teal px-4 text-sm font-semibold text-white shadow-soft transition hover:bg-teal/90;
-    border-radius: 6px;
+    @apply inline-flex h-10 items-center gap-2 px-5 text-sm font-semibold transition-all;
+    background: #1565C0;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(21, 101, 192, 0.25);
   }
 
+  .btn-primary:hover {
+    background: #0D47A1;
+    box-shadow: 0 2px 8px rgba(21, 101, 192, 0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(21, 101, 192, 0.2);
+  }
+
+  /* Secondary button */
   .btn-secondary {
-    @apply inline-flex h-10 items-center gap-2 border border-slate-300 bg-white px-4 text-sm font-semibold text-ink shadow-soft transition hover:border-teal hover:text-teal;
-    border-radius: 6px;
+    @apply inline-flex h-10 items-center gap-2 px-5 text-sm font-semibold transition-all;
+    background: #ffffff;
+    color: #1565C0;
+    border: 1px solid #d5dde5;
+    border-radius: 8px;
   }
 
+  .btn-secondary:hover {
+    border-color: #1565C0;
+    background: #f0f4f8;
+  }
+
+  /* Badge */
   .badge {
-    @apply inline-flex items-center gap-2 border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600;
+    @apply inline-flex items-center gap-2 px-3 py-1 text-xs font-medium;
+    background: #f0f4f8;
+    border: 1px solid #e5ebf0;
     border-radius: 999px;
+    color: #5a6a7a;
   }
 
+  /* Page shell */
   .page-shell {
     @apply mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8;
   }
 
+  /* Table header */
   .table-head {
-    @apply bg-slate-50 text-xs font-semibold uppercase tracking-normal text-slate-500;
+    @apply text-xs font-semibold uppercase tracking-wider;
+    background: #f8fafb;
+    color: #90a4ae;
+  }
+
+  /* Input field */
+  .input-field {
+    @apply h-10 w-full px-3 text-sm outline-none transition-all;
+    background: #ffffff;
+    border: 1px solid #d5dde5;
+    border-radius: 8px;
+    color: #1a2332;
+  }
+
+  .input-field::placeholder {
+    color: #90a4ae;
+  }
+
+  .input-field:focus {
+    border-color: #1565C0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+  }
+
+  /* Select field */
+  .select-field {
+    @apply h-10 w-full px-3 text-sm outline-none transition-all;
+    background: #ffffff;
+    border: 1px solid #d5dde5;
+    border-radius: 8px;
+    color: #1a2332;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2390a4ae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+
+  .select-field:focus {
+    border-color: #1565C0;
+    box-shadow: 0 0 0 3px rgba(21, 101, 192, 0.08);
+  }
+
+  /* Status dots */
+  .status-dot {
+    @apply inline-block h-2 w-2 rounded-full;
+  }
+
+  .status-dot-online {
+    @apply status-dot;
+    background: #2E7D32;
+    box-shadow: 0 0 6px rgba(46, 125, 50, 0.4);
+  }
+
+  .status-dot-offline {
+    @apply status-dot;
+    background: #90a4ae;
+  }
+
+  .status-dot-warning {
+    @apply status-dot;
+    background: #F57F17;
+    box-shadow: 0 0 6px rgba(245, 127, 23, 0.4);
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    transition: all 0.2s ease;
+  }
+
+  .card-hover:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    transform: translateY(-2px);
+    border-color: #d5dde5;
+  }
+
+  /* Accent line — colored bar at top of card */
+  .accent-line-primary {
+    border-top: 3px solid #1565C0;
+  }
+
+  .accent-line-teal {
+    border-top: 3px solid #00897B;
+  }
+
+  .accent-line-amber {
+    border-top: 3px solid #F9A825;
+  }
+
+  .accent-line-rose {
+    border-top: 3px solid #C62828;
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+}
+
+/* ── Agent FAB mood animations ───────────────────────────────────── */
+.agent-fab {
+  position: fixed;
+}
+
+.agent-fab-ring {
+  position: absolute;
+  inset: -4px;
+  border-radius: 9999px;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.agent-fab-figure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: 50% 70%;
+  will-change: transform;
+}
+
+.agent-fab-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  border: 2px solid #fff;
+}
+
+/* idle — calm, soft bob */
+.agent-fab-figure--idle {
+  animation: agentIdleBob 3.6s ease-in-out infinite;
+}
+.agent-mood-idle {
+  filter: saturate(0.95) brightness(1);
+}
+
+/* waiting — amber pulse, impatient lean */
+.agent-fab-figure--waiting {
+  animation: agentWaitSway 1.4s ease-in-out infinite;
+}
+.agent-fab-ring--waiting {
+  opacity: 1;
+  border: 2px solid rgba(251, 191, 36, 0.55);
+  animation: agentRingPulse 1.2s ease-out infinite;
+}
+.agent-fab-badge--waiting {
+  background: #F9A825;
+  animation: agentBadgeBlink 1s ease-in-out infinite;
+}
+.agent-mood-waiting {
+  filter: sepia(0.25) saturate(1.2) hue-rotate(-10deg);
+}
+
+/* thinking — teal tilt + slow spin aura */
+.agent-fab-figure--thinking {
+  animation: agentThinkTilt 2s ease-in-out infinite;
+}
+.agent-fab-ring--thinking {
+  opacity: 1;
+  border: 2px dashed rgba(0, 137, 123, 0.5);
+  animation: agentRingSpin 3s linear infinite;
+}
+.agent-fab-badge--thinking {
+  background: #00897B;
+  box-shadow: 0 0 8px rgba(0, 137, 123, 0.5);
+}
+.agent-mood-thinking {
+  filter: hue-rotate(12deg) saturate(1.15) brightness(1.02);
+}
+
+/* outputting — lively bounce, sky energy */
+.agent-fab-figure--outputting {
+  animation: agentOutputBounce 0.7s ease-in-out infinite;
+}
+.agent-fab-ring--outputting {
+  opacity: 1;
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  animation: agentRingPulse 0.8s ease-out infinite;
+}
+.agent-fab-badge--outputting {
+  background: #0284C7;
+  animation: agentBadgeBlink 0.6s ease-in-out infinite;
+}
+.agent-mood-outputting {
+  filter: saturate(1.25) brightness(1.05);
+}
+
+/* done — proud nod, emerald */
+.agent-fab-figure--done {
+  animation: agentDoneNod 0.85s ease-out 1;
+}
+.agent-fab-ring--done {
+  opacity: 1;
+  border: 2px solid rgba(46, 125, 50, 0.55);
+  animation: agentRingPulse 1.2s ease-out 2;
+}
+.agent-fab-badge--done {
+  background: #2E7D32;
+}
+.agent-mood-done {
+  filter: hue-rotate(-8deg) saturate(1.1) brightness(1.04);
+}
+
+@keyframes agentIdleBob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-1.5deg); }
+}
+
+@keyframes agentWaitSway {
+  0%, 100% { transform: translateY(0) rotate(-6deg) scale(1); }
+  50% { transform: translateY(-2px) rotate(6deg) scale(1.02); }
+}
+
+@keyframes agentThinkTilt {
+  0%, 100% { transform: rotate(-8deg) translateY(0); }
+  40% { transform: rotate(10deg) translateY(-2px); }
+  70% { transform: rotate(-4deg) translateY(-1px); }
+}
+
+@keyframes agentOutputBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-5px) scale(1.06) rotate(3deg); }
+  70% { transform: translateY(-1px) scale(1.02) rotate(-2deg); }
+}
+
+@keyframes agentDoneNod {
+  0% { transform: translateY(0) scale(1); }
+  30% { transform: translateY(-8px) scale(1.1) rotate(-4deg); }
+  55% { transform: translateY(2px) scale(0.98) rotate(3deg); }
+  100% { transform: translateY(0) scale(1) rotate(0); }
+}
+
+@keyframes agentRingPulse {
+  0% { transform: scale(1); opacity: 0.85; }
+  70% { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes agentRingSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes agentBadgeBlink {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.85); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agent-fab-figure--idle,
+  .agent-fab-figure--waiting,
+  .agent-fab-figure--thinking,
+  .agent-fab-figure--outputting,
+  .agent-fab-figure--done,
+  .agent-fab-ring--waiting,
+  .agent-fab-ring--thinking,
+  .agent-fab-ring--outputting,
+  .agent-fab-ring--done,
+  .agent-fab-badge--waiting,
+  .agent-fab-badge--outputting {
+    animation: none !important;
   }
 }

@@ -7,6 +7,7 @@ import logging
 from typing import Optional
 from rdkit import Chem
 from rdkit.Chem import AllChem, Descriptors, Lipinski, QED, rdMolDescriptors
+from app.services.sa_score import compute_sa_score
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class SDFParseResult:
         self.logp: Optional[float] = None
         self.tpsa: Optional[float] = None
         self.qed: Optional[float] = None
+        self.sa_score: Optional[float] = None
         self.sdf_properties: dict = {}
         self.warnings: list[str] = []
         self.error: Optional[str] = None
@@ -90,6 +92,10 @@ def parse_sdf_file(file_path: str) -> list[SDFParseResult]:
                     result.qed = QED.qed(mol)
                 except Exception:
                     result.warnings.append("QED 计算失败")
+                try:
+                    result.sa_score = compute_sa_score(mol)
+                except Exception:
+                    result.warnings.append("SA Score 计算失败")
                 prop_names = list(mol.GetPropNames())
                 sdf_props = {}
                 for prop_name in prop_names:

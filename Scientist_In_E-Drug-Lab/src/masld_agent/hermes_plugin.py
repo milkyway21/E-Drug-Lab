@@ -202,6 +202,127 @@ def _schrodinger_mmgbsa(args: dict, **kwargs) -> str:
     )
 
 
+def _schrodinger_md_submit(args: dict, **kwargs) -> str:
+    from masld_agent.platform.schrodinger_md_tools import schrodinger_md_submit
+
+    return json.dumps(
+        schrodinger_md_submit(
+            structure_path=args.get("structure_path") or None,
+            mode=str(args.get("mode") or "dry_prep"),
+            confirm=bool(args.get("confirm", False)),
+            simulation_time_ns=args.get("simulation_time_ns"),
+            host=args.get("host") or None,
+            molecule_id=args.get("molecule_id") or None,
+            target_id=args.get("target_id") or None,
+            api_base=args.get("api_base") or None,
+        ),
+        default=str,
+    )
+
+
+def _schrodinger_md_status(args: dict, **kwargs) -> str:
+    from masld_agent.platform.schrodinger_md_tools import schrodinger_md_status
+
+    return json.dumps(
+        schrodinger_md_status(
+            task_id=str(args.get("task_id") or ""),
+            target_id=args.get("target_id") or None,
+            api_base=args.get("api_base") or None,
+        ),
+        default=str,
+    )
+
+
+def _funnel_plan(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import plan_campaign
+
+    result = plan_campaign(
+        int(args.get("final_count") or 0),
+        manifest_path=args.get("manifest") or None,
+        target_id=args.get("target_id") or None,
+        profile=str(args.get("profile") or "full"),
+        write=True,
+    )
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+def _funnel_preflight(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.funnel.runner import preflight_campaign
+
+    manifest = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    return json.dumps(preflight_campaign(manifest), ensure_ascii=False, default=str)
+
+
+def _funnel_run_stage(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.funnel.runner import run_stage
+
+    manifest = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    result = run_stage(
+        manifest,
+        str(args.get("stage") or ""),
+        execute=bool(args.get("execute", False)),
+        confirm=bool(args.get("confirm", False)),
+    )
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+def _funnel_validate_stage(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.funnel.runner import validate_stage
+
+    manifest = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    return json.dumps(
+        validate_stage(manifest, str(args.get("stage") or "")),
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+def _funnel_status(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.funnel.runner import stage_status
+
+    manifest = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    return json.dumps(stage_status(manifest), ensure_ascii=False, default=str)
+
+
+def _funnel_autopilot(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.autopilot import run_autopilot, start_autopilot
+
+    execute = bool(args.get("execute", False))
+    background = bool(args.get("background", True))
+    if execute and background:
+        result = start_autopilot(
+            int(args.get("final_count") or 0),
+            manifest_path=args.get("manifest") or None,
+            target_id=args.get("target_id") or None,
+            profile=str(args.get("profile") or "full"),
+            confirm=bool(args.get("confirm", False)),
+        )
+    else:
+        result = run_autopilot(
+            int(args.get("final_count") or 0),
+            manifest_path=args.get("manifest") or None,
+            target_id=args.get("target_id") or None,
+            profile=str(args.get("profile") or "full"),
+            execute=execute,
+            confirm=bool(args.get("confirm", False)),
+        )
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
+def _funnel_autopilot_status(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.autopilot import autopilot_status
+
+    result = autopilot_status(
+        manifest_path=args.get("manifest") or None,
+        target_id=args.get("target_id") or None,
+    )
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
 OFFLINE_SCHEMA = {
     "name": "masld_offline_demo",
     "description": (
@@ -387,6 +508,378 @@ SZ_MMGBSA_SCHEMA = {
     },
 }
 
+SZ_MD_SUBMIT_SCHEMA = {
+    "name": "schrodinger_md_submit",
+    "description": (
+        "Schrödinger Desmond MD via e-drug-lab POST /api/v1/affinity/md. "
+        "Default mode=dry_prep (prepare job_dir+msj, no production submit). "
+        "mode=smoke|short requires confirm=true. Never treat stub as success. "
+        "Appends memory/targets/<id>/MD_JOBS.jsonl. "
+        "Production PASS needs cms+traj+md_summary+done; smoke gate ≠ production. "
+        "Env: use $SCHRODINGER/multisim — do NOT conda create/activate for Desmond "
+        "(conda 'diffdynamic' is DiffDynamic-only). "
+        "Prefer skills funnel-desmond-short-md / funnel-desmond-long-md for task MD."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "structure_path": {"type": "string"},
+            "mode": {"type": "string", "enum": ["dry_prep", "smoke", "short"]},
+            "confirm": {"type": "boolean"},
+            "simulation_time_ns": {"type": "number"},
+            "host": {"type": "string"},
+            "molecule_id": {"type": "string"},
+            "target_id": {"type": "string"},
+            "api_base": {"type": "string"},
+        },
+        "required": [],
+    },
+}
+
+SZ_MD_STATUS_SCHEMA = {
+    "name": "schrodinger_md_status",
+    "description": "Poll Desmond MD task via GET /api/v1/affinity/md/{task_id}; append MD_JOBS.jsonl.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "task_id": {"type": "string"},
+            "target_id": {"type": "string"},
+            "api_base": {"type": "string"},
+        },
+        "required": ["task_id"],
+    },
+}
+
+FUNNEL_CONTEXT_PROPERTIES = {
+    "manifest": {
+        "type": "string",
+        "description": "Optional absolute campaign manifest; otherwise resolve target session memory.",
+    },
+    "target_id": {"type": "string", "description": "Campaign target, default HSD17B13."},
+}
+
+FUNNEL_PROFILE_PROPERTY = {
+    "profile": {
+        "type": "string",
+        "enum": ["full", "test"],
+        "description": "Defaults to full. Use test only when the user explicitly requests a smoke/test run.",
+    }
+}
+
+FUNNEL_PLAN_SCHEMA = {
+    "name": "funnel_plan",
+    "description": (
+        "Given only the desired final molecule count, deterministically infer H0-H10 stage counts, "
+        "inspect local CPU/GPU/disk resources, allocate free resources, and write a profile-specific plan."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "final_count": {"type": "integer", "minimum": 1},
+            **FUNNEL_PROFILE_PROPERTY,
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": ["final_count"],
+    },
+}
+
+FUNNEL_PREFLIGHT_SCHEMA = {
+    "name": "funnel_preflight",
+    "description": "Read-only H0-H10 assets, environment, adapter, and existing-artifact preflight.",
+    "parameters": {"type": "object", "properties": FUNNEL_CONTEXT_PROPERTIES, "required": []},
+}
+
+FUNNEL_STAGE_SCHEMA = {
+    "name": "funnel_run_stage",
+    "description": (
+        "Reuse valid outputs or run one configured H0-H10 stage. Preview by default; "
+        "execution needs execute=true and compute also needs confirm=true."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "stage": {"type": "string", "enum": ["H0", "H1A", "H1B", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10"]},
+            "execute": {"type": "boolean"},
+            "confirm": {"type": "boolean"},
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": ["stage"],
+    },
+}
+
+FUNNEL_AUTOPILOT_STATUS_SCHEMA = {
+    "name": "funnel_autopilot_status",
+    "description": "Read persistent worker state and latest per-stage report. Poll this after background autopilot launch.",
+    "parameters": {"type": "object", "properties": FUNNEL_CONTEXT_PROPERTIES, "required": []},
+}
+
+FUNNEL_VALIDATE_SCHEMA = {
+    "name": "funnel_validate_stage",
+    "description": "Hard-validate one stage from artifacts rather than chat claims or done markers.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "stage": {"type": "string", "enum": ["H0", "H1A", "H1B", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10"]},
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": ["stage"],
+    },
+}
+
+FUNNEL_STATUS_SCHEMA = {
+    "name": "funnel_status",
+    "description": "Return hard-validation status and evidence for every H0-H10 stage.",
+    "parameters": {"type": "object", "properties": FUNNEL_CONTEXT_PROPERTIES, "required": []},
+}
+
+FUNNEL_AUTOPILOT_SCHEMA = {
+    "name": "funnel_autopilot",
+    "description": (
+        "PRIMARY WEAK-MODEL ENTRYPOINT. Given final_count only, plan all stage counts, allocate local "
+        "resources, reuse valid artifacts, execute H0-H10 in order, stop on failed validation, and "
+        "write JSON+Markdown report after every stage. Full is the default profile; test must be explicit. "
+        "Preview/report mode is default. Set execute=true "
+        "and confirm=true only after user authorizes production compute."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "final_count": {"type": "integer", "minimum": 1},
+            **FUNNEL_PROFILE_PROPERTY,
+            "execute": {"type": "boolean"},
+            "confirm": {"type": "boolean"},
+            "background": {
+                "type": "boolean",
+                "description": "For production, default true: launch persistent worker and return task state.",
+            },
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": ["final_count"],
+    },
+}
+
+MEMORY_READ_SCHEMA = {
+    "name": "campaign_memory_read",
+    "description": (
+        "Read structured task memory: MAIN_PLAYBOOK, GLOBAL_HISTORY, CAMPAIGN.md "
+        "(任务状态), DECISIONS tail, or session.json. Paths confined to memory/."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "section": {
+                "type": "string",
+                "enum": ["playbook", "global", "campaign", "decisions", "session"],
+            },
+            "target_id": {"type": "string"},
+            "tail": {"type": "integer", "description": "DECISIONS lines from end"},
+        },
+        "required": ["section"],
+    },
+}
+
+MEMORY_WRITE_SCHEMA = {
+    "name": "campaign_memory_write",
+    "description": "Update allowed CAMPAIGN.md (任务状态) metadata field or append DECISIONS row.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "target_id": {"type": "string"},
+            "action": {"type": "string", "enum": ["set_field", "append_decision"]},
+            "field": {"type": "string"},
+            "value": {"type": "string"},
+            "stage": {"type": "string"},
+            "decision": {"type": "string"},
+            "summary": {"type": "string"},
+            "evidence": {"type": "string"},
+        },
+        "required": ["target_id", "action"],
+    },
+}
+
+GLOBAL_HISTORY_SCHEMA = {
+    "name": "global_history_append",
+    "description": "Append one line to memory/GLOBAL_HISTORY.md 任务摘要 section.",
+    "parameters": {
+        "type": "object",
+        "properties": {"line": {"type": "string"}},
+        "required": ["line"],
+    },
+}
+
+UI_NAV_SCHEMA = {
+    "name": "edrug_ui_navigate",
+    "description": "Enqueue UI navigate command (whitelist paths). Separate from edrug_bridge compute.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "path": {"type": "string"},
+        },
+        "required": ["path"],
+    },
+}
+
+UI_HIGHLIGHT_SCHEMA = {
+    "name": "edrug_ui_highlight",
+    "description": "Highlight entity in e-drug-lab web UI.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "entity_type": {"type": "string"},
+            "entity_id": {"type": "string"},
+        },
+        "required": ["entity_type", "entity_id"],
+    },
+}
+
+UI_OPEN_MOL_SCHEMA = {
+    "name": "edrug_ui_open_molecule",
+    "description": "Open molecule panel in workflow UI.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "molecule_id": {"type": "string"},
+            "smiles": {"type": "string"},
+        },
+        "required": ["molecule_id"],
+    },
+}
+
+UI_SET_TARGET_SCHEMA = {
+    "name": "edrug_ui_set_target",
+    "description": "Set current workflow target in web UI.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "target_id": {"type": "string"},
+            "name": {"type": "string"},
+        },
+        "required": ["target_id"],
+    },
+}
+
+UI_START_TASK_SCHEMA = {
+    "name": "edrug_ui_start_task",
+    "description": "Whitelist POST to existing backend domain APIs via UI bus.",
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "session_id": {"type": "string"},
+            "api_path": {"type": "string"},
+            "body": {"type": "object"},
+        },
+        "required": ["api_path"],
+    },
+}
+
+
+def _memory_read(args: dict, **kwargs) -> str:
+    from masld_agent.memory_store import read_memory
+
+    return json.dumps(
+        read_memory(
+            target_id=args.get("target_id"),
+            section=str(args.get("section") or "campaign"),
+            tail=int(args.get("tail") or 20),
+        ),
+        ensure_ascii=False,
+    )
+
+
+def _memory_write(args: dict, **kwargs) -> str:
+    from masld_agent.memory_store import append_decision, write_campaign_field
+
+    target_id = str(args.get("target_id") or "")
+    action = str(args.get("action") or "")
+    if action == "set_field":
+        result = write_campaign_field(
+            target_id=target_id,
+            field=str(args.get("field") or ""),
+            value=str(args.get("value") or ""),
+        )
+    elif action == "append_decision":
+        result = append_decision(
+            target_id=target_id,
+            stage=str(args.get("stage") or ""),
+            decision=str(args.get("decision") or "NOTE"),
+            summary=str(args.get("summary") or ""),
+            evidence=str(args.get("evidence") or ""),
+        )
+    else:
+        result = {"status": "error", "error": f"unknown action: {action}"}
+    return json.dumps(result, ensure_ascii=False)
+
+
+def _global_history_append(args: dict, **kwargs) -> str:
+    from masld_agent.memory_store import append_global_history
+
+    return json.dumps(append_global_history(str(args.get("line") or "")), ensure_ascii=False)
+
+
+def _ui_navigate(args: dict, **kwargs) -> str:
+    from masld_agent.ui_command_bus import ui_navigate
+
+    return json.dumps(
+        ui_navigate(str(args.get("session_id") or "default"), str(args.get("path") or "/")),
+        ensure_ascii=False,
+    )
+
+
+def _ui_highlight(args: dict, **kwargs) -> str:
+    from masld_agent.ui_command_bus import ui_highlight
+
+    return json.dumps(
+        ui_highlight(
+            str(args.get("session_id") or "default"),
+            str(args.get("entity_type") or ""),
+            str(args.get("entity_id") or ""),
+        ),
+        ensure_ascii=False,
+    )
+
+
+def _ui_open_molecule(args: dict, **kwargs) -> str:
+    from masld_agent.ui_command_bus import ui_open_molecule
+
+    return json.dumps(
+        ui_open_molecule(
+            str(args.get("session_id") or "default"),
+            str(args.get("molecule_id") or ""),
+            args.get("smiles"),
+        ),
+        ensure_ascii=False,
+    )
+
+
+def _ui_set_target(args: dict, **kwargs) -> str:
+    from masld_agent.ui_command_bus import ui_set_target
+
+    return json.dumps(
+        ui_set_target(
+            str(args.get("session_id") or "default"),
+            str(args.get("target_id") or ""),
+            args.get("name"),
+        ),
+        ensure_ascii=False,
+    )
+
+
+def _ui_start_task(args: dict, **kwargs) -> str:
+    from masld_agent.ui_command_bus import ui_start_task
+
+    return json.dumps(
+        ui_start_task(
+            str(args.get("session_id") or "default"),
+            str(args.get("api_path") or ""),
+            args.get("body") if isinstance(args.get("body"), dict) else {},
+        ),
+        ensure_ascii=False,
+    )
+
 
 def register(ctx):
     """Hermes plugin entry: ctx.register_tool / register_command / register_cli_command."""
@@ -404,17 +897,34 @@ def register(ctx):
         ("schrodinger_status", SZ_STATUS_SCHEMA, _schrodinger_status),
         ("schrodinger_dock", SZ_DOCK_SCHEMA, _schrodinger_dock),
         ("schrodinger_mmgbsa", SZ_MMGBSA_SCHEMA, _schrodinger_mmgbsa),
+        ("schrodinger_md_submit", SZ_MD_SUBMIT_SCHEMA, _schrodinger_md_submit),
+        ("schrodinger_md_status", SZ_MD_STATUS_SCHEMA, _schrodinger_md_status),
+        ("funnel_plan", FUNNEL_PLAN_SCHEMA, _funnel_plan),
+        ("funnel_preflight", FUNNEL_PREFLIGHT_SCHEMA, _funnel_preflight),
+        ("funnel_run_stage", FUNNEL_STAGE_SCHEMA, _funnel_run_stage),
+        ("funnel_validate_stage", FUNNEL_VALIDATE_SCHEMA, _funnel_validate_stage),
+        ("funnel_status", FUNNEL_STATUS_SCHEMA, _funnel_status),
+        ("funnel_autopilot", FUNNEL_AUTOPILOT_SCHEMA, _funnel_autopilot),
+        ("funnel_autopilot_status", FUNNEL_AUTOPILOT_STATUS_SCHEMA, _funnel_autopilot_status),
+        ("campaign_memory_read", MEMORY_READ_SCHEMA, _memory_read),
+        ("campaign_memory_write", MEMORY_WRITE_SCHEMA, _memory_write),
+        ("global_history_append", GLOBAL_HISTORY_SCHEMA, _global_history_append),
+        ("edrug_ui_navigate", UI_NAV_SCHEMA, _ui_navigate),
+        ("edrug_ui_highlight", UI_HIGHLIGHT_SCHEMA, _ui_highlight),
+        ("edrug_ui_open_molecule", UI_OPEN_MOL_SCHEMA, _ui_open_molecule),
+        ("edrug_ui_set_target", UI_SET_TARGET_SCHEMA, _ui_set_target),
+        ("edrug_ui_start_task", UI_START_TASK_SCHEMA, _ui_start_task),
     ]
-    try:
-        for name, schema, handler in tools:
+    for name, schema, handler in tools:
+        try:
             ctx.register_tool(
                 name=name,
                 toolset="scientist_in_e_drug_lab",
                 schema=schema,
                 handler=handler,
             )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Hermes register_tool failed (running outside Hermes?): %s", exc)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Hermes register_tool skipped %s: %s", name, exc)
 
     def _slash_offline(raw: str = ""):
         return _run_offline({"fixture": raw.strip() or None})

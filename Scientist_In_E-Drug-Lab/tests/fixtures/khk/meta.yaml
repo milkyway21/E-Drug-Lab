@@ -1,0 +1,59 @@
+gene_symbol: KHK
+uniprot_id: P50053
+scientific_significance: >
+  Ketohexokinase (especially KHK-C) phosphorylates fructose and fuels de novo lipogenesis;
+  strong mechanistic rationale for MASLD/metabolic disease.
+clinical_significance: >
+  Multiple clinical programs for KHK inhibitors — evidence-rich but novelty is lower
+  (established/emerging clinical target class).
+uncertainty: >
+  Systemic fructose metabolism effects and GI/metabolic adverse events require careful monitoring.
+
+novelty:
+  has_approved_drug: false
+  has_late_clinical: true
+  has_early_clinical_or_strong_preclinical: true
+
+dimension_scores:
+  human_genetics_evidence: 0.45
+  disease_mechanism_relevance: 0.9
+  hepatocyte_or_liver_specificity: 0.7
+  druggability: 0.85
+  structure_availability: 0.7
+  ligand_precedent: 0.85
+  safety_rationale: 0.5
+  novelty: null
+
+structures:
+  - pdb_id: 3NBW
+    organism: Homo sapiens
+    resolution_A: 2.0
+    method: X-RAY DIFFRACTION
+    chains: ["A", "B"]
+    bound_ligands: []
+    selection_reason: Representative human KHK structure (fixture)
+
+pockets:
+  - pocket_type: catalytic
+    key_residues: ["Asp15", "Asn121"]
+    structure_pdb_id: 3NBW
+    selection_reason: ATP/fructose active-site region (simplified fixture annotation)
+
+ligands:
+  - name: KHK-inhibitor-example
+    pubchem_cid: null
+    smiles: "CC(=O)Nc1ccc(cc1)S(=O)(=O)N"
+    role: biochemical_positive_control
+    assay_source: fixture_placeholder
+
+evidence:
+  - source: fixture
+    evidence_level: B
+    confidence: 0.85
+    verified: true
+    pmid: "31434724"
+    url: "https://pubmed.ncbi.nlm.nih.gov/31434724/"
+    title: "Fixture — fructose metabolism / KHK in NAFLD pathophysiology"
+    year: 2019
+    abstract_excerpt: "KHK activity links dietary fructose to hepatic lipogenesis."
+    supports_claim: mechanism_relevance

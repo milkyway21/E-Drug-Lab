@@ -55,6 +55,8 @@
 !*.cfg
 !*.conf
 !*.env.example
+!requirements.txt
+!*.txt
 !Dockerfile
 !docker-compose*.yml
 !Makefile
@@ -132,12 +134,38 @@ venv/
 .tox/
 **/.tox/
 
-tools/Target-driven-ML-enabled-VS/
+# Large / vendored / local data (do not publish; whitelist would otherwise leak *.py/*.md/*.json)
+tools/
+molecules/
+deliverables/
+outputs/
+saves/
+bio-research/
+nature-skills/
+glaretrain/
+models/
+molfactory/
+data/
+Scientist_In_E-Drug-Lab/vendor/**
+!Scientist_In_E-Drug-Lab/vendor/
+!Scientist_In_E-Drug-Lab/vendor/README.md
+Scientist_In_E-Drug-Lab/reports/
+Scientist_In_E-Drug-Lab/memory/
+Scientist_In_E-Drug-Lab/runs/**
+!Scientist_In_E-Drug-Lab/runs/
+!Scientist_In_E-Drug-Lab/runs/.gitkeep
+Scientist_In_E-Drug-Lab/skills_pack/*/
+!Scientist_In_E-Drug-Lab/skills_pack/README.md
+!Scientist_In_E-Drug-Lab/skills_pack/MANIFEST.json
 
-deliverables/target-driven-vs-package/
+# Private relay / local UA patches (never publish)
+Scientist_In_E-Drug-Lab/scripts/fuckclau_ua_patch.py
+Scientist_In_E-Drug-Lab/scripts/hermes_fuckclau.sh
+Scientist_In_E-Drug-Lab/scripts/sitecustomize_fuckclau/
 
 # Local agent / IDE noise (do not publish)
-.claude/worktrees/
+.claude/
+frontend/.claude/
 .codegraph/
 C*tmpadmet_result.json
 
@@ -149,6 +177,8 @@ C*tmpadmet_result.json
 
 # Live secrets (examples stay allowed via *.example)
 **/.env
+**/.env.local
+**/.hermes/
 **/providers.yaml
 !**/.env.example
 !**/providers.example.yaml

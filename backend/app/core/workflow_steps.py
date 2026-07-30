@@ -1,0 +1,45 @@
+"""Canonical workflow step identifiers for the e-drug-lab pipeline."""
+
+STEP_TARGET_PREP = 1
+STEP_LIBRARY_BUILD = 2
+STEP_VIRTUAL_SCREEN = 3
+STEP_ADMET = 4
+STEP_AFFINITY = 5
+STEP_CANDIDATE_RANKING = 6
+STEP_RL_TRAINING = 7
+STEP_VAV1_RL = 8
+
+STEP_ID_TARGET_PREP = "target_prep"
+STEP_ID_LIBRARY_BUILD = "library_build"
+STEP_ID_VIRTUAL_SCREEN = "virtual_screen"
+STEP_ID_ADMET = "admet"
+STEP_ID_AFFINITY = "affinity"
+STEP_ID_RANKING = "ranking"
+STEP_ID_RL_TRAIN = "rl_train"
+STEP_ID_VAV1_RL = "vav1_rl"
+
+PIPELINE_STEP_RANKING = "workflow-step-6-candidate-ranking"
+PIPELINE_STEP_RL_TRAIN = "workflow-step-7-rl-training"
+PIPELINE_STEP_GLARE_SCREEN = "workflow-step-3-glare-screen"
+
+STEP_ORDER = [
+    STEP_ID_TARGET_PREP,
+    STEP_ID_LIBRARY_BUILD,
+    STEP_ID_VIRTUAL_SCREEN,
+    STEP_ID_ADMET,
+    STEP_ID_AFFINITY,
+    STEP_ID_RANKING,
+    STEP_ID_RL_TRAIN,
+    STEP_ID_VAV1_RL,
+]
+
+STEP_DEPENDENCIES: dict[str, list[str]] = {
+    STEP_ID_TARGET_PREP: [],
+    STEP_ID_LIBRARY_BUILD: [STEP_ID_TARGET_PREP],
+    STEP_ID_VIRTUAL_SCREEN: [STEP_ID_LIBRARY_BUILD],
+    STEP_ID_ADMET: [],
+    STEP_ID_AFFINITY: [],
+    STEP_ID_RANKING: [],
+    STEP_ID_RL_TRAIN: [STEP_ID_RANKING],
+    STEP_ID_VAV1_RL: [STEP_ID_TARGET_PREP],
+}

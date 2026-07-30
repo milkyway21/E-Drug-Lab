@@ -1,0 +1,37 @@
+---
+name: funnel-orchestrator
+description: H0-H10 drug-discovery funnel orchestration, resume, validation, and stage routing.
+---
+
+# Funnel Orchestrator
+
+Use the project-owned Python interface. Do not assemble long inline shell programs.
+
+```bash
+masld-agent funnel autopilot --final-count 10 --profile full --target-id HSD17B13
+masld-agent funnel autopilot --final-count 2 --profile test --target-id HSD17B13
+masld-agent funnel autopilot --final-count 10 --profile full --target-id HSD17B13 --execute --confirm --background
+masld-agent funnel autopilot-status --target-id HSD17B13
+masld-agent funnel preflight --manifest /abs/path/inputs/manifest.json
+masld-agent funnel status --manifest /abs/path/inputs/manifest.json
+masld-agent funnel run --manifest /abs/path/inputs/manifest.json --stage H3
+masld-agent funnel validate --manifest /abs/path/inputs/manifest.json --stage H3
+```
+
+If the human supplies only a desired final count, `autopilot` is the mandatory first
+choice with `profile=full`. Use `profile=test` only after an explicit smoke/test request.
+It derives all stage counts, detects local resources, writes a plan, processes
+stages in order, and writes a report after every stage. Do not ask the model to reproduce
+this logic conversationally.
+
+`run` is preview-only unless `--execute` is present. Compute stages also require
+`--confirm`. A valid existing artifact always wins over recomputation and returns
+`reused_existing=true`.
+
+Scale truth tables: `config/funnel_profiles/full.yaml` and `test.yaml`. Stage map:
+H0 gate; H1a/H1b DiffDynamic; H2 primary SP; H3 FeatureHit/Shape;
+H4 explicit ADMET backend; H5 refined SP; H6 XP; H7 MMGBSA; H8 short MD;
+H9 long MD; H10 evidence curation.
+
+Read `config/SOUL.md` and the campaign manifest before acting. Planned counts are
+not completed counts. Advance only after `funnel validate` reports `valid=true`.

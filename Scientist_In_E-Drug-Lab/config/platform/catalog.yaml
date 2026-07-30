@@ -209,9 +209,20 @@ entries:
   - id: ed.http.affinity
     system: ed
     stage: http
-    summary: /api/v1/affinity vina|glide|schrodinger/dock|mmgbsa
-    risks: [server_often_down_prefer_library]
-    skill_ref: []
+    summary: /api/v1/affinity vina|glide|schrodinger/dock|mmgbsa|md (Desmond dry_prep/smoke/short)
+    invoke: "POST /api/v1/affinity/md; GET /api/v1/affinity/md/{task_id}"
+    risks: [server_often_down_prefer_library, md_requires_confirm_for_submit]
+    skill_ref: [funnel-desmond-short-md, funnel-desmond-long-md, edrug-capability-check]
+
+  - id: ed.funnel.autopilot
+    system: ed
+    stage: orchestrate
+    summary: Deterministic final-count-only H0-H10 planner, local resource allocator, persistent worker, and per-stage reporter
+    invoke: "funnel_autopilot(final_count=N, profile=full); funnel_autopilot_status() | masld-agent funnel autopilot --final-count N --profile full"
+    inputs: [final_count, optional_profile_default_full, optional_manifest_or_target_memory]
+    outputs: [inputs/funnel_plan_PROFILE.json, reports/funnel/PROFILE/H_stage_json_md, reports/funnel/AUTOPILOT_STATE.json]
+    risks: [preview_default, test_requires_explicit_selection, production_requires_confirm, stop_on_failed_validation]
+    skill_ref: [funnel-orchestrator, e-drug-lab-scientist]
 
   - id: ed.integrations.stub
     system: ed
@@ -350,6 +361,20 @@ entries:
     outputs: [mmgbsa_csv]
     skill_ref: [ddfast-09-mmgbsa-ifd]
 
+  - id: sz.desmond
+    system: sz
+    stage: md
+    summary: Desmond MD via multisim; Web POST /api/v1/affinity/md (dry_prep default; confirm for smoke/short)
+    invoke: "schrodinger_md_submit; GET /api/v1/affinity/md/{task_id}; $SCHRODINGER/utilities/multisim"
+    inputs: [complex_cms_or_mae]
+    outputs: [cms, traj, md_summary, STATUS.json]
+    risks: [confirm_required_for_submit, dry_prep_not_production, never_treat_stub_as_success]
+    skill_ref:
+      - funnel-desmond-short-md
+      - funnel-desmond-long-md
+      - dd-md-desmond
+      - edrug-capability-check
+
   - id: sz.ifd
     system: sz
     stage: refine
@@ -369,6 +394,32 @@ entries:
       - ddfast-08-glide-xp
       - ddfast-09-mmgbsa-ifd
       - ddfast-10-rank-manual
+
+  - id: sz.funnel.track_h
+    system: sz
+    stage: funnel
+    summary: Track H flowchart — SP1000→FeatureHit/Shape~3000→HepG2→SP500→XP130→MMGBSA40→MD→Top10
+    skill_ref:
+      - dd-orchestrator
+      - featurehit-shape-expand
+      - drugflow-hepg2-admet
+      - ddfast-07-glide-sp
+      - ddfast-08-glide-xp
+      - ddfast-09-mmgbsa-ifd
+      - dd-md-desmond
+      - funnel-desmond-short-md
+      - funnel-desmond-long-md
+      - funnel-final-curation
+      - hsd17b13-funnel-scientist
+      - edrug-capability-check
+      - funnel-campaign-memory
+
+  - id: ed.admet.hepg2
+    system: ed
+    stage: filter
+    summary: HepG2 phenotype-priority ADMET (DrugFlow if available; else hepg2_equiv_admet_ai)
+    skill_ref: [drugflow-hepg2-admet, admet-filter]
+    risks: [do_not_rename_qikprop_as_drugflow]
 
   - id: sz.pitfalls
     system: sz

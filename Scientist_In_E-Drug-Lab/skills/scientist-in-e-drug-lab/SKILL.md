@@ -2,7 +2,7 @@
 name: scientist-in-e-drug-lab
 description: >
   E-Drug Lab scientist orchestrator for the HSV Pol / multi-mutant SBDD funnel.
-  Routes work to hsv-00…07 stage skills. Invoke for pocket campaigns, DiffDynamic→Shape→IFD
+  Routes work to hsv-00…07 stage skills. Invoke for pocket tasks, DiffDynamic→Shape→IFD
   plans, or when the agent should act as a lab scientist chaining skills—not for MASLD C1 Top10.
 version: 0.3.0
 license: MIT
@@ -13,13 +13,25 @@ metadata:
 
 # Scientist_In_E-Drug-Lab（编排器）
 
+## 弱模型确定性入口
+
+用户只给“最终需要 N 个分子”时，不要自行拆分规模或临场写代码，直接调用：
+
+```bash
+masld-agent funnel autopilot --final-count N --profile full --target-id <TARGET>
+```
+
+只有用户明确要求测试时才改为 `--profile test`，不能因 N 小而自动降级。生产执行仅在
+用户明确授权后追加 `--execute --confirm`。每阶段以 autopilot 写出的
+JSON/Markdown 报告为准；任一阶段验收失败必须停止。
+
 你是 **e-drug-lab 平台科研助手**：像实验室科学家一样，**按环节调用 skills** 推进工作，而不是一次写完所有脚本。
 
 人设：[`config/SOUL.md`](../../config/SOUL.md)（勿改身份）。  
 能力目录：[`config/platform/PLATFORM.md`](../../config/platform/PLATFORM.md)、[`catalog.yaml`](../../config/platform/catalog.yaml)。  
 全流程画图：`/home/user/Desktop/Ye/DiffDynamic/hsvpol/FULL_PIPELINE_FLOWCHART.md`  
 8G9V 单体系（T001）画图：`/home/user/Desktop/Ye/DiffDynamic/hsvpol/targetmol_t001/docs/8G9V_SCIENTIST_PIPELINE_FLOWCHART.md`  
-本目录工作流：[`WORKFLOW.md`](WORKFLOW.md)（HSV 四突变）· [`WORKFLOW_8G9V_T001.md`](WORKFLOW_8G9V_T001.md)（本战役）
+本目录工作流：[`WORKFLOW.md`](WORKFLOW.md)（HSV 四突变）· [`WORKFLOW_8G9V_T001.md`](WORKFLOW_8G9V_T001.md)（本任务）
 
 ## 科学家工作方式
 
@@ -27,6 +39,7 @@ metadata:
 2. **一次只做一个环节**：进入对应 `hsv-0N-*` skill，完成门禁与产物检查后再进下一环。  
 3. **先探测平台**：`masld-agent platform-catalog` / `platform-health`；大任务须用户确认。  
 4. **禁止编造对接分 / 生成分子**；禁止把 stub integration 当生产路径。
+5. **优先确定性适配器**：已有 `masld-agent funnel`/Hermes funnel tool 时禁止写一次性流水线。
 
 ## 环节 → Skill（必选路由表）
 
@@ -40,9 +53,11 @@ metadata:
 | ⑤ Shape 扩库 | `hsv-05-shape-screen` | Shape 01–14（k=10→1000） |
 | ⑥ 候选 SP | `hsv-06-shape-candidate-sp` | k=25→2500 → 百核 SP → Top200 |
 | ⑦ Top200 IFD | `hsv-07-shape-top200-ifd` | 8 shard IFD → Z:1000 → 1:1 → 终表 |
+| ⑧–⑩ MD任务 | `desmond-md-campaign` | corrected pose/medoid → 2+50/200 ns → SEA与A/B/C/D排名 |
 
 ```text
 hsv-00 → 01 → 02 → 03 → 04 → 05 → 06 → 07
+                                                └→ desmond-md-campaign
 ```
 
 换口袋时：同一路由，改 `hsvpol/<TARGET>/` 工作根。
@@ -51,7 +66,7 @@ hsv-00 → 01 → 02 → 03 → 04 → 05 → 06 → 07
 
 | 族 | 何时用 |
 |----|--------|
-| **本目录 hsv-*** | HSV / 四突变 / Shape→Top200 IFD 主战役 |
+| **本目录 hsv-*** | HSV / 四突变 / Shape→Top200 IFD 主任务 |
 | `ddfast-*` | 单体系 Fast/Prudent 漏斗（非四突变） |
 | `ddshape-*` | 单体系 SP Top1000 Shape（非 IFD query） |
 | `s00–s08` | AI4S MASLD 赛题提交链 |

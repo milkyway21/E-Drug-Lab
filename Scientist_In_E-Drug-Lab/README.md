@@ -2,7 +2,7 @@
 
 **e-drug-lab 平台药物发现科研助手**（Hermes Plugin / Skill / MCP 扩展，**不修改 Hermes 核心**）。覆盖靶点假说、机制、证据链、结构/口袋、配体与对接验证计划等，**不限单一疾病**。
 
-- 平台：[`/data/ye/e-drug-lab`](file:///data/ye/e-drug-lab)
+- 仓库根：上一级 `e-drug-lab/`（Backend / Frontend 同仓）
 - 人设：[`config/SOUL.md`](config/SOUL.md)（启动时同步到 `.hermes/SOUL.md`）
 - 平台能力目录：[`config/platform/PLATFORM.md`](config/platform/PLATFORM.md) + [`catalog.yaml`](config/platform/catalog.yaml)（同步到 `.hermes/`，**不改人设**）
 - **AI4S 生命科学赛道**为可选竞赛预设（默认疾病 MASLD；可切 HCC，须向组委会确认，禁止混淆）。库内化合物 Top10（C1）仍由 `ai4s_masld_lipid` S01–S08 负责；本 Agent 侧重靶点 / 机制 / Proposal+Method。
@@ -12,13 +12,21 @@
 ## Quick start (Linux)
 
 ```bash
-cd /data/ye/e-drug-lab/Scientist_In_E-Drug-Lab
+cd Scientist_In_E-Drug-Lab
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-pip install -e "./vendor/hermes-agent"
-# 对话（Hermes 多 Provider，从 CC-Switch 同步密钥）
+
+# Hermes 不随仓库发布（见 vendor/README.md）
+mkdir -p vendor
+git clone --depth 1 https://github.com/NousResearch/hermes-agent.git vendor/hermes-agent
+pip install -e ./vendor/hermes-agent
+
+cp .env.example .env   # 填 OPENAI_API_KEY；可选 OPENAI_BASE_URL
+cp config/providers.example.yaml config/providers.yaml
+python scripts/import_drug_skills.py
 bash scripts/start_agent.sh
-# 离线科学管线
+
+# 离线科学管线（可选）
 masld-agent offline-demo --fixture tests/fixtures/hsd17b13 --output runs
 ```
 
@@ -27,33 +35,34 @@ masld-agent offline-demo --fixture tests/fixtures/hsd17b13 --output runs
 Prefer WSL2 and the Linux commands above. Native Windows:
 
 ```powershell
-cd \data\ye\e-drug-lab\Scientist_In_E-Drug-Lab
+cd Scientist_In_E-Drug-Lab
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
+git clone --depth 1 https://github.com/NousResearch/hermes-agent.git vendor/hermes-agent
 pip install -e ".\vendor\hermes-agent"
 masld-agent offline-demo --fixture tests/fixtures/hsd17b13 --output runs
 ```
 
 ## Dialogue (Hermes multi-provider)
 
-**不要用**自研 LLM REPL。对话与 Claude Code CLI 一样走 Hermes Provider 抽象：
+**不要用**自研 LLM REPL。对话走 Hermes Provider 抽象；密钥仅放在本地 `.env` / `.hermes/.env`（已 gitignore）。
 
 ```bash
+export OPENAI_API_KEY=...          # 必填
+export OPENAI_BASE_URL=...         # 可选；默认同 config/hermes.config.yaml 占位
 bash scripts/start_agent.sh
-# 或
-HERMES_HOME=$PWD/.hermes hermes chat --provider volcengine-plan
-HERMES_HOME=$PWD/.hermes hermes chat --provider volcano-anthropic
 hermes model
 ```
 
 详见 [docs/hermes_integration.md](docs/hermes_integration.md)。
 
-## Skills（药物设计 / 论文 / 自写）
+## Skills（精简可启动集）
 
 ```bash
-python scripts/import_drug_skills.py   # 导入/刷新到 .hermes/skills
-# ddfast 00–10 | drug-design×20 | writing×10 | masld-ai4s（s00–s08 + scientist）
+python scripts/import_drug_skills.py   # 从 skills/ 链接到 .hermes/skills + skills_pack/
+# funnel×14 | ddfast×4 | drug-design×3 | campaign×3
+# 已移除：MASLD s00–s08、hsv-*、writing/nature、未用 ddfast 00–05/08–10
 ```
 
 ## CLI（科学管线）
@@ -105,9 +114,9 @@ masld-agent pack-submission --run-dir runs/<run_id> --output runs/<run_id>/submi
 
 ## LLM credentials
 
-- 推荐：`bash scripts/start_agent.sh sync`（从 CC-Switch 当前 Claude provider 写入 `.hermes/.env`）
-- 或复制 `.env.example` → `.env`（`OPENAI_API_KEY` / `ANTHROPIC_*` / `MASLD_LLM_*`）
-- 模板：`config/hermes.config.yaml`、`config/providers.example.yaml`
+- 复制 `.env.example` → `.env`，填写 `OPENAI_API_KEY`（及可选 `OPENAI_BASE_URL` / `ANTHROPIC_*` / `MASLD_LLM_*`）
+- 模板：`config/hermes.config.yaml`（占位 endpoint）、`config/providers.example.yaml`
+- **禁止**提交 `.env`、`providers.yaml`、`.hermes/`、任何 API Key
 - Scientific DB / RDKit calls **never** go through the LLM.
 
 ## Hermes Plugin

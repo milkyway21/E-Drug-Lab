@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, useMemo, useState } from "react";
-import { Lang, TranslationKey, translations } from "./translations";
+import { Lang, type TranslationKey, translations } from "./translations";
+export type { TranslationKey } from "./translations";
 
 type I18nContextValue = {
   lang: Lang;

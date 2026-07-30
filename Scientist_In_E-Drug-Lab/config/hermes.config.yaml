@@ -1,36 +1,23 @@
 # Project Hermes home template — copied to $PROJECT/.hermes/config.yaml by
 # scripts/sync_providers_from_ccswitch.py (secrets stay in .hermes/.env).
 #
-# Multi-provider chat uses Hermes runtime (not masld-agent). Switch with:
-#   hermes chat --provider volcengine-plan
-#   hermes chat --provider volcano-anthropic
-#   hermes chat --provider anthropic|openrouter|custom|...
-#   hermes model
+# Set OPENAI_BASE_URL / OPENAI_API_KEY (or key_env) locally; do not commit real endpoints or keys.
 
 model:
-  provider: volcengine-plan
-  default: ark-code-latest
+  provider: openai-relay
+  default: gpt-5.6-sol
+  context_length: 1050000
 
 providers:
-  # OpenAI-compatible Volcano Coding Plan (CC-Switch: 火山Agentplan)
-  volcengine-plan:
-    name: volcengine-plan
-    base_url: "https://ark.cn-beijing.volces.com/api/coding/v3"
+  openai-relay:
+    name: OpenAI Responses Relay
+    base_url: "https://your-openai-compatible-endpoint/v1"
     key_env: OPENAI_API_KEY
-    api_mode: chat_completions
-    default_model: ark-code-latest
+    api_mode: codex_responses
+    default_model: gpt-5.6-sol
     models:
-      ark-code-latest: {}
-
-  # Anthropic Messages wire for the same Coding Plan key
-  volcano-anthropic:
-    name: volcano-anthropic
-    base_url: "https://ark.cn-beijing.volces.com/api/coding"
-    key_env: ANTHROPIC_AUTH_TOKEN
-    api_mode: anthropic_messages
-    default_model: ark-code-latest
-    models:
-      ark-code-latest: {}
+      gpt-5.6-sol:
+        context_length: 1050000
 
 # Competition eval mode: disable uncontrolled long-term memory writes
 memory:
@@ -40,7 +27,8 @@ memory:
   flush_min_turns: 0
 
 agent:
-  max_turns: 40
+  max_turns: 120
+  reasoning_effort: xhigh
   disabled_toolsets:
     - memory
 
@@ -66,7 +54,7 @@ plugins:
   enabled:
     - scientist_in_e_drug_lab
 
-# Local drug-design / writing / self-written skills (see scripts/import_drug_skills.py)
+# Curated project skills (see scripts/import_drug_skills.py)
 skills:
   creation_enabled: true
   external_dirs:

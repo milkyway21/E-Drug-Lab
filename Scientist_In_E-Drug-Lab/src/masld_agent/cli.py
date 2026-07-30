@@ -14,6 +14,12 @@ from masld_agent.models import DiseaseScope
 from masld_agent.supervisor import evaluate_single_target, run_offline_demo, run_pipeline
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, name="masld-agent")
+funnel_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    help="Deterministic H0-H10 campaign planning, execution, and validation.",
+)
+app.add_typer(funnel_app, name="funnel")
 
 
 @app.command("run")
@@ -73,8 +79,7 @@ def cmd_chat() -> None:
     rprint(
         "[yellow]masld-agent chat 已移除[/yellow]。请用 Hermes 对话（人设见 config/SOUL.md）：\n"
         "  bash scripts/start_agent.sh\n"
-        "  hermes chat --provider volcengine-plan\n"
-        "  hermes chat --provider volcano-anthropic\n"
+        "  hermes chat --provider openai-relay\n"
         "  hermes model"
     )
     raise SystemExit(2)
@@ -184,6 +189,188 @@ def _json_print(payload: dict) -> None:
     import json
 
     print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+
+
+@funnel_app.command("plan")
+def cmd_funnel_plan(
+    final_count: int = typer.Option(..., "--final-count", min=1),
+    profile: str = typer.Option("full", "--profile", help="full (default) or explicit test"),
+    manifest: Optional[Path] = typer.Option(None, "--manifest"),
+    target_id: Optional[str] = typer.Option(None, "--target-id"),
+) -> None:
+    """Infer all stage counts and allocate available local resources."""
+    from masld_agent.funnel.planner import plan_campaign
+
+    payload = plan_campaign(
+        final_count,
+        manifest_path=manifest,
+        target_id=target_id,
+        profile=profile,
+        write=True,
+    )
+    _json_print(payload)
+
+
+@funnel_app.command("preflight")
+def cmd_funnel_preflight(
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+) -> None:
+    """Read-only campaign input, environment, and adapter preflight."""
+    from masld_agent.funnel.runner import preflight_campaign
+
+    payload = preflight_campaign(manifest)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
+
+
+@funnel_app.command("status")
+def cmd_funnel_status(
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+) -> None:
+    """Validate all stages without trusting chat text or marker files."""
+    from masld_agent.funnel.runner import stage_status
+
+    payload = stage_status(manifest)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
+
+
+@funnel_app.command("validate")
+def cmd_funnel_validate(
+    stage: str = typer.Option(..., "--stage"),
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+) -> None:
+    """Hard-validate one stage's declared or conventional artifacts."""
+    from masld_agent.funnel.runner import validate_stage
+
+    payload = validate_stage(manifest, stage)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
+
+
+@funnel_app.command("run")
+def cmd_funnel_run(
+    stage: str = typer.Option(..., "--stage"),
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+    execute: bool = typer.Option(False, "--execute"),
+    confirm: bool = typer.Option(False, "--confirm"),
+) -> None:
+    """Reuse valid outputs or run one configured stage through an argv adapter."""
+    from masld_agent.funnel.runner import run_stage
+
+    payload = run_stage(manifest, stage, execute=execute, confirm=confirm)
+    _json_print(payload)
+    accepted = {"completed", "dry_run", "submitted_or_incomplete"}
+    raise SystemExit(0 if payload.get("status") in accepted else 1)
+
+
+@funnel_app.command("autopilot")
+def cmd_funnel_autopilot(
+    final_count: int = typer.Option(..., "--final-count", min=1),
+    profile: str = typer.Option("full", "--profile", help="full (default) or explicit test"),
+    manifest: Optional[Path] = typer.Option(None, "--manifest"),
+    target_id: Optional[str] = typer.Option(None, "--target-id"),
+    execute: bool = typer.Option(False, "--execute"),
+    confirm: bool = typer.Option(False, "--confirm"),
+    background: bool = typer.Option(False, "--background"),
+) -> None:
+    """Plan resources and run/report H0-H10 through one deterministic call."""
+    from masld_agent.funnel.autopilot import run_autopilot, start_autopilot
+
+    if execute and background:
+        payload = start_autopilot(
+            final_count,
+            manifest_path=manifest,
+            target_id=target_id,
+            profile=profile,
+            confirm=confirm,
+        )
+    else:
+        payload = run_autopilot(
+            final_count,
+            manifest_path=manifest,
+            target_id=target_id,
+            profile=profile,
+            execute=execute,
+            confirm=confirm,
+        )
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") in {"planned", "completed", "queued", "running"} else 1)
+
+
+@funnel_app.command("autopilot-status")
+def cmd_funnel_autopilot_status(
+    manifest: Optional[Path] = typer.Option(None, "--manifest"),
+    target_id: Optional[str] = typer.Option(None, "--target-id"),
+) -> None:
+    """Read persistent autopilot worker and latest stage-report state."""
+    from masld_agent.funnel.autopilot import autopilot_status
+
+    payload = autopilot_status(manifest_path=manifest, target_id=target_id)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") != "error" else 1)
+
+
+@funnel_app.command("inspect-sdf")
+def cmd_funnel_inspect_sdf(
+    input_path: Path = typer.Option(..., "--input", exists=True, dir_okay=False),
+) -> None:
+    """Count plain or gzip-compressed SDF records without text-decoding mistakes."""
+    from masld_agent.funnel.utilities import inspect_sdf
+
+    payload = inspect_sdf(input_path)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
+
+
+@funnel_app.command("prudent-physchem")
+def cmd_funnel_prudent_physchem(
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+    execute: bool = typer.Option(False, "--execute"),
+    confirm: bool = typer.Option(False, "--confirm"),
+) -> None:
+    """Reconstruct Prudent PT and compute physchem with Vina execution disabled."""
+    from masld_agent.funnel.diffdynamic import prudent_physchem
+
+    payload = prudent_physchem(manifest, execute=execute, confirm=confirm)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") in {"dry_run", "completed"} else 1)
+
+
+@funnel_app.command("prudent-generate")
+def cmd_funnel_prudent_generate(
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+    execute: bool = typer.Option(False, "--execute"),
+    confirm: bool = typer.Option(False, "--confirm"),
+) -> None:
+    """Render a target-sized Prudent config and run the existing DiffDynamic sampler."""
+    from masld_agent.funnel.diffdynamic import prudent_generate
+
+    payload = prudent_generate(manifest, execute=execute, confirm=confirm)
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") in {"dry_run", "completed"} else 1)
+
+
+@funnel_app.command("rank-glide")
+def cmd_funnel_rank_glide(
+    csv_path: Path = typer.Option(..., "--csv", exists=True, dir_okay=False),
+    output: Path = typer.Option(..., "--output"),
+    top: int = typer.Option(..., "--top", min=1),
+    parent_column: str = typer.Option("parent_id", "--parent-column"),
+    score_column: str = typer.Option("r_i_glide_gscore", "--score-column"),
+) -> None:
+    """Select each parent's numeric best Glide score deterministically."""
+    from masld_agent.funnel.utilities import rank_glide_parents
+
+    payload = rank_glide_parents(
+        csv_path,
+        output,
+        top=top,
+        parent_column=parent_column,
+        score_column=score_column,
+    )
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
 
 
 @app.command("platform-catalog")

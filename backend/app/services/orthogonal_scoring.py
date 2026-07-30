@@ -3,6 +3,16 @@
 The final rank is driven by an independent orthogonal metric. Repeated values
 for the same metric are reduced by selecting one observed value, never by
 averaging model outputs.
+
+Gap threshold 35.0: empirical threshold — a primary desirability 35+ points
+higher than the orthogonal desirability indicates the primary metric is likely
+a scoring-function artifact rather than a true binding signal.
+
+Penalty weight 0.65: controls how aggressively artifact gaps reduce the final
+score via a quadratic formula: penalty = max(0, gap - threshold)^2 * weight / 100.
+A gap of 10 points above threshold yields a 0.65-point penalty; a gap of 45
+yields 6.5 points.  Molecules flagged as artifacts (gap > threshold AND
+primary_desirability >= 70) receive an additional 70% reduction (final_score * 0.3).
 """
 from dataclasses import dataclass
 from statistics import median
@@ -59,6 +69,14 @@ def select_representative_metric(
     values = [item for item in observations if item.metric_name == metric_name]
     if not values:
         raise ValueError(f"Missing metric: {metric_name}")
+
+    # direction 一致性校验
+    directions = {item.direction for item in values}
+    if len(directions) > 1:
+        raise ValueError(
+            f"Inconsistent directions for metric '{metric_name}': {directions}. "
+            "All observations of the same metric must share the same direction."
+        )
 
     preferred_models = preferred_models or []
     for model_name in preferred_models:
@@ -117,11 +135,16 @@ def rank_by_orthogonal_rescore(
         primary_desirability = robust_desirability(primary_obs.value, primary_values, primary_obs.direction)
         orthogonal_desirability = robust_desirability(orthogonal_obs.value, orthogonal_values, orthogonal_obs.direction)
         gap = round(primary_desirability - orthogonal_desirability, 4)
-        penalty = max(0.0, gap - gap_threshold) * penalty_weight
+
+        # 非线性惩罚：gap 越大惩罚增长越快
+        penalty = max(0.0, gap - gap_threshold) ** 2 * penalty_weight / 100.0
         final_score = round(max(0.0, orthogonal_desirability - penalty), 4)
+
         artifact_flag = gap > gap_threshold and primary_desirability >= 70.0
         artifact_reason = None
         if artifact_flag:
+            # artifact 分子施加额外惩罚
+            final_score = round(final_score * 0.3, 4)
             artifact_reason = (
                 "Primary score is strong, but orthogonal rescoring is weak; "
                 "treat as a possible scoring-function artifact."

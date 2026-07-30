@@ -1,0 +1,105 @@
+gene_symbol: HSD17B13
+uniprot_id: Q7Z5P4
+ensembl_id: ENSG00000186199
+scientific_significance: >
+  HSD17B13 localizes to hepatocyte lipid droplets and human genetic studies associate
+  loss-of-function variants with lower risk of chronic liver disease progression.
+clinical_significance: >
+  Multiple industry programs pursue HSD17B13 inhibition for MASH/MASLD; still not an
+  approved standard of care — classify as emerging rather than wholly novel.
+uncertainty: >
+  Genetic protection does not guarantee that pharmacological inhibition will safely
+  reduce lipid accumulation without off-target or pathway compensation effects.
+
+novelty:
+  has_approved_drug: false
+  has_late_clinical: false
+  has_early_clinical_or_strong_preclinical: true
+
+dimension_scores:
+  human_genetics_evidence: 0.85
+  disease_mechanism_relevance: 0.8
+  hepatocyte_or_liver_specificity: 0.9
+  druggability: 0.7
+  structure_availability: 0.85
+  ligand_precedent: 0.75
+  safety_rationale: 0.55
+  novelty: null
+
+score_sources:
+  human_genetics_evidence: ["fixture:pmid_genetics"]
+  structure_availability: ["PDB:8G9V", "PDB:8G89"]
+  ligand_precedent: ["PubChem:167312378", "PubChem:11486127"]
+
+structures:
+  - pdb_id: 8G9V
+    organism: Homo sapiens
+    resolution_A: 1.9
+    method: X-RAY DIFFRACTION
+    chains: ["A"]
+    cofactors: []
+    bound_ligands: ["YXW"]
+    preferred: true
+    selection_reason: Human, ligand-bound, high-resolution experimental structure
+  - pdb_id: 8G89
+    organism: Homo sapiens
+    resolution_A: 2.2
+    method: X-RAY DIFFRACTION
+    chains: ["A"]
+    cofactors: []
+    bound_ligands: []
+    selection_reason: Auxiliary human structure
+
+pockets:
+  - pocket_type: catalytic
+    key_residues: ["Ser172", "Tyr185", "Lys189"]
+    structure_pdb_id: 8G9V
+    selection_reason: Canonical catalytic triad reported for 17β-HSD13 SDR fold
+
+ligands:
+  # SMILES left null offline to avoid fabricating structures; online PubChem fill by CID.
+  - name: BI-3231
+    pubchem_cid: 167312378
+    smiles: null
+    role: biochemical_positive_control
+    activity_type: IC50
+    assay_source: literature_fixture
+    provenance:
+      smiles_policy: "fetch_from_pubchem_when_online"
+  - name: HSD17B13-IN-2 / YXW
+    pubchem_cid: 11486127
+    smiles: null
+    role: crystallographic_reference
+    activity_type: structural_ligand
+    assay_source: PDB_8G9V
+    provenance:
+      smiles_policy: "fetch_from_pubchem_when_online"
+
+evidence:
+  - source: fixture
+    evidence_level: A
+    confidence: 0.9
+    verified: true
+    pmid: "28112690"
+    doi: "10.1038/ng.3761"
+    url: "https://pubmed.ncbi.nlm.nih.gov/28112690/"
+    title: "A protein-truncating HSD17B13 variant and protection from chronic liver disease"
+    year: 2017
+    abstract_excerpt: "A loss-of-function variant in HSD17B13 was associated with a reduced risk of chronic liver disease."
+    supports_claim: human_genetics_protection
+  - source: fixture
+    evidence_level: B
+    confidence: 0.8
+    verified: true
+    pmid: "34822763"
+    url: "https://pubmed.ncbi.nlm.nih.gov/34822763/"
+    title: "Fixture record — HSD17B13 lipid droplet localization / inhibitor tool compounds"
+    year: 2021
+    abstract_excerpt: "HSD17B13 associates with lipid droplets; tool inhibitors including BI-3231 enable target pharmacology studies."
+    supports_claim: mechanism_and_ligand_precedent
+  - source: fixture
+    evidence_level: U
+    confidence: 0.1
+    verified: false
+    title: "Unverified placeholder — must be dropped from final report"
+    supports_claim: should_not_appear

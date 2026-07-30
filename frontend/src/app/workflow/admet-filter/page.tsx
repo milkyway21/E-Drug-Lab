@@ -1,31 +1,67 @@
-import { SlidersHorizontal } from "lucide-react";
-import { WorkflowHeader, WorkflowShell } from "@/components/workflow/WorkflowLayout";
+"use client";
 
-const rules = [
-  ["Absorption", "Caco-2, HIA, and permeability"],
-  ["Distribution", "PPB, BBB, and volume of distribution"],
-  ["Metabolism", "CYP inhibition and substrate profile"],
-  ["Excretion", "Clearance and half-life"],
-  ["Toxicity", "hERG, Ames, and hepatotoxicity"]
-];
+import { useState } from "react";
+import { WorkflowHeader, WorkflowShell } from "@/components/workflow/WorkflowLayout";
+import { ModelSelector } from "@/components/workflow/ModelSelector";
+import { ResultCard, type StepResult } from "@/components/workflow/ResultCard";
+import { getStepByHref, STEP_ID_ADMET } from "@/lib/tool-registry";
+import { useLang } from "@/lib/i18n/i18n-context";
+import { useStepRunner } from "@/hooks/useStepRunner";
 
 export default function AdmetFilterPage() {
   return (
     <WorkflowShell current="/workflow/admet-filter">
+      <AdmetFilterContent />
+    </WorkflowShell>
+  );
+}
+
+function AdmetFilterContent() {
+  const { t } = useLang();
+  const stepConfig = getStepByHref("/workflow/admet-filter")!;
+  const { executeStep, running, workflow } = useStepRunner();
+  const [results, setResults] = useState<Record<string, StepResult>>({});
+
+  function setModelResult(modelId: string, result: StepResult) {
+    setResults((prev) => ({ ...prev, [modelId]: result }));
+  }
+
+  async function handleRun(selectedIds: string[]) {
+    if (selectedIds.length === 0) return;
+    setModelResult("batch", { status: "loading", message: "Running ADMET..." });
+    const result = await executeStep(STEP_ID_ADMET, selectedIds);
+    setModelResult("batch", {
+      status: result.ok ? "done" : "error",
+      message: result.message,
+    });
+    for (const id of selectedIds) {
+      setModelResult(id, {
+        status: result.ok ? "done" : "error",
+        message: result.message,
+      });
+    }
+  }
+
+  const counts = workflow.getCounts();
+
+  return (
+    <>
       <WorkflowHeader
-        badge="ADMET"
-        title="ADMET filter"
-        description="Filter candidate molecules by absorption, distribution, metabolism, excretion, and toxicity properties."
+        badge={t("workflowStep4")}
+        title={t("workflowStep4")}
+        description={t("workflowStep4Desc")}
       />
-      <div className="grid gap-4 md:grid-cols-2">
-        {rules.map(([title, body]) => (
-          <div key={title} className="panel p-5">
-            <SlidersHorizontal size={18} className="text-amber" />
-            <h2 className="mt-3 text-lg font-semibold text-ink">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{body}</p>
-          </div>
+      <ModelSelector models={stepConfig.models} onRun={handleRun} running={running} />
+      <div className="mt-4 grid gap-3">
+        {Object.entries(results).map(([modelId, result]) => (
+          <ResultCard key={modelId} title={modelId} result={result} />
         ))}
       </div>
-    </WorkflowShell>
+      {counts.total > 0 && (
+        <p className="mt-3 text-xs text-muted">
+          Pipeline: {counts.pass} pass / {counts.fail} fail / {counts.pending} pending
+        </p>
+      )}
+    </>
   );
 }

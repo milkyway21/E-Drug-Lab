@@ -1,0 +1,73 @@
+profile_id: full
+label: 完整正式漏斗
+description: 按《整体流程图_三轮理解》执行中央科学计算漏斗，所有数量均为计划目标。
+source: /data/ye/整体流程图_三轮理解.md
+reference_final_count: 10
+final_stage: H10
+default_for_final_count_only: true
+stages:
+  H0:
+    skill: funnel-orchestrator
+    target: {mode: fixed, value: 1}
+    reference_target: 1
+    quantity_role: input_gate
+  H1A:
+    skill: funnel-diffdynamic-denovo
+    target: {mode: per_final, value: 50000}
+    reference_target: 500000
+    quantity_role: generated_molecules
+  H1B:
+    skill: funnel-diffdynamic-prudent
+    target: {mode: per_final, value: 4000}
+    reference_target: 40000
+    quantity_role: prudent_unique_target
+    analysis_vina_modes: none
+    next_stage: H2
+  H2:
+    skill: funnel-glide-sp
+    target: {mode: per_final, value: 100}
+    reference_target: 1000
+    quantity_role: promoted_molecules
+  H3:
+    skill: funnel-featurehit+funnel-shape-screen
+    target: {mode: per_final, value: 300}
+    reference_target: 3000
+    quantity_role: expanded_unique_hits
+  H4:
+    skill: ddfast-06-qikprop-admet
+    target: {mode: per_final, value: 300}
+    reference_target: 3000
+    quantity_role: molecules_evaluated
+    backend_policy: schrodinger_qikprop_required
+  H5:
+    skill: funnel-glide-sp
+    target: {mode: per_final, value: 50}
+    reference_target: 500
+    quantity_role: promoted_molecules
+  H6:
+    skill: funnel-glide-xp
+    target: {mode: per_final, value: 13}
+    reference_target: 130
+    quantity_role: promoted_molecules
+  H7:
+    skill: funnel-mmgbsa
+    target: {mode: per_final, value: 4}
+    reference_target: 40
+    quantity_role: promoted_molecules
+  H8:
+    skill: funnel-desmond-short-md
+    target: {mode: per_final, value: 2}
+    reference_target: 20
+    quantity_role: promoted_molecules
+    protocol: two_independent_50ns_trajectories_per_molecule
+  H9:
+    skill: funnel-desmond-long-md
+    target: {mode: per_final, value: 1}
+    reference_target: 10
+    quantity_role: promoted_molecules
+    protocol: 200ns_per_molecule
+  H10:
+    skill: funnel-comprehensive-analysis
+    target: {mode: per_final, value: 1}
+    reference_target: 10
+    quantity_role: final_candidates

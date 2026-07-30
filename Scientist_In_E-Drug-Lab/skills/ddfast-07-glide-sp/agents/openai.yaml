@@ -1,0 +1,4 @@
+interface:
+  display_name: "DDFast Glide SP"
+  short_description: "Single-system PrepWizard grid and Glide SP docking"
+  default_prompt: "Invoke ddfast-07 and prepare one receptor system then run Glide SP on ADMET-pass ligands."

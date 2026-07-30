@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "E-Drug Lab Funnel Campaign",
+  "type": "object",
+  "required": ["campaign_id", "target_id", "campaign_root", "inputs"],
+  "properties": {
+    "campaign_id": {"type": "string", "minLength": 1},
+    "target_id": {"type": "string", "minLength": 1},
+    "campaign_root": {"type": "string", "minLength": 1},
+    "current_stage": {"type": "string"},
+    "funnel_profile": {
+      "type": "object",
+      "required": ["id", "source", "final_stage", "final_count"],
+      "properties": {
+        "id": {"type": "string", "enum": ["test", "full"]},
+        "source": {"type": "string"},
+        "final_stage": {"type": "string"},
+        "final_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "required": ["receptor_pdb", "reference_ligand_sdf", "prepwizard_mae", "grid_zip"]
+    },
+    "stages": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "backend": {"type": "string"},
+          "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["command"],
+              "properties": {
+                "name": {"type": "string"},
+                "command": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "probe": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+                "cwd": {"type": "string"},
+                "timeout_seconds": {"type": "integer", "minimum": 1},
+                "env": {"type": "object"}
+              },
+              "additionalProperties": true
+            }
+          },
+          "probe": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "cwd": {"type": "string"},
+          "outputs": {"type": "array", "items": {"type": "string"}},
+          "timeout_seconds": {"type": "integer", "minimum": 1},
+          "target_count": {"type": "integer", "minimum": 0},
+          "resources": {"type": "object"},
+          "env": {"type": "object", "additionalProperties": {"type": ["string", "number", "boolean"]}}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,15 @@
+---
+name: funnel-comprehensive-analysis
+description: H10 auditable curation of docking, ADMET, and validated MD evidence.
+---
+
+# H10 Comprehensive Analysis
+
+Join on molecule ID, library ID, or parent InChIKey; never raw SMILES alone when a
+stable ID exists. Preserve backend identity, missing values, source pose, CMS,
+trajectory, SEA path, and validation class. Corrected-pose validated MD evidence takes
+precedence over a favorable numeric docking score.
+
+Write a machine table and human report. State that computational nomination is not
+experimental confirmation. `funnel validate --stage H10` must verify both outputs and
+their candidate counts.

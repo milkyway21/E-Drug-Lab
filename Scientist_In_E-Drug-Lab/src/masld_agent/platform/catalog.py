@@ -38,6 +38,7 @@ REQUIRED_IDS = [
     "ed.integrations.stub",
     "ed.cfg",
     "ed.pipelines.vav1",
+    "ed.funnel.autopilot",
     "sz.env",
     "sz.bin.glide",
     "sz.bin.ligprep",

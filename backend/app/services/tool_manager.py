@@ -1,6 +1,7 @@
 """
 e-drug lab 本地工具管理器
 """
+import asyncio
 import subprocess
 import os
 import logging
@@ -32,9 +33,9 @@ class ToolInfo:
 
 
 class ToolManager:
-    def __init__(self, tool_paths: Dict[str, str]):
+    def __init__(self, tool_paths: Dict[str, Optional[str]]):
         self.tools: Dict[str, ToolInfo] = {}
-        for name, path in tool_paths.items():
+        for name, path in (tool_paths or {}).items():
             if path:
                 self.tools[name] = ToolInfo(name, path)
         self._perform_initial_check()
@@ -63,5 +64,35 @@ class ToolManager:
         full_env = os.environ.copy()
         if env:
             full_env.update(env)
-        logger.info(f"Executing {tool_name}: {args}", extra={"tool": tool_name, "args": args, "cwd": cwd})
+        logger.info(f"Executing {tool_name}: {args}", extra={"tool": tool_name, "tool_args": args, "cwd": cwd})
         return subprocess.run([tool.executable_path] + args, capture_output=True, text=True, timeout=timeout, cwd=cwd, env=full_env)
+
+    async def async_execute(self, tool_name: str, args: list[str], timeout: int = 600, cwd: Optional[str] = None, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
+        tool = self.tools.get(tool_name)
+        if not tool:
+            raise ValueError(f"Unknown tool: {tool_name}")
+        if not tool.is_available:
+            raise FileNotFoundError(f"Tool not available: {tool_name} at {tool.executable_path}")
+        full_env = os.environ.copy()
+        if env:
+            full_env.update(env)
+        logger.info(f"Async executing {tool_name}: {args}", extra={"tool": tool_name, "tool_args": args, "cwd": cwd})
+        proc = await asyncio.create_subprocess_exec(
+            tool.executable_path, *args,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=cwd,
+            env=full_env,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.wait()
+            raise
+        return subprocess.CompletedProcess(
+            args=[tool.executable_path] + args,
+            returncode=proc.returncode,
+            stdout=stdout.decode("utf-8", errors="replace") if stdout else "",
+            stderr=stderr.decode("utf-8", errors="replace") if stderr else "",
+        )

@@ -1,0 +1,94 @@
+# Phase C — expanded tool matrix templates (structure present; not-run-yet)
+# These score GATE by design and must not block MD verification.
+version: 1
+cases:
+  - id: tpl_vina_dock
+    kind: template
+    not_run_yet: true
+    tool: vina-dock
+    api_path: /api/v1/affinity/docking/vina
+    skip_reason: "template — Vina dock evidence path not executed in this harness run"
+
+  - id: tpl_glide_dock
+    kind: template
+    not_run_yet: true
+    tool: glide-dock
+    api_path: /api/v1/affinity/docking/glide
+    skip_reason: "template — Glide dock not executed (needs receptor+ligands)"
+
+  - id: tpl_schrodinger_pipeline_dock
+    kind: template
+    not_run_yet: true
+    tool: schrodinger_dock
+    api_path: /api/v1/affinity/schrodinger/dock
+    skip_reason: "template — pipeline Glide not executed"
+
+  - id: tpl_mmgbsa
+    kind: template
+    not_run_yet: true
+    tool: mm-gbsa
+    api_path: /api/v1/affinity/mmgbsa
+    skip_reason: "template — MMGBSA needs pose_maegz"
+
+  - id: tpl_admet_predict
+    kind: template
+    not_run_yet: true
+    tool: admet-ai
+    api_path: /api/v1/admet/predict
+    skip_reason: "template — ADMET not executed"
+
+  - id: tpl_diffdynamic_generate
+    kind: template
+    not_run_yet: true
+    tool: diffdynamic_generate
+    api_path: /api/v1/diffdynamic/generate
+    skip_reason: "template — DiffDynamic generate gated; not executed"
+
+  - id: tpl_diffdynamic_extract
+    kind: template
+    not_run_yet: true
+    tool: diffdynamic_extract
+    api_path: /api/v1/diffdynamic/extract
+    skip_reason: "template — extract not executed"
+
+  - id: tpl_orthogonal_rank
+    kind: template
+    not_run_yet: true
+    tool: orthogonal-rank
+    api_path: /api/v1/ranking/orthogonal-rescore
+    skip_reason: "template — ranking not executed"
+
+  - id: tpl_glare_screen
+    kind: template
+    not_run_yet: true
+    tool: glare-screen
+    api_path: /api/v1/glare/screen
+    skip_reason: "template — GLARE not executed"
+
+  - id: tpl_drugclip_screen
+    kind: template
+    not_run_yet: true
+    tool: drugclip
+    api_path: /api/v1/drugclip/screen
+    skip_reason: "template — DrugCLIP not executed"
+
+  - id: tpl_tame_vs_smoke
+    kind: template
+    not_run_yet: true
+    tool: tame-vs
+    api_path: /api/v1/tame-vs/smoke-test
+    skip_reason: "template — TameVS not executed"
+
+  - id: tpl_desmond_smoke_confirm
+    kind: template
+    not_run_yet: true
+    tool: schrodinger_md_submit
+    api_path: /api/v1/affinity/md
+    skip_reason: "template — smoke with confirm=true not auto-run (GPU/license)"
+
+  - id: tpl_desmond_short_confirm
+    kind: template
+    not_run_yet: true
+    tool: schrodinger_md_submit
+    api_path: /api/v1/affinity/md
+    skip_reason: "template — short 50ns requires confirm=true; not auto-run"

@@ -1,0 +1,74 @@
+# Core capability cases — run by capability_harness.py
+version: 1
+cases:
+  - id: md_api_dry_prep
+    kind: http_md_submit
+    enabled: true
+    expect_status: completed
+    body:
+      mode: dry_prep
+      confirm: false
+      target_id: HSD17B13
+
+  - id: md_api_status
+    kind: http_md_status
+    enabled: true
+    # task_id filled from previous submit by harness
+
+  - id: md_api_gated_short_no_confirm
+    kind: http_md_submit
+    enabled: true
+    expect_status: gated
+    body:
+      mode: short
+      confirm: false
+      target_id: HSD17B13
+
+  - id: agent_md_dry_prep
+    kind: agent_md_dry_prep
+    enabled: true
+    target_id: HSD17B13
+
+  # Agent/Hermes path checks (still NOT live SKILL.md / Hermes chat)
+  - id: hermes_md_tools_registered
+    kind: hermes_md_tools_registered
+    enabled: true
+
+  - id: funnel_autopilot_tools_registered
+    kind: funnel_autopilot_tools_registered
+    enabled: true
+
+  - id: hermes_handler_md_dry_prep
+    kind: hermes_handler_md_dry_prep
+    enabled: true
+    target_id: HSD17B13
+
+  - id: skill_md_presence
+    kind: skill_md_presence
+    enabled: true
+    skills:
+      - funnel-desmond-short-md
+      - funnel-desmond-long-md
+      - dd-md-desmond
+      - edrug-capability-check
+    must_contain:
+      - schrodinger_md_submit
+      - SCHRODINGER
+    conda_note_markers:
+      - conda
+      - diffdynamic
+
+  - id: env_probe_desmond_conda
+    kind: env_probe_desmond_conda
+    enabled: true
+
+  - id: ui_navigate_workflow
+    kind: ui_navigate
+    enabled: true
+    path: /workflow
+
+  - id: ui_set_target_hsd17b13
+    kind: ui_set_target
+    enabled: true
+    target_id: HSD17B13
+    name: HSD17B13

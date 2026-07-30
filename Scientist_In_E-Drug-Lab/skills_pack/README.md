@@ -1,12 +1,13 @@
 # Skills pack (Scientist_In_E-Drug-Lab)
 
-Skill **bodies** are installed locally (Hermes `$HERMES_HOME/skills/` or `~/.cursor/skills`) and are **not** fully vendored in this GitHub tree.
+Imported into Hermes `$HERMES_HOME/skills/<category>/`.
+Skill bodies live under `../skills/` (tracked); this pack holds symlinks + MANIFEST.
 
-Categories (local install):
+- **funnel**: 14 (整体流程图)
+- **ddfast**: 4 (QikProp / Glide SP / Desmond MD helpers)
+- **drug-design**: 3 (rdkit / pose / membrane MD ops)
+- **campaign**: 3 (campaign + scientist aliases)
 
-- **ddfast** / orchestrator / Shape / MD — DiffDynamic pocket funnel
-- **drug-design**, **writing**, **masld-ai4s** — curated packs
+Removed from public bootstrap: MASLD s00–s08, hsv-*, writing/nature, unused ddfast 00–05/08–10.
 
-Re-run local import: `python scripts/import_drug_skills.py`
-
-See also agent entry: `skills/scientist-in-e-drug-lab/SKILL.md` and `config/platform/PLATFORM.md`.
+Re-run: `python scripts/import_drug_skills.py`

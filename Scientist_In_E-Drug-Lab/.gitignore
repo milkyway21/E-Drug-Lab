@@ -16,12 +16,18 @@ skills_pack/*/
 !skills_pack/MANIFEST.json
 runs/*/
 !runs/.gitkeep
+reports/
+memory/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 *.log
 vendor/hermes-agent/
 .DS_Store
+# Private relay patches — never publish
+scripts/fuckclau_ua_patch.py
+scripts/hermes_fuckclau.sh
+scripts/sitecustomize_fuckclau/
 # Local workflow notes / nested HSV skills — not part of this sync
 skills/scientist-in-e-drug-lab/WORKFLOW*.md
 skills/scientist-in-e-drug-lab/hsv-*/

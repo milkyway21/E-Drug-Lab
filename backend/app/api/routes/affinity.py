@@ -5,7 +5,8 @@
 - /schrodinger/status    — 本地 Schrödinger 健康检查
 - /schrodinger/dock      — 流水线 SMILES 批量 Glide (+ 可选 MM-GBSA)
 - /mmgbsa                — Prime MM-GBSA 重打分
-- /md                    — MD 模拟（stub）
+- /md                    — Schrödinger Desmond MD（dry_prep 默认；生产需 confirm）
+- /md/{task_id}          — Desmond MD 任务状态
 """
 import asyncio
 import uuid
@@ -121,12 +122,20 @@ class SchrodingerPipelineDockRequest(BaseModel):
 
 
 class MdSimulationRequest(BaseModel):
-    """MD 模拟请求（stub）"""
-    structure_path: Optional[str] = Field(default=None, description="初始结构文件路径")
-    force_field: str = Field(default="amber14", description="力场")
-    water_model: str = Field(default="tip3p", description="水模型")
-    simulation_time_ns: float = Field(default=10.0, ge=0.1, le=1000.0, description="模拟时间 (ns)")
-    temperature_k: float = Field(default=300.0, ge=200.0, le=400.0, description="温度 (K)")
+    """Schrödinger Desmond MD 请求。
+
+    默认 mode=dry_prep：只检查环境并写 job_dir/msj，不提交生产 MD。
+    mode=smoke|short 需 confirm=true 才会调用 multisim。
+    """
+    structure_path: Optional[str] = Field(default=None, description="复合物 .cms/.mae/.maegz 路径")
+    mode: str = Field(default="dry_prep", description="dry_prep | smoke | short")
+    confirm: bool = Field(default=False, description="smoke/short 真实提交必须为 true")
+    simulation_time_ns: Optional[float] = Field(
+        default=None, ge=0.01, le=1000.0, description="可选覆盖提示（ns）；协议以 mode 模板为准"
+    )
+    host: Optional[str] = Field(default=None, description="JobDJ host（默认 localhost）")
+    molecule_id: Optional[str] = None
+    target_id: Optional[str] = None
 
 
 # ── 响应模型 ────────────────────────────────────────────────
@@ -463,22 +472,51 @@ async def mmgbsa(body: MmgbsaRequest = MmgbsaRequest()):
     }
 
 
-@router.post("/md", summary="MD 模拟（stub）")
-async def md_simulation(request: Request, body: MdSimulationRequest = MdSimulationRequest()):
-    """分子动力学模拟。当前为 placeholder。"""
-    task_id = str(uuid.uuid4())[:8]
-    return {
-        "task_id": task_id,
-        "status": "stub",
-        "message": "MD simulation not yet implemented. Requires GROMACS or OpenMM.",
-        "params": {
-            "structure": body.structure_path,
-            "force_field": body.force_field,
-            "water_model": body.water_model,
-            "simulation_time_ns": body.simulation_time_ns,
-            "temperature_k": body.temperature_k,
-        },
-    }
+@router.post("/md", summary="Schrödinger Desmond MD（dry_prep 默认）")
+async def md_simulation(body: MdSimulationRequest = MdSimulationRequest()):
+    """提交 / 准备 Desmond MD。
+
+    - 默认 ``mode=dry_prep``：检查 $SCHRODINGER + multisim，写 job_dir + md.msj，**不**提交生产。
+    - ``smoke`` / ``short`` 须 ``confirm=true``，否则返回 ``gated``。
+    - 缺少 Schrödinger 时返回 ``unavailable``（绝非 stub/假 completed）。
+    """
+    from app.services.desmond_md_service import submit_desmond_md
+    from app.config import get_settings
+
+    structure = None
+    if body.structure_path:
+        try:
+            structure = _safe_file(body.structure_path, must_exist=True)
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    install = get_settings().schrodinger.install_path
+    result = await asyncio.to_thread(
+        submit_desmond_md,
+        structure_path=structure,
+        mode=body.mode,
+        confirm=body.confirm,
+        simulation_time_ns=body.simulation_time_ns,
+        host=body.host,
+        install_path=install,
+        molecule_id=body.molecule_id,
+        target_id=body.target_id,
+    )
+    # Never advertise stub success
+    if result.get("status") == "stub":
+        result["status"] = "failed"
+        result["message"] = "Internal error: stub status is forbidden for Desmond MD"
+    return result
+
+
+@router.get("/md/{task_id}", summary="Desmond MD 任务状态")
+async def md_status(task_id: str):
+    from app.services.desmond_md_service import get_task
+
+    job = get_task(task_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"MD task not found: {task_id}")
+    return job
 
 
 @router.get("/docking/vina/version", summary="获取 Vina 版本信息")

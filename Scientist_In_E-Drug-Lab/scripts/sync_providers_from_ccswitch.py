@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sqlite3
 from pathlib import Path
@@ -24,6 +25,8 @@ PLATFORM_MD = ROOT / "config" / "platform" / "PLATFORM.md"
 PLATFORM_CATALOG = ROOT / "config" / "platform" / "catalog.yaml"
 SKIN_SRC = ROOT / "config" / "skins" / "edrug-scientist.yaml"
 SKIN_NAME = "edrug-scientist"
+PROVIDER_ENV_PREFIXES = ("ANTHROPIC_", "OPENAI_", "MASLD_LLM_")
+PROVIDER_ENV_KEYS = {"CLAUDE_CODE_EFFORT_LEVEL"}
 
 
 def _load_dotenv_file(path: Path) -> dict[str, str]:
@@ -59,11 +62,24 @@ def _write_dotenv(path: Path, data: dict[str, str]) -> None:
         pass
 
 
-def _current_claude_provider(db: Path, settings_path: Path) -> dict | None:
+def _strip_provider_env(data: dict[str, str]) -> dict[str, str]:
+    return {
+        key: value
+        for key, value in data.items()
+        if key not in PROVIDER_ENV_KEYS
+        and not any(key.startswith(prefix) for prefix in PROVIDER_ENV_PREFIXES)
+    }
+
+
+def _claude_provider(
+    db: Path,
+    settings_path: Path,
+    selector: str | None = None,
+) -> dict | None:
     if not db.is_file():
         return None
     provider_id = None
-    if settings_path.is_file():
+    if not selector and settings_path.is_file():
         try:
             provider_id = json.loads(settings_path.read_text(encoding="utf-8")).get(
                 "currentProviderClaude"
@@ -73,7 +89,13 @@ def _current_claude_provider(db: Path, settings_path: Path) -> dict | None:
     conn = sqlite3.connect(str(db))
     try:
         cur = conn.cursor()
-        if provider_id:
+        if selector:
+            cur.execute(
+                "SELECT id, name, settings_config, website_url FROM providers "
+                "WHERE app_type='claude' AND (id=? OR lower(name)=lower(?)) LIMIT 1",
+                (selector, selector),
+            )
+        elif provider_id:
             cur.execute(
                 "SELECT id, name, settings_config, website_url FROM providers "
                 "WHERE id=? AND app_type='claude'",
@@ -103,7 +125,16 @@ def _current_claude_provider(db: Path, settings_path: Path) -> dict | None:
     }
 
 
-def _merge_from_ccswitch(env: dict[str, str], provider: dict) -> None:
+def _current_claude_provider(db: Path, settings_path: Path) -> dict | None:
+    return _claude_provider(db, settings_path)
+
+
+def _merge_from_ccswitch(
+    env: dict[str, str],
+    provider: dict,
+    *,
+    model_override: str | None = None,
+) -> None:
     """Map Claude-Code-style CC-Switch env into Hermes + dual-wire keys."""
     src = provider.get("env") or {}
     for k, v in src.items():
@@ -118,29 +149,30 @@ def _merge_from_ccswitch(env: dict[str, str], provider: dict) -> None:
         or ""
     ).strip()
     if token:
-        env.setdefault("ANTHROPIC_AUTH_TOKEN", token)
-        env.setdefault("ANTHROPIC_API_KEY", token)
-        env.setdefault("ANTHROPIC_TOKEN", token)
-        env.setdefault("OPENAI_API_KEY", token)
-        env.setdefault("MASLD_LLM_API_KEY", token)
+        env["ANTHROPIC_AUTH_TOKEN"] = token
+        env["ANTHROPIC_API_KEY"] = token
+        env["ANTHROPIC_TOKEN"] = token
+        env["OPENAI_API_KEY"] = token
+        env["MASLD_LLM_API_KEY"] = token
 
     base = (env.get("ANTHROPIC_BASE_URL") or "").rstrip("/")
     if base:
         # OpenAI Coding Plan wire
         if base.endswith("/api/coding"):
-            env.setdefault("OPENAI_BASE_URL", base + "/v3")
-            env.setdefault("MASLD_LLM_BASE_URL", base + "/v3")
+            env["OPENAI_BASE_URL"] = base + "/v3"
+            env["MASLD_LLM_BASE_URL"] = base + "/v3"
         elif "/api/coding/v3" in base:
-            env.setdefault("OPENAI_BASE_URL", base)
-            env.setdefault("MASLD_LLM_BASE_URL", base)
+            env["OPENAI_BASE_URL"] = base
+            env["MASLD_LLM_BASE_URL"] = base
 
     model = (
-        env.get("ANTHROPIC_MODEL")
+        model_override
+        or env.get("ANTHROPIC_MODEL")
         or env.get("MASLD_LLM_MODEL")
         or "ark-code-latest"
     )
-    env.setdefault("MASLD_LLM_MODEL", model)
-    env.setdefault("ANTHROPIC_MODEL", model)
+    env["MASLD_LLM_MODEL"] = model
+    env["ANTHROPIC_MODEL"] = model
 
 
 def _ensure_plugin_enabled(data: dict) -> bool:
@@ -176,7 +208,22 @@ def _sync_skin_file(hermes_home: Path) -> Path | None:
     return dst
 
 
-def _ensure_config(hermes_home: Path, provider: dict | None) -> Path:
+def _provider_slug(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-")
+    return slug or "ccswitch-claude"
+
+
+def _ensure_config(
+    hermes_home: Path,
+    provider: dict | None,
+    *,
+    activate_selected: bool = False,
+    context_length: int | None = None,
+    model_override: str | None = None,
+    configured_provider: str | None = None,
+    reasoning_effort: str | None = None,
+    prune_unlisted_providers: bool = False,
+) -> Path:
     import yaml
 
     cfg_path = hermes_home / "config.yaml"
@@ -188,24 +235,117 @@ def _ensure_config(hermes_home: Path, provider: dict | None) -> Path:
     data = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
     dirty = False
 
-    # Optionally retarget default model from CC-Switch
+    if prune_unlisted_providers:
+        template_data = yaml.safe_load(TEMPLATE.read_text(encoding="utf-8")) or {}
+        allowed_providers = set((template_data.get("providers") or {}).keys())
+        providers = data.setdefault("providers", {})
+        if isinstance(providers, dict):
+            for name in list(providers):
+                if name not in allowed_providers:
+                    providers.pop(name)
+                    dirty = True
+
+    # Optionally retarget default model from CC-Switch.
     if provider and provider.get("env"):
-        model = (provider["env"].get("ANTHROPIC_MODEL") or "").strip()
-        if model and data.get("model", {}).get("default") != model:
-            data.setdefault("model", {})
-            data["model"]["default"] = model
-            dirty = True
+        model = (model_override or provider["env"].get("ANTHROPIC_MODEL") or "").strip()
         if model:
+            data.setdefault("model", {})["default"] = model
             for name in ("volcengine-plan", "volcano-anthropic"):
                 entry = (data.get("providers") or {}).get(name)
                 if isinstance(entry, dict):
-                    if entry.get("default_model") != model:
-                        entry["default_model"] = model
-                        dirty = True
-                    models = entry.setdefault("models", {})
-                    if isinstance(models, dict) and model not in models:
-                        models[model] = {}
-                        dirty = True
+                    entry["default_model"] = model
+                    entry.setdefault("models", {}).setdefault(model, {})
+            dirty = True
+
+        if activate_selected:
+            env = provider["env"]
+            base_url = (env.get("ANTHROPIC_BASE_URL") or "").strip().rstrip("/")
+            if not model:
+                raise ValueError(
+                    f"CC-Switch provider {provider.get('name')!r} has no ANTHROPIC_MODEL"
+                )
+            if not base_url:
+                raise ValueError(
+                    f"CC-Switch provider {provider.get('name')!r} has no ANTHROPIC_BASE_URL"
+                )
+
+            metadata = {"context_length": context_length} if context_length else {}
+            if base_url.endswith("/api/coding"):
+                slug = "volcano-anthropic"
+                selected_entries = {
+                    "volcano-anthropic": {
+                        "name": "Volcengine DeepSeek (Anthropic)",
+                        "base_url": base_url,
+                        "key_env": "ANTHROPIC_AUTH_TOKEN",
+                        "api_mode": "anthropic_messages",
+                        "default_model": model,
+                        "models": {model: dict(metadata)},
+                    },
+                    "volcengine-plan": {
+                        "name": "Volcengine DeepSeek (OpenAI)",
+                        "base_url": base_url + "/v3",
+                        "key_env": "OPENAI_API_KEY",
+                        "api_mode": "chat_completions",
+                        "default_model": model,
+                        "models": {model: dict(metadata)},
+                    },
+                }
+            else:
+                slug = _provider_slug(str(provider.get("name") or ""))
+                key_env = (
+                    "ANTHROPIC_API_KEY"
+                    if env.get("ANTHROPIC_API_KEY")
+                    else "ANTHROPIC_AUTH_TOKEN"
+                )
+                selected_entries = {
+                    slug: {
+                        "name": str(provider.get("name") or slug),
+                        "base_url": base_url,
+                        "key_env": key_env,
+                        "api_mode": "anthropic_messages",
+                        "default_model": model,
+                        "models": {model: dict(metadata)},
+                    }
+                }
+            data.setdefault("providers", {}).update(selected_entries)
+            model_config = data.setdefault("model", {})
+            model_config.update({"provider": slug, "default": model})
+            for stale_key in ("base_url", "api_mode", "api_key"):
+                model_config.pop(stale_key, None)
+            if context_length:
+                model_config["context_length"] = context_length
+            else:
+                model_config.pop("context_length", None)
+            dirty = True
+
+    if configured_provider:
+        providers = data.setdefault("providers", {})
+        entry = providers.get(configured_provider)
+        if not isinstance(entry, dict):
+            template_data = yaml.safe_load(TEMPLATE.read_text(encoding="utf-8")) or {}
+            template_entry = (template_data.get("providers") or {}).get(configured_provider)
+            if not isinstance(template_entry, dict):
+                raise ValueError(f"Configured Hermes provider not found: {configured_provider}")
+            entry = dict(template_entry)
+            providers[configured_provider] = entry
+        model = (model_override or entry.get("default_model") or "").strip()
+        if not model:
+            raise ValueError(f"No model configured for Hermes provider: {configured_provider}")
+        model_config = data.setdefault("model", {})
+        model_config.update({"provider": configured_provider, "default": model})
+        if context_length:
+            model_config["context_length"] = context_length
+        models = entry.setdefault("models", {})
+        if isinstance(models, dict):
+            metadata = models.setdefault(model, {})
+            if context_length and isinstance(metadata, dict):
+                metadata["context_length"] = context_length
+        entry["default_model"] = model
+        dirty = True
+
+    if reasoning_effort:
+        data.setdefault("agent", {})["reasoning_effort"] = reasoning_effort
+        dirty = True
 
     if _ensure_plugin_enabled(data):
         dirty = True
@@ -245,9 +385,41 @@ def main() -> int:
     parser.add_argument("--ccswitch-db", type=Path, default=DEFAULT_CCSWITCH_DB)
     parser.add_argument("--ccswitch-settings", type=Path, default=DEFAULT_SETTINGS)
     parser.add_argument(
+        "--ccswitch-provider",
+        help="Select a Claude provider by exact CC-Switch name or id; otherwise use current",
+    )
+    parser.add_argument(
+        "--context-length",
+        type=int,
+        help="Explicit Hermes context window for the selected model",
+    )
+    parser.add_argument(
+        "--model",
+        help="Override the CC-Switch ANTHROPIC_MODEL for this Hermes agent",
+    )
+    parser.add_argument(
+        "--activate-provider",
+        help="Activate an existing named Hermes provider without importing CC-Switch",
+    )
+    parser.add_argument(
+        "--reasoning-effort",
+        choices=("none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra"),
+        help="Persist the Hermes reasoning effort",
+    )
+    parser.add_argument(
         "--skip-ccswitch",
         action="store_true",
         help="Only sync from project .env (ignore CC-Switch DB)",
+    )
+    parser.add_argument(
+        "--prune-unlisted-providers",
+        action="store_true",
+        help="Remove Hermes providers absent from the project template",
+    )
+    parser.add_argument(
+        "--strip-provider-env",
+        action="store_true",
+        help="Exclude provider credentials inherited from the project .env",
     )
     args = parser.parse_args()
 
@@ -255,19 +427,39 @@ def main() -> int:
     hermes_home.mkdir(parents=True, exist_ok=True)
 
     env = _load_dotenv_file(ROOT / ".env")
+    if args.strip_provider_env:
+        env = _strip_provider_env(env)
     provider = None
     if not args.skip_ccswitch:
-        provider = _current_claude_provider(args.ccswitch_db, args.ccswitch_settings)
+        provider = _claude_provider(
+            args.ccswitch_db,
+            args.ccswitch_settings,
+            args.ccswitch_provider,
+        )
         if provider:
-            _merge_from_ccswitch(env, provider)
-            print(f"CC-Switch current: {provider.get('name')} ({provider.get('id')})")
+            _merge_from_ccswitch(env, provider, model_override=args.model)
+            source = "selected" if args.ccswitch_provider else "current"
+            print(f"CC-Switch {source}: {provider.get('name')} ({provider.get('id')})")
+        elif args.ccswitch_provider:
+            raise SystemExit(
+                f"CC-Switch Claude provider not found: {args.ccswitch_provider}"
+            )
         else:
             print("CC-Switch: no current Claude provider found; using project .env only")
 
     # Competition eval flag for masld tools
     env.setdefault("MASLD_COMPETITION_EVAL_MODE", "true")
 
-    cfg_path = _ensure_config(hermes_home, provider)
+    cfg_path = _ensure_config(
+        hermes_home,
+        provider,
+        activate_selected=bool(args.ccswitch_provider),
+        context_length=args.context_length,
+        model_override=args.model,
+        configured_provider=args.activate_provider,
+        reasoning_effort=args.reasoning_effort,
+        prune_unlisted_providers=args.prune_unlisted_providers,
+    )
     env_path = hermes_home / ".env"
     _write_dotenv(env_path, env)
 
@@ -295,6 +487,9 @@ def main() -> int:
         env.get("OPENAI_API_KEY")
         or env.get("ANTHROPIC_AUTH_TOKEN")
         or env.get("ANTHROPIC_API_KEY")
+        or os.environ.get("OPENAI_API_KEY")
+        or os.environ.get("ANTHROPIC_AUTH_TOKEN")
+        or os.environ.get("ANTHROPIC_API_KEY")
     )
     print(f"Wrote {cfg_path}")
     print(f"Wrote {env_path} (keys_present={has_key}, n_vars={len(env)})")
