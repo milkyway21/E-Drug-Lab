@@ -4,10 +4,11 @@ from __future__ import annotations
 import argparse
 import json
 import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 
 from masld_agent.funnel.autopilot import _write_state, run_autopilot
-from masld_agent.funnel.manifest import campaign_root, load_manifest
+from masld_agent.funnel.manifest import load_manifest
 
 
 def main() -> None:
@@ -31,12 +32,16 @@ def main() -> None:
     except Exception as exc:  # noqa: BLE001
         manifest = load_manifest(args.manifest)
         _write_state(
-            campaign_root(manifest),
+            manifest,
             {
                 "task_id": args.task_id,
                 "status": "failed",
+                "manifest": str(args.manifest.resolve()),
+                "final_count": args.final_count,
+                "profile": args.profile,
                 "error": f"{type(exc).__name__}: {exc}",
                 "traceback": traceback.format_exc(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
         )
         raise

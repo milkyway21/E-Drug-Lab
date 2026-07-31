@@ -585,7 +585,10 @@ FUNNEL_PLAN_SCHEMA = {
 
 FUNNEL_PREFLIGHT_SCHEMA = {
     "name": "funnel_preflight",
-    "description": "Read-only H0-H10 assets, environment, adapter, and existing-artifact preflight.",
+    "description": (
+        "Read-only H0-H10 assets, environment, adapter, and existing-artifact preflight. "
+        "ready_for_one_shot_execution must be true before production starts."
+    ),
     "parameters": {"type": "object", "properties": FUNNEL_CONTEXT_PROPERTIES, "required": []},
 }
 
@@ -637,7 +640,9 @@ FUNNEL_AUTOPILOT_SCHEMA = {
     "description": (
         "PRIMARY WEAK-MODEL ENTRYPOINT. Given final_count only, plan all stage counts, allocate local "
         "resources, reuse valid artifacts, execute H0-H10 in order, stop on failed validation, and "
-        "write JSON+Markdown report after every stage. Full is the default profile; test must be explicit. "
+        "write JSON+Markdown report after every stage. Before any compute, all enabled stages are checked "
+        "for a valid artifact or available argv adapter; missing readiness returns gated_preflight. "
+        "Full is the default profile; test must be explicit. "
         "Preview/report mode is default. Set execute=true "
         "and confirm=true only after user authorizes production compute."
     ),

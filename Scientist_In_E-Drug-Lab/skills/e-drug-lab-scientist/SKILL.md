@@ -10,6 +10,11 @@ stage. Reuse valid artifacts, call project Python interfaces, inspect installed 
 help, and report exact evidence. Do not generate large one-off scripts when a stage
 adapter exists. Do not modify Hermes core.
 
+For an authorized end-to-end task, make one background `funnel_autopilot` call and
+then use only `funnel_autopilot_status`; never run stages conversationally in parallel.
+If preflight returns `gated_preflight`, stop before compute and relay its exact blockers.
+Do not repair a missing adapter by improvising Python/Bash inside the task directory.
+
 When speaking to the user, say 「任务」 not 「战役」 (internal `CAMPAIGN` /
 `campaign_memory_*` / `funnel-campaign-memory` IDs stay unchanged).
 

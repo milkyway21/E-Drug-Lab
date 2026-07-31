@@ -1,7 +1,7 @@
 profile_id: test
 label: 测试漏斗
 description: 用于验证编排、工具调用、验收与逐阶段报告的小规模端到端任务。
-source: 用户指定测试链路（Prudent 100 → SP 10 → 扩库 30 → ADMET 5 → 2×10ns）
+source: 用户指定测试链路（Prudent 100 → SP 10 → 扩库 30 → ADMET 5 → 精选 2 → 2×10ns）
 reference_final_count: 2
 final_stage: H8
 default_for_final_count_only: false
@@ -41,9 +41,9 @@ stages:
     backend_policy: schrodinger_qikprop_required
   H5:
     skill: funnel-glide-sp
-    target: {mode: fixed, value: 0}
-    reference_target: 0
-    quantity_role: disabled
+    target: {mode: per_final, value: 1}
+    reference_target: 2
+    quantity_role: final_test_hits
   H6:
     skill: funnel-glide-xp
     target: {mode: fixed, value: 0}
@@ -58,7 +58,7 @@ stages:
     skill: funnel-desmond-short-md
     target: {mode: per_final, value: 1}
     reference_target: 2
-    quantity_role: final_test_hits
+    quantity_role: md_validation_molecules
     protocol: 10ns_per_molecule
   H9:
     skill: funnel-desmond-long-md

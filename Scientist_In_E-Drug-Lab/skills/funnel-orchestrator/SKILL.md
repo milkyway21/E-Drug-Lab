@@ -24,6 +24,13 @@ It derives all stage counts, detects local resources, writes a plan, processes
 stages in order, and writes a report after every stage. Do not ask the model to reproduce
 this logic conversationally.
 
+Production execution performs a whole-pipeline readiness check before starting H1.
+Every enabled downstream stage must already have a valid artifact or an available
+argv adapter. If the result is `gated_preflight`, report `blocking_stages` and the
+`PREFLIGHT_EXECUTION.json` path exactly. Do not write a task-local replacement script,
+do not start H1 manually, and do not retry autopilot until the project adapter or input
+is fixed. This prevents a long generation job from reaching a predictable H2/H3 gate.
+
 `run` is preview-only unless `--execute` is present. Compute stages also require
 `--confirm`. A valid existing artifact always wins over recomputation and returns
 `reused_existing=true`.

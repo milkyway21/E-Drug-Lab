@@ -53,9 +53,11 @@ runtime `memory_enabled` 保持 **false**；禁止启用原生 memory toolset。
    不要反复询问可由任务记忆发现的路径。
 4. autopilot 负责 H0–H10 数量反推、本机 CPU/GPU/磁盘探测、资源分配、既有产物复用、
    顺序执行、硬验收和每阶段 JSON/Markdown 报告。Agent 只需转述阶段报告和卡点。
-5. 任一阶段验收失败即停止；禁止跳过后声称全流程完成。
-6. 两套数量真值表位于 `config/funnel_profiles/full.yaml` 与 `test.yaml`；正式表依据
-   `/data/ye/整体流程图_三轮理解.md`，测试表只验证 100→10→30→5→2×10ns 链路。
+5. execute 前必须通过 whole-pipeline readiness preflight；出现 `gated_preflight` 时只转述
+   `blocking_stages` 和预检报告路径，禁止先跑 H1，也禁止临时编写任务专用适配脚本。
+6. 任一阶段验收失败即停止；禁止跳过后声称全流程完成。
+7. 两套数量真值表位于 `config/funnel_profiles/full.yaml` 与 `test.yaml`；正式表依据
+   `/data/ye/整体流程图_三轮理解.md`，测试表只验证 100→10→30→5→2→2×10ns 链路。
 
 ### 命令纪律
 

@@ -41,6 +41,10 @@ masld-agent funnel autopilot-status --target-id HSD17B13
 每阶段写 `reports/funnel/<profile>/H*.json` 与 `.md`，验收失败即停止。
 `full` 是只给最终数量时的默认；`test` 不得因最终数量较小而自动启用。
 
+生产 worker 启动前会对所有启用阶段做 whole-pipeline readiness preflight；仅当
+`ready_for_one_shot_execution=true` 才会开始 H1。`gated_preflight` 表示没有任何计算
+启动，Agent 必须报告 `blocking_stages`，不得在任务目录临时编写替代脚本。
+
 ## Track H（HSD17B13 整体流程图）→ **funnel-*** skills
 
 规格：`/data/ye/整体流程图_三轮理解.md`  

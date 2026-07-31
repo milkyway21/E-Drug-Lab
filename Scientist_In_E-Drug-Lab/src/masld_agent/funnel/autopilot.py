@@ -13,7 +13,7 @@ from typing import Any
 from masld_agent.funnel.manifest import STAGE_ORDER
 from masld_agent.funnel.manifest import campaign_root, load_manifest
 from masld_agent.funnel.planner import load_funnel_profile, plan_campaign, resolve_manifest
-from masld_agent.funnel.runner import run_stage, validate_stage
+from masld_agent.funnel.runner import preflight_campaign, run_stage, validate_stage
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -114,6 +114,9 @@ def run_autopilot(
     manifest_path = Path(plan["manifest"])
     manifest_data = load_manifest(manifest_path)
     report_root = _report_root(manifest_data, plan["profile"])
+    preflight = preflight_campaign(manifest_path)
+    preflight_path = report_root / "PREFLIGHT_EXECUTION.json"
+    _atomic_write(preflight_path, json.dumps(preflight, ensure_ascii=False, indent=2) + "\n")
     rows = []
     stopped_at = None
     task = task_id or f"sync-{uuid.uuid4().hex[:10]}"
@@ -127,9 +130,51 @@ def run_autopilot(
             "final_count": final_count,
             "profile": plan["profile"],
             "manifest": str(manifest_path),
+            "preflight": str(preflight_path),
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
     )
+    if execute and not preflight.get("ready_for_one_shot_execution"):
+        blocking_stages = list(preflight.get("blocking_stages") or [])
+        stopped_at = blocking_stages[0] if blocking_stages else "H0"
+        summary = {
+            "status": "gated_preflight",
+            "execute": True,
+            "confirm": confirm,
+            "final_count": final_count,
+            "profile": plan["profile"],
+            "profile_path": plan["profile_path"],
+            "final_stage": plan["final_stage"],
+            "manifest": str(manifest_path),
+            "plan_path": plan.get("plan_path"),
+            "report_root": str(report_root),
+            "preflight_report": str(preflight_path),
+            "blocking_stages": blocking_stages,
+            "stopped_at": stopped_at,
+            "stages_processed": 0,
+            "rows": [],
+            "error": "enabled downstream stages are not ready; no compute was started",
+        }
+        summary_path = report_root / "AUTOPILOT_SUMMARY.json"
+        _atomic_write(summary_path, json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
+        _write_state(
+            manifest_data,
+            {
+                "task_id": task,
+                "status": summary["status"],
+                "current_stage": stopped_at,
+                "completed_stages": [],
+                "final_count": final_count,
+                "profile": plan["profile"],
+                "manifest": str(manifest_path),
+                "summary": str(summary_path),
+                "preflight": str(preflight_path),
+                "blocking_stages": blocking_stages,
+                "stopped_at": stopped_at,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return summary
     for stage in STAGE_ORDER:
         target_count = int(plan["stage_targets"][stage])
         if target_count == 0:
@@ -188,6 +233,9 @@ def run_autopilot(
         "manifest": str(manifest_path),
         "plan_path": plan.get("plan_path"),
         "report_root": str(report_root),
+        "preflight_report": str(preflight_path),
+        "preflight_ready": bool(preflight.get("ready_for_one_shot_execution")),
+        "blocking_stages": list(preflight.get("blocking_stages") or []),
         "stopped_at": stopped_at,
         "stages_processed": len(rows),
         "rows": rows,
@@ -211,6 +259,8 @@ def run_autopilot(
             "profile": plan["profile"],
             "manifest": str(manifest_path),
             "summary": str(report_root / "AUTOPILOT_SUMMARY.json"),
+            "preflight": str(preflight_path),
+            "blocking_stages": list(preflight.get("blocking_stages") or []),
             "stopped_at": stopped_at,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -249,8 +299,35 @@ def start_autopilot(
                     ),
                 }
             return {**current, "reused_existing_worker": True}
-    task_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
+    plan = plan_campaign(
+        final_count,
+        manifest_path=manifest_path,
+        profile=profile,
+        write=True,
+    )
+    manifest = load_manifest(manifest_path)
     report_root = _report_root(manifest, profile)
+    preflight = preflight_campaign(manifest_path)
+    preflight_path = report_root / "PREFLIGHT_EXECUTION.json"
+    _atomic_write(preflight_path, json.dumps(preflight, ensure_ascii=False, indent=2) + "\n")
+    if not preflight.get("ready_for_one_shot_execution"):
+        blocking_stages = list(preflight.get("blocking_stages") or [])
+        state = {
+            "status": "gated_preflight",
+            "pid": None,
+            "final_count": final_count,
+            "profile": profile,
+            "manifest": str(manifest_path),
+            "plan": plan.get("plan_path"),
+            "preflight": str(preflight_path),
+            "blocking_stages": blocking_stages,
+            "current_stage": blocking_stages[0] if blocking_stages else "H0",
+            "error": "enabled downstream stages are not ready; background worker was not started",
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        _write_state(manifest, state)
+        return state
+    task_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ") + "-" + uuid.uuid4().hex[:8]
     report_root.mkdir(parents=True, exist_ok=True)
     log_path = report_root / f"autopilot_{task_id}.log"
     command = [

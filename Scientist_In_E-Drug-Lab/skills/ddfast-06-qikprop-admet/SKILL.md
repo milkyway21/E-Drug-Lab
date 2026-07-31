@@ -30,6 +30,11 @@ Never pass SMILES directly to QikProp. Under 2023-3, `qikprop -inp ...` and a
 QikProp `-osd` argument are invalid. If LigPrep creates multiple states, preserve
 the parent ID and deterministically select one state per parent before QikProp.
 
+QikProp 2023-3 can reject an otherwise valid SDF when upstream records carry hundreds
+of SD data fields. Before QikProp, write a minimal structure SDF that retains only the
+title and one lineage field (`parent_id`); keep the full original SDF and a separate
+lineage CSV as evidence. This is mandatory preprocessing, not an after-failure patch.
+
 ## Data gate
 
 Require one QikProp row per input parent and numeric values for `mol_MW`,
@@ -51,6 +56,10 @@ Report `mol_MW <= 650` and `QPlogPo/w <= 6` as supplementary rules. Select the
 requested exact N only from core-pass molecules, sorting by supplementary fail
 count, then a documented deterministic ADMET score, then molecule ID. If fewer
 than N pass, stop at the gate rather than loosening thresholds.
+
+Treat a molecule that produces no numeric QikProp row as explicitly incompatible and
+record it in the validation report. Do not require failed molecules to appear in the
+numeric descriptor table, but require enough valid core-pass rows to select exact N.
 
 Write the full descriptor table, exact-N manifest, exact-N SDF, parent-state map,
 command log, and validation report to the manifest-declared stage directory.
