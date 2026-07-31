@@ -64,6 +64,7 @@ All paths below are relative to `scripts/hsd17b13_reference/`. These files prese
 | `41_phaseF_full20_post_analysis.py` | Incremental final-two SEA and analysis, full-20 merge, plate, and tables-only orchestration |
 | `42_export_phaseF_full20_tables_only.py` | Full-20 CSV-only export for decisions, dynamics, RMSF, residue-contact heatmaps, transitions, and validation |
 | `43_phaseF_full20_analysis_watchdog.py` | Persistent hard-validation gate that launches the full-20 analysis without using GPUs |
+| `44_package_phaseF_full20_delivery.py` | Strict top-10 selection and checksum-validated light package excluding raw and oversized coordinate/SEA files |
 
 ## Protocols And Utility Shells
 

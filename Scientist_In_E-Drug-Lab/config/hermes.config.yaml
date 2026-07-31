@@ -27,7 +27,7 @@ memory:
   flush_min_turns: 0
 
 agent:
-  max_turns: 120
+  max_turns: 600
   reasoning_effort: xhigh
   disabled_toolsets:
     - memory

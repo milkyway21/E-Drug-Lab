@@ -9,11 +9,12 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
-from masld_agent.funnel.autopilot import autopilot_status, run_autopilot
+from masld_agent.funnel.autopilot import autopilot_status, run_autopilot, start_autopilot
 from masld_agent.funnel.diffdynamic import prudent_generate, prudent_physchem
 from masld_agent.funnel.planner import allocate_resources, plan_campaign, plan_counts
-from masld_agent.funnel.runner import run_stage, stage_status, validate_stage
+from masld_agent.funnel.runner import preflight_campaign, run_stage, stage_status, validate_stage
 from masld_agent.funnel.utilities import inspect_sdf, rank_glide_parents
 from masld_agent.hermes_plugin import register
 
@@ -68,6 +69,7 @@ def test_test_profile_matches_requested_smoke_counts():
     assert plan["stage_targets"]["H1B"] == 100
     assert plan["stage_targets"]["H3"] == 30
     assert plan["stage_targets"]["H4"] == 5
+    assert plan["stage_targets"]["H5"] == 2
     assert plan["stage_targets"]["H8"] == 2
 
 
@@ -199,6 +201,103 @@ def test_autopilot_uses_manifest_report_directory(tmp_path: Path, monkeypatch):
     assert "/09_reports_and_dialogue/funnel/AUTOPILOT_STATE.json" in state["state_path"]
 
 
+def test_preflight_lists_every_missing_enabled_adapter(tmp_path: Path, monkeypatch):
+    manifest = campaign_manifest(tmp_path)
+    monkeypatch.setattr(
+        "masld_agent.funnel.planner.resource_inventory",
+        lambda root: {
+            "captured_at": "test",
+            "cpu_total": 8,
+            "cpu_jobs": 6,
+            "memory_available_gb": 16,
+            "disk_free_gb": 100,
+            "gpus": [],
+            "available_gpu_ids": [1, 3],
+        },
+    )
+    plan_campaign(2, manifest_path=manifest, profile="test")
+    result = preflight_campaign(manifest)
+    assert result["status"] == "gated"
+    assert result["ready_for_one_shot_execution"] is False
+    assert {"H2", "H3", "H4", "H5", "H8"} <= set(result["blocking_stages"])
+    assert result["stages"]["H2"]["blockers"] == ["missing_argv_adapter"]
+    assert result["stages"]["H6"]["enabled"] is False
+    assert result["stages"]["H6"]["ready"] is True
+
+
+def test_execute_is_gated_before_h1_when_downstream_adapter_is_missing(
+    tmp_path: Path,
+    monkeypatch,
+):
+    marker = tmp_path / "h1_started"
+    script = tmp_path / "must_not_run.py"
+    script.write_text(
+        "from pathlib import Path\nPath(%r).write_text('started')\n" % str(marker),
+        encoding="utf-8",
+    )
+    manifest = campaign_manifest(
+        tmp_path,
+        stages={
+            "H1B": {
+                "command": [sys.executable, str(script)],
+                "outputs": ["dedup/unique.csv"],
+            }
+        },
+    )
+    monkeypatch.setattr(
+        "masld_agent.funnel.planner.resource_inventory",
+        lambda root: {
+            "captured_at": "test",
+            "cpu_total": 8,
+            "cpu_jobs": 6,
+            "memory_available_gb": 16,
+            "disk_free_gb": 100,
+            "gpus": [],
+            "available_gpu_ids": [1, 3],
+        },
+    )
+    result = run_autopilot(
+        2,
+        manifest_path=manifest,
+        profile="test",
+        execute=True,
+        confirm=True,
+    )
+    assert result["status"] == "gated_preflight"
+    assert result["stages_processed"] == 0
+    assert "H2" in result["blocking_stages"]
+    assert not marker.exists()
+    assert Path(result["preflight_report"]).is_file()
+
+
+def test_background_worker_is_not_spawned_when_preflight_is_gated(
+    tmp_path: Path,
+    monkeypatch,
+):
+    manifest = campaign_manifest(tmp_path)
+    monkeypatch.setattr(
+        "masld_agent.funnel.planner.resource_inventory",
+        lambda root: {
+            "captured_at": "test",
+            "cpu_total": 8,
+            "cpu_jobs": 6,
+            "memory_available_gb": 16,
+            "disk_free_gb": 100,
+            "gpus": [],
+            "available_gpu_ids": [1, 3],
+        },
+    )
+    result = start_autopilot(
+        2,
+        manifest_path=manifest,
+        profile="test",
+        confirm=True,
+    )
+    assert result["status"] == "gated_preflight"
+    assert result["pid"] is None
+    assert "H2" in result["blocking_stages"]
+
+
 def test_stage_runner_requires_confirm_then_validates(tmp_path: Path):
     script = tmp_path / "make_output.py"
     script.write_text(
@@ -239,6 +338,7 @@ def test_shell_string_is_rejected(tmp_path: Path):
         ("H4", ["qikprop", "-inp", "hits.smi"], "structure input"),
         ("H8", ["conda", "run", "desmond"], "must not launch through conda"),
         ("H1B", ["python3", "-c", "print(1)"], "inline shell/Python"),
+        ("H2", ["glide", "dock.in", "-WAIT"], "-OVERWRITE"),
     ],
 )
 def test_known_dialogue_command_failures_are_blocked(
@@ -429,6 +529,23 @@ def test_funnel_tools_register_for_weak_model():
     assert schema["parameters"]["required"] == ["final_count"]
     assert schema["parameters"]["properties"]["profile"]["enum"] == ["full", "test"]
     assert callable(registered["funnel_autopilot"]["handler"])
+
+
+def test_hermes_turn_limit_is_high_and_syncable(tmp_path: Path):
+    config = yaml.safe_load((ROOT / "config/hermes.config.yaml").read_text(encoding="utf-8"))
+    assert config["agent"]["max_turns"] >= 600
+    launcher = (ROOT / "scripts/start_agent.sh").read_text(encoding="utf-8")
+    assert 'HERMES_MAX_TURNS="${HERMES_MAX_TURNS:-600}"' in launcher
+    assert '--max-turns "$HERMES_MAX_TURNS"' in launcher
+
+    sync_path = ROOT / "scripts/sync_providers_from_ccswitch.py"
+    spec = importlib.util.spec_from_file_location("sync_providers", sync_path)
+    assert spec is not None and spec.loader is not None
+    sync = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sync)
+    output = sync._ensure_config(tmp_path, None, max_turns=600)
+    synced = yaml.safe_load(output.read_text(encoding="utf-8"))
+    assert synced["agent"]["max_turns"] == 600
 
 
 def test_funnel_skills_resolve_to_project_and_reject_self_link(tmp_path: Path):

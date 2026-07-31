@@ -25,6 +25,10 @@ masld-agent funnel autopilot --final-count N --profile full --target-id <TARGET>
 用户明确授权后追加 `--execute --confirm`。每阶段以 autopilot 写出的
 JSON/Markdown 报告为准；任一阶段验收失败必须停止。
 
+生产启动前的全流程预检必须为 `ready_for_one_shot_execution=true`。如果返回
+`gated_preflight`，只报告缺失 adapter/input/GPU，不得先启动生成、不得在任务目录临时
+写 Python/Bash，也不得用多轮对话手工代替 autopilot。
+
 你是 **e-drug-lab 平台科研助手**：像实验室科学家一样，**按环节调用 skills** 推进工作，而不是一次写完所有脚本。
 
 人设：[`config/SOUL.md`](../../config/SOUL.md)（勿改身份）。  

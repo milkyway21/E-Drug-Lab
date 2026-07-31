@@ -42,6 +42,8 @@ def _command_policy_violations(command: list[str], stage: str) -> list[str]:
     if stage == "H3" and "shape_screen_gpu" in executable:
         if "-osd" in command and "-ocsv" in command:
             violations.append("Schrödinger Shape cannot receive -osd and -ocsv together")
+    if stage in {"H2", "H5"} and executable == "glide" and "-OVERWRITE" not in command:
+        violations.append("non-interactive Glide requires -OVERWRITE")
     if stage == "H4" and "qikprop" in executable:
         if "-inp" in command or any(item.lower().endswith((".smi", ".smiles")) for item in command):
             violations.append("QikProp must receive LigPrep structure input, not direct SMILES/-inp")
@@ -132,31 +134,70 @@ def validate_stage(manifest_path: str | Path, stage: str) -> dict[str, Any]:
         return _error_payload(exc)
 
 
+def _planned_target(manifest: dict[str, Any], stage: str) -> int | None:
+    config = stage_config(manifest, stage)
+    value = config.get("target_count")
+    if value is None:
+        value = (manifest.get("pipeline_targets") or {}).get(stage)
+    if value is None:
+        return None
+    return int(value)
+
+
+def _stage_preflight(manifest: dict[str, Any], stage: str, root: Path) -> dict[str, Any]:
+    config = stage_config(manifest, stage)
+    validation = validate_artifacts(manifest, stage)
+    target_count = _planned_target(manifest, stage)
+    enabled = target_count != 0
+    configured = bool(config.get("command") or config.get("steps"))
+    command_ok: bool | None = None
+    command_error: str | None = None
+    if configured:
+        try:
+            units = _stage_units(config, stage)
+            command_ok = all(
+                _command_available(
+                    unit["command"],
+                    resolve_campaign_path(manifest, unit.get("cwd") or root),
+                )
+                for unit in units
+            )
+        except (ManifestError, OSError, ValueError) as exc:
+            command_ok = False
+            command_error = str(exc)
+    resources = config.get("resources") or {}
+    resources_ready = not bool(resources.get("gated_no_free_gpu"))
+    blockers = []
+    if enabled and not validation["valid"]:
+        if stage == "H0":
+            blockers.append("invalid_required_inputs")
+        elif not configured:
+            blockers.append("missing_argv_adapter")
+        elif not command_ok:
+            blockers.append("adapter_command_unavailable")
+        if stage != "H0" and not resources_ready:
+            blockers.append("no_allocated_gpu")
+    return {
+        "target_count": target_count,
+        "enabled": enabled,
+        "valid": validation["valid"],
+        "configured": configured,
+        "command_available": command_ok,
+        "command_error": command_error,
+        "resources_ready": resources_ready,
+        "ready": not blockers,
+        "blockers": blockers,
+        "backend": config.get("backend"),
+    }
+
+
 def preflight_campaign(manifest_path: str | Path) -> dict[str, Any]:
     try:
         manifest = load_manifest(manifest_path)
         root = campaign_root(manifest)
         stages = {}
         for stage in STAGE_ORDER:
-            config = stage_config(manifest, stage)
-            validation = validate_artifacts(manifest, stage)
-            configured = bool(config.get("command") or config.get("steps"))
-            command_ok = None
-            if configured:
-                units = _stage_units(config, stage)
-                command_ok = all(
-                    _command_available(
-                        unit["command"],
-                        resolve_campaign_path(manifest, unit.get("cwd") or root),
-                    )
-                    for unit in units
-                )
-            stages[stage] = {
-                "valid": validation["valid"],
-                "configured": configured,
-                "command_available": command_ok,
-                "backend": config.get("backend"),
-            }
+            stages[stage] = _stage_preflight(manifest, stage, root)
         environment = {
             "diffdynamic_root": str(DIFFDYNAMIC_ROOT),
             "diffdynamic_root_exists": DIFFDYNAMIC_ROOT.is_dir(),
@@ -170,8 +211,9 @@ def preflight_campaign(manifest_path: str | Path) -> dict[str, Any]:
             },
         }
         h0 = validate_artifacts(manifest, "H0")
+        blocking_stages = [stage for stage, row in stages.items() if not row["ready"]]
         return {
-            "status": "ok" if h0["valid"] else "gated",
+            "status": "ok" if h0["valid"] and not blocking_stages else "gated",
             "manifest": manifest["_manifest_path"],
             "campaign_root": str(root),
             "campaign_id": manifest.get("campaign_id"),
@@ -179,7 +221,13 @@ def preflight_campaign(manifest_path: str | Path) -> dict[str, Any]:
             "h0": h0,
             "environment": environment,
             "stages": stages,
-            "warnings": ["preflight is read-only", "planned counts are not completed counts"],
+            "blocking_stages": blocking_stages,
+            "ready_for_one_shot_execution": h0["valid"] and not blocking_stages,
+            "warnings": [
+                "preflight is read-only",
+                "planned counts are not completed counts",
+                "all enabled stages must be valid or have an available argv adapter before compute starts",
+            ],
         }
     except Exception as exc:  # noqa: BLE001
         return _error_payload(exc)

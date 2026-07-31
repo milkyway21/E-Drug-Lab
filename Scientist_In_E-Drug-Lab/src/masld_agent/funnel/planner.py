@@ -243,6 +243,7 @@ def plan_campaign(
             "reuse_valid_artifacts_first": True,
             "execute_default": False,
             "compute_requires_confirm": True,
+            "whole_pipeline_preflight_before_compute": True,
             "stop_on_failed_validation": True,
             "report_every_stage": True,
         },

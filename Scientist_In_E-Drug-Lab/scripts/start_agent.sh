@@ -36,6 +36,7 @@ export HERMES_INFERENCE_PROVIDER="${HERMES_INFERENCE_PROVIDER:-openai-relay}"
 export HERMES_INFERENCE_MODEL="${HERMES_INFERENCE_MODEL:-gpt-5.6-sol}"
 export HERMES_MODEL_CONTEXT_LENGTH="${HERMES_MODEL_CONTEXT_LENGTH:-1050000}"
 export HERMES_REASONING_EFFORT="${HERMES_REASONING_EFFORT:-xhigh}"
+export HERMES_MAX_TURNS="${HERMES_MAX_TURNS:-600}"
 export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://your-openai-compatible-endpoint/v1}"
 
 if [[ -z "${OPENAI_API_KEY:-}" ]]; then
@@ -55,7 +56,8 @@ python "$ROOT/scripts/sync_providers_from_ccswitch.py" \
   --activate-provider "$HERMES_INFERENCE_PROVIDER" \
   --model "$HERMES_INFERENCE_MODEL" \
   --context-length "$HERMES_MODEL_CONTEXT_LENGTH" \
-  --reasoning-effort "$HERMES_REASONING_EFFORT"
+  --reasoning-effort "$HERMES_REASONING_EFFORT" \
+  --max-turns "$HERMES_MAX_TURNS"
 python "$ROOT/scripts/import_drug_skills.py" --hermes-home "$HERMES_HOME" --check
 
 cat <<BANNER
@@ -67,6 +69,7 @@ cat <<BANNER
   模型来源: $HERMES_INFERENCE_PROVIDER
   推理模型: $HERMES_INFERENCE_MODEL
   推理强度: $HERMES_REASONING_EFFORT
+  单会话轮次: $HERMES_MAX_TURNS
   上下文窗口: $HERMES_MODEL_CONTEXT_LENGTH tokens
   OPENAI_BASE_URL: $OPENAI_BASE_URL
 ============================================================

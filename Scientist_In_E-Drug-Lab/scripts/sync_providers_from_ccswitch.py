@@ -222,6 +222,7 @@ def _ensure_config(
     model_override: str | None = None,
     configured_provider: str | None = None,
     reasoning_effort: str | None = None,
+    max_turns: int | None = None,
     prune_unlisted_providers: bool = False,
 ) -> Path:
     import yaml
@@ -347,6 +348,12 @@ def _ensure_config(
         data.setdefault("agent", {})["reasoning_effort"] = reasoning_effort
         dirty = True
 
+    if max_turns is not None:
+        if max_turns <= 0:
+            raise ValueError("Hermes max_turns must be positive")
+        data.setdefault("agent", {})["max_turns"] = max_turns
+        dirty = True
+
     if _ensure_plugin_enabled(data):
         dirty = True
     if _ensure_edrug_skin(data):
@@ -407,6 +414,11 @@ def main() -> int:
         help="Persist the Hermes reasoning effort",
     )
     parser.add_argument(
+        "--max-turns",
+        type=int,
+        help="Persist the Hermes per-session tool/dialogue turn limit",
+    )
+    parser.add_argument(
         "--skip-ccswitch",
         action="store_true",
         help="Only sync from project .env (ignore CC-Switch DB)",
@@ -458,6 +470,7 @@ def main() -> int:
         model_override=args.model,
         configured_provider=args.activate_provider,
         reasoning_effort=args.reasoning_effort,
+        max_turns=args.max_turns,
         prune_unlisted_providers=args.prune_unlisted_providers,
     )
     env_path = hermes_home / ".env"
