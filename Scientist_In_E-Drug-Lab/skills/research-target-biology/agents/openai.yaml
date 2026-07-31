@@ -1,0 +1,4 @@
+interface:
+  display_name: Research Target Biology
+  short_description: Build an auditable target evidence card
+  default_prompt: Resolve this target, collect biological evidence, separate support and opposition, and write target_evidence.json.

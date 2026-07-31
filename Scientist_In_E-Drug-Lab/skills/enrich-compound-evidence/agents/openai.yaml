@@ -1,0 +1,4 @@
+interface:
+  display_name: Enrich Compound Evidence
+  short_description: Normalize and annotate library compounds
+  default_prompt: Normalize this official library, preserve assay context and provenance, and write compound_evidence.jsonl.

@@ -94,6 +94,13 @@ class ProteinStructure(ProvenanceMixin):
     is_alphafold: bool = False
     preferred: bool = False
     selection_reason: str = ""
+    uniprot_id: Optional[str] = None
+    entity_id: Optional[str] = None
+    sequence_coverage: Optional[float] = Field(None, ge=0.0, le=1.0)
+    mutations: list[str] = Field(default_factory=list)
+    biological_assembly: Optional[str] = None
+    release_date: Optional[str] = None
+    quality_score: Optional[float] = Field(None, ge=0.0, le=100.0)
 
 
 class BindingPocket(ProvenanceMixin):
@@ -101,6 +108,39 @@ class BindingPocket(ProvenanceMixin):
     key_residues: list[str] = Field(default_factory=list)
     structure_pdb_id: Optional[str] = None
     selection_reason: str = ""
+
+
+class TargetEvidenceCard(ProvenanceMixin):
+    gene_symbol: str
+    disease: str
+    uniprot_id: Optional[str] = None
+    ensembl_id: Optional[str] = None
+    organism: str = "Homo sapiens"
+    biological_function: str = ""
+    tissue_context: list[str] = Field(default_factory=list)
+    pathways: list[str] = Field(default_factory=list)
+    mechanism_directions: list[str] = Field(default_factory=list)
+    supporting_evidence: list[EvidenceRecord] = Field(default_factory=list)
+    opposing_evidence: list[EvidenceRecord] = Field(default_factory=list)
+    unresolved_questions: list[str] = Field(default_factory=list)
+
+
+class StructureCandidate(ProteinStructure):
+    target_gene: Optional[str] = None
+    relevant_ligand: bool = False
+    construct_notes: list[str] = Field(default_factory=list)
+
+
+class PocketQualification(ProvenanceMixin):
+    target_gene: str
+    structure_id: Optional[str] = None
+    applicable: bool = False
+    qualified: bool = False
+    pocket_type: Optional[str] = None
+    key_residues: list[str] = Field(default_factory=list)
+    evidence_basis: list[str] = Field(default_factory=list)
+    rejection_reasons: list[str] = Field(default_factory=list)
+    docking_recommendation: str = "do_not_dock"
 
 
 class ReferenceLigand(ProvenanceMixin):
@@ -127,6 +167,77 @@ class SafetyConcern(ProvenanceMixin):
     concern: str
     severity: str = "moderate"  # low|moderate|high
     mitigation: Optional[str] = None
+
+
+class ActivityEvidence(ProvenanceMixin):
+    target: Optional[str] = None
+    assay_id: Optional[str] = None
+    assay_type: Optional[str] = None
+    assay_description: Optional[str] = None
+    organism: Optional[str] = None
+    standard_type: Optional[str] = None
+    standard_relation: Optional[str] = None
+    standard_value: Optional[float] = None
+    standard_units: Optional[str] = None
+    pchembl_value: Optional[float] = None
+    document_id: Optional[str] = None
+
+
+class SafetyEvidence(ProvenanceMixin):
+    endpoint: str
+    result: str
+    severity: str = "unknown"
+    observed: bool = False
+    prediction: bool = False
+    reference_id: Optional[str] = None
+    applicability: str = "unknown"
+
+
+class MechanismHypothesis(BaseModel):
+    intervention: str
+    direct_action: str
+    target_or_pathway: str
+    expected_direction: str
+    lipid_phenotype: str
+    evidence_refs: list[str] = Field(default_factory=list)
+    alternative_mechanisms: list[str] = Field(default_factory=list)
+    falsifiers: list[str] = Field(default_factory=list)
+    validation_readouts: list[str] = Field(default_factory=list)
+
+
+class NominationScoreBreakdown(BaseModel):
+    lipid_evidence: float = Field(0.0, ge=0.0, le=100.0)
+    mechanism_relevance: float = Field(0.0, ge=0.0, le=100.0)
+    activity_quality: float = Field(0.0, ge=0.0, le=100.0)
+    safety: float = Field(0.0, ge=0.0, le=100.0)
+    structure_developability: float = Field(0.0, ge=0.0, le=100.0)
+    diversity: float = Field(0.0, ge=0.0, le=100.0)
+    uncertainty_penalty: float = Field(0.0, ge=0.0, le=20.0)
+    weighted_total: float = Field(0.0, ge=0.0, le=100.0)
+    final_score: float = Field(0.0, ge=0.0, le=100.0)
+    weights: dict[str, float] = Field(default_factory=dict)
+
+
+class CompoundEvidenceCard(ProvenanceMixin):
+    library_id: str
+    library_source: str
+    name: Optional[str] = None
+    canonical_smiles: Optional[str] = None
+    parent_inchikey: Optional[str] = None
+    pubchem_cid: Optional[int] = None
+    chembl_id: Optional[str] = None
+    molecular_properties: dict[str, Optional[float]] = Field(default_factory=dict)
+    structure_alerts: list[str] = Field(default_factory=list)
+    target_or_pathway: list[str] = Field(default_factory=list)
+    lipid_rationale: str = ""
+    toxicity_rationale: str = ""
+    activity_evidence: list[ActivityEvidence] = Field(default_factory=list)
+    safety_evidence: list[SafetyEvidence] = Field(default_factory=list)
+    literature_evidence: list[EvidenceRecord] = Field(default_factory=list)
+    mechanism_hypotheses: list[MechanismHypothesis] = Field(default_factory=list)
+    score: NominationScoreBreakdown = Field(default_factory=NominationScoreBreakdown)
+    structure_applicability: str = "not_assessed"
+    identity_valid: bool = False
 
 
 class ValidationExperiment(ProvenanceMixin):

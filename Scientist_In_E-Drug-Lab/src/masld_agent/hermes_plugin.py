@@ -43,11 +43,28 @@ def _run_pipeline(args: dict, **kwargs) -> str:
             args.get("output"),
             default=PKG_ROOT / "runs" / "demo",
         )
+        library = (
+            resolve_under(PKG_ROOT, args.get("library"))
+            if args.get("library")
+            else None
+        )
     except (UnsafePathError, ValueError) as exc:
         return json.dumps({"status": "error", "error": str(exc)})
     online = bool(args.get("online", False))
     top = int(args.get("top_targets", 10))
-    out = run_pipeline(output, disease=disease, top_targets=top, online=online)
+    out = run_pipeline(
+        output,
+        disease=disease,
+        top_targets=top,
+        online=online,
+        offline_replay=bool(args.get("offline_replay", False)),
+        library_path=library,
+        final_count=int(args.get("final_count") or 10),
+        target_gene=str(args.get("target_gene") or "").strip() or None,
+        evidence_profile=str(args.get("evidence_profile") or "generic"),
+        online_enrichment_limit=int(args.get("online_enrichment_limit") or 50),
+        library_source=str(args.get("library_source") or "official_sdf_library"),
+    )
     return json.dumps({"status": "ok", "output_dir": str(out), "online": online})
 
 
@@ -97,6 +114,160 @@ def _pack_submission(args: dict, **kwargs) -> str:
         return json.dumps({"status": "error", "error": str(exc)})
     path = pack_submission(run_dir, output)
     return json.dumps({"status": "ok", "zip": str(path)})
+
+
+def _target_biology_search(args: dict, **kwargs) -> str:
+    from masld_agent.evidence_pipeline import build_target_evidence_card
+    from masld_agent.http_cache import CachedHttp
+
+    gene = str(args.get("gene") or "").strip()
+    if not gene:
+        return json.dumps({"status": "error", "error": "gene is required"})
+    card = build_target_evidence_card(
+        gene,
+        str(args.get("disease") or "MASLD"),
+        online=bool(args.get("online", True)) or bool(args.get("offline_replay", False)),
+        http=CachedHttp(cache_only=bool(args.get("offline_replay", False))),
+    )
+    return card.model_dump_json(indent=2)
+
+
+def _structure_search_rank(args: dict, **kwargs) -> str:
+    from masld_agent.http_cache import CachedHttp
+    from masld_agent.tools.pdb import discover_structure_candidates
+
+    gene = str(args.get("gene") or "").strip() or None
+    uniprot = str(args.get("uniprot_id") or "").strip() or None
+    if not gene and not uniprot:
+        return json.dumps({"status": "error", "error": "gene or uniprot_id is required"})
+    structures = discover_structure_candidates(
+        gene=gene,
+        uniprot_id=uniprot,
+        limit=int(args.get("limit") or 25),
+        http=CachedHttp(cache_only=bool(args.get("offline_replay", False))),
+    )
+    return json.dumps(
+        {"status": "ok", "structures": [item.model_dump(mode="json") for item in structures]},
+        ensure_ascii=False,
+        default=str,
+    )
+
+
+def _pocket_qualify(args: dict, **kwargs) -> str:
+    from masld_agent.models import StructureCandidate
+    from masld_agent.tools.pdb import qualify_pocket
+
+    structure_data = args.get("structure")
+    structure = (
+        StructureCandidate.model_validate(structure_data)
+        if isinstance(structure_data, dict)
+        else None
+    )
+    result = qualify_pocket(
+        structure,
+        target_gene=str(args.get("target_gene") or "phenotype_first"),
+        key_residues=list(args.get("key_residues") or []),
+        evidence_basis=list(args.get("evidence_basis") or []),
+        mechanism_is_target_based=bool(args.get("mechanism_is_target_based", True)),
+    )
+    return result.model_dump_json(indent=2)
+
+
+def _compound_evidence_enrich(args: dict, **kwargs) -> str:
+    from masld_agent.tools.compound_evidence import dump_cards_jsonl, load_compound_library
+
+    try:
+        library = resolve_under(PKG_ROOT, args.get("library"))
+        output = resolve_under(
+            PKG_ROOT,
+            args.get("output"),
+            default=PKG_ROOT / "runs" / "evidence" / "compound_evidence.jsonl",
+        )
+    except UnsafePathError as exc:
+        return json.dumps({"status": "error", "error": str(exc)})
+    cards = load_compound_library(
+        library,
+        library_source=str(args.get("library_source") or "official_sdf_library"),
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    dump_cards_jsonl(cards, output)
+    return json.dumps({"status": "ok", "records": len(cards), "output": str(output)})
+
+
+def _toxicity_triage(args: dict, **kwargs) -> str:
+    from masld_agent.models import CompoundEvidenceCard
+
+    try:
+        evidence_path = resolve_under(PKG_ROOT, args.get("compound_evidence"))
+    except UnsafePathError as exc:
+        return json.dumps({"status": "error", "error": str(exc)})
+    cards = [
+        CompoundEvidenceCard.model_validate_json(line)
+        for line in evidence_path.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    summary = [
+        {
+            "library_id": card.library_id,
+            "safety_score": card.score.safety,
+            "observed": sum(item.observed for item in card.safety_evidence),
+            "predicted": sum(item.prediction for item in card.safety_evidence),
+            "status": (
+                "observed"
+                if any(item.observed for item in card.safety_evidence)
+                else "predicted_only"
+                if any(item.prediction for item in card.safety_evidence)
+                else "unknown"
+            ),
+            "rationale": card.toxicity_rationale,
+        }
+        for card in cards
+    ]
+    return json.dumps({"status": "ok", "toxicity": summary}, ensure_ascii=False)
+
+
+def _nominate_compounds(args: dict, **kwargs) -> str:
+    from masld_agent.evidence_pipeline import run_evidence_nomination
+
+    try:
+        library = resolve_under(PKG_ROOT, args.get("library"))
+        output = resolve_under(
+            PKG_ROOT,
+            args.get("output"),
+            default=PKG_ROOT / "runs" / "evidence",
+        )
+    except UnsafePathError as exc:
+        return json.dumps({"status": "error", "error": str(exc)})
+    result = run_evidence_nomination(
+        library,
+        output,
+        final_count=int(args.get("final_count") or 10),
+        disease=str(args.get("disease") or "MASLD"),
+        target_gene=str(args.get("target_gene") or "").strip() or None,
+        online=bool(args.get("online", False)),
+        offline_replay=bool(args.get("offline_replay", False)),
+        online_enrichment_limit=int(args.get("online_enrichment_limit") or 50),
+        library_source=str(args.get("library_source") or "official_sdf_library"),
+        mechanism_is_target_based=bool(args.get("mechanism_is_target_based", True)),
+    )
+    return json.dumps({"status": "completed", "output_dir": str(result)})
+
+
+def _build_validation_report(args: dict, **kwargs) -> str:
+    from masld_agent.submission import validate_submission, write_hepg2_plan, write_validation_report
+
+    try:
+        run_dir = resolve_under(PKG_ROOT, args.get("run_dir"), default=PKG_ROOT / "runs")
+    except UnsafePathError as exc:
+        return json.dumps({"status": "error", "error": str(exc)})
+    write_hepg2_plan(run_dir)
+    result = validate_submission(run_dir)
+    report = write_validation_report(run_dir, result)
+    return json.dumps(
+        {"status": "ok" if result["ok"] else "incomplete", "report": str(report), **result},
+        ensure_ascii=False,
+        default=str,
+    )
 
 
 def _platform_catalog(args: dict, **kwargs) -> str:
@@ -343,9 +514,9 @@ OFFLINE_SCHEMA = {
 RUN_SCHEMA = {
     "name": "masld_run_pipeline",
     "description": (
-        "Run target-hypothesis supervisor (AI4S competition preset supports MASLD/HCC). "
-        "Prefer offline fixtures; set online=true to fetch literature. "
-        "Does not nominate official-library Top10 compounds (C1)."
+        "Run target-hypothesis discovery when no library is supplied, or the complete E0-E6 "
+        "evidence nomination workflow for an official SDF/CSV/SMI library. Set online=true "
+        "for verified public-source enrichment; structure docking remains conditional."
     ),
     "parameters": {
         "type": "object",
@@ -353,7 +524,14 @@ RUN_SCHEMA = {
             "disease": {"type": "string", "enum": ["MASLD", "HCC"]},
             "top_targets": {"type": "integer"},
             "online": {"type": "boolean"},
+            "offline_replay": {"type": "boolean"},
             "output": {"type": "string"},
+            "library": {"type": "string"},
+            "final_count": {"type": "integer", "minimum": 1},
+            "target_gene": {"type": "string"},
+            "evidence_profile": {"type": "string", "enum": ["generic", "competition"]},
+            "online_enrichment_limit": {"type": "integer", "minimum": 0},
+            "library_source": {"type": "string"},
         },
         "required": [],
     },
@@ -394,6 +572,129 @@ PACK_SCHEMA = {
             "output": {"type": "string"},
         },
         "required": [],
+    },
+}
+
+TARGET_BIOLOGY_SCHEMA = {
+    "name": "target_biology_search",
+    "description": (
+        "E1 mandatory biology reconnaissance for target-based discovery. Resolve the human gene, "
+        "retrieve target-disease literature, Open Targets associations, and Reactome pathways. "
+        "Call before structure or pocket selection; preserve missing and opposing evidence."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "gene": {"type": "string"},
+            "disease": {"type": "string"},
+            "online": {"type": "boolean"},
+            "offline_replay": {"type": "boolean"},
+        },
+        "required": ["gene"],
+    },
+}
+
+STRUCTURE_SEARCH_SCHEMA = {
+    "name": "structure_search_rank",
+    "description": (
+        "E2 search and rank experimental RCSB structures by target identity, organism, ligand, "
+        "resolution, and construct quality. Call after target_biology_search and before pocket_qualify."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "gene": {"type": "string"},
+            "uniprot_id": {"type": "string"},
+            "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+            "offline_replay": {"type": "boolean"},
+        },
+        "required": [],
+    },
+}
+
+POCKET_QUALIFY_SCHEMA = {
+    "name": "pocket_qualify",
+    "description": (
+        "E3 decide whether structure docking is applicable and evidence-supported. Requires a ranked "
+        "structure plus ligand, residue, cofactor, or literature support; never invent a blind pocket."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "target_gene": {"type": "string"},
+            "structure": {"type": "object"},
+            "key_residues": {"type": "array", "items": {"type": "string"}},
+            "evidence_basis": {"type": "array", "items": {"type": "string"}},
+            "mechanism_is_target_based": {"type": "boolean"},
+        },
+        "required": ["target_gene"],
+    },
+}
+
+COMPOUND_ENRICH_SCHEMA = {
+    "name": "compound_evidence_enrich",
+    "description": (
+        "E4 normalize an SDF/CSV/SMI library into exact parent identities, descriptors, evidence "
+        "fields, structural-alert predictions, and explicit unknowns. Writes compound_evidence.jsonl."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "library": {"type": "string"},
+            "output": {"type": "string"},
+            "library_source": {"type": "string"},
+        },
+        "required": ["library"],
+    },
+}
+
+TOXICITY_TRIAGE_SCHEMA = {
+    "name": "toxicity_triage",
+    "description": (
+        "E5 summarize observed, predicted, and unknown toxicity evidence. Absence of evidence is "
+        "never labeled low toxicity; structural alerts are predictions rather than observed effects."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"compound_evidence": {"type": "string"}},
+        "required": ["compound_evidence"],
+    },
+}
+
+NOMINATE_COMPOUNDS_SCHEMA = {
+    "name": "nominate_compounds",
+    "description": (
+        "Run deterministic E0-E6 compound nomination from an official library. Produces target, "
+        "structure, pocket, compound, toxicity, scorecard, Top-N, provenance, and mechanism reports. "
+        "Use structure docking only when E3 qualifies it."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "library": {"type": "string"},
+            "output": {"type": "string"},
+            "final_count": {"type": "integer", "minimum": 1},
+            "disease": {"type": "string"},
+            "target_gene": {"type": "string"},
+            "online": {"type": "boolean"},
+            "online_enrichment_limit": {"type": "integer", "minimum": 0},
+            "library_source": {"type": "string"},
+            "mechanism_is_target_based": {"type": "boolean"},
+        },
+        "required": ["library"],
+    },
+}
+
+BUILD_VALIDATION_REPORT_SCHEMA = {
+    "name": "build_validation_report",
+    "description": (
+        "E6 rebuild the dual-readout validation plan and validate nomination/submission artifacts. "
+        "Use after nominate_compounds or H10 comprehensive analysis."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {"run_dir": {"type": "string"}},
+        "required": ["run_dir"],
     },
 }
 
@@ -894,6 +1195,13 @@ def register(ctx):
         ("masld_competition_brief", BRIEF_SCHEMA, _competition_brief),
         ("masld_validate_submission", VALIDATE_SCHEMA, _validate_submission),
         ("masld_pack_submission", PACK_SCHEMA, _pack_submission),
+        ("target_biology_search", TARGET_BIOLOGY_SCHEMA, _target_biology_search),
+        ("structure_search_rank", STRUCTURE_SEARCH_SCHEMA, _structure_search_rank),
+        ("pocket_qualify", POCKET_QUALIFY_SCHEMA, _pocket_qualify),
+        ("compound_evidence_enrich", COMPOUND_ENRICH_SCHEMA, _compound_evidence_enrich),
+        ("toxicity_triage", TOXICITY_TRIAGE_SCHEMA, _toxicity_triage),
+        ("nominate_compounds", NOMINATE_COMPOUNDS_SCHEMA, _nominate_compounds),
+        ("build_validation_report", BUILD_VALIDATION_REPORT_SCHEMA, _build_validation_report),
         ("platform_catalog", CATALOG_SCHEMA, _platform_catalog),
         ("platform_health", HEALTH_SCHEMA, _platform_health),
         ("diffdynamic_status", DD_STATUS_SCHEMA, _diffdynamic_status),
@@ -959,13 +1267,11 @@ def register(ctx):
         logger.debug("register_command unavailable: %s", exc)
 
     try:
-        skill_root = PKG_ROOT / "skills" / "scientist-in-e-drug-lab"
-        if hasattr(ctx, "register_skill") and skill_root.exists():
-            # Parent orchestrator + nested hsv-00…07 stage skills
-            ctx.register_skill(str(skill_root))
-            for child in sorted(skill_root.iterdir()):
-                if child.is_dir() and (child / "SKILL.md").is_file():
-                    ctx.register_skill(str(child))
+        skills_root = PKG_ROOT / "skills"
+        if hasattr(ctx, "register_skill") and skills_root.exists():
+            for skill_root in sorted(skills_root.iterdir()):
+                if skill_root.is_dir() and (skill_root / "SKILL.md").is_file():
+                    ctx.register_skill(str(skill_root))
     except Exception as exc:  # noqa: BLE001
         logger.debug("register_skill skipped: %s", exc)
 

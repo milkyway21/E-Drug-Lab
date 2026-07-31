@@ -13,3 +13,9 @@ precedence over a favorable numeric docking score.
 Write a machine table and human report. State that computational nomination is not
 experimental confirmation. `funnel validate --stage H10` must verify both outputs and
 their candidate counts.
+
+Then hand the joined candidates to E4-E6. Preserve official library ID, parent InChIKey,
+assay context, evidence level, observed versus predicted toxicity, score decomposition,
+uncertainty penalty, target/pathway direction, alternatives, falsifiers, and validation
+readouts. Do not allow a favorable docking or MD value to erase contrary biological or
+toxicity evidence.

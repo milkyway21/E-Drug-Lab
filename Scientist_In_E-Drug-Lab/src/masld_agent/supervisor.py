@@ -286,8 +286,31 @@ def run_pipeline(
     modality: str = "small_molecule_inhibitor",
     top_targets: int = 10,
     online: bool = False,
+    offline_replay: bool = False,
+    library_path: Optional[Path] = None,
+    final_count: int = 10,
+    target_gene: Optional[str] = None,
+    evidence_profile: str = "generic",
+    online_enrichment_limit: int = 50,
+    library_source: str = "official_sdf_library",
 ) -> Path:
-    """Online-capable run: uses curated panel; fetches live APIs when online=True."""
+    """Run target discovery or route a supplied compound library through E0-E6."""
+    if library_path is not None:
+        from masld_agent.evidence_pipeline import run_evidence_nomination
+
+        if evidence_profile not in {"generic", "competition"}:
+            raise ValueError("evidence_profile must be generic or competition")
+        return run_evidence_nomination(
+            library_path,
+            output_dir,
+            final_count=final_count,
+            disease=disease.value,
+            target_gene=target_gene,
+            online=online,
+            offline_replay=offline_replay,
+            online_enrichment_limit=online_enrichment_limit,
+            library_source=library_source,
+        )
     run_id = _now_id()
     out = output_dir / run_id
     out.mkdir(parents=True, exist_ok=True)

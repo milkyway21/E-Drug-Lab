@@ -8,16 +8,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-from masld_agent.config import DEFAULT_COMPETITION, PKG_ROOT, load_competition_config
+from masld_agent.config import DEFAULT_COMPETITION, load_competition_config
 from masld_agent.tools.ai4s_brief import lint_dual_readout, load_ai4s_config
 
 TOP10_COLUMNS_DEFAULT = [
     "rank",
+    "library_id",
     "id_or_name",
+    "canonical_smiles",
+    "parent_inchikey",
     "smiles_or_inchikey",
+    "target_or_pathway",
+    "evidence_level",
+    "lipid_score",
+    "safety_score",
+    "uncertainty_penalty",
+    "structure_applicability",
     "lipid_rationale",
     "tox_rationale",
     "mechanism_hypothesis",
+    "validation_readouts",
     "evidence_refs",
     "library_source",
 ]
@@ -125,19 +135,64 @@ def validate_submission(
 
     filled = 0
     pending_placeholder = 0
+    valid_ranks: list[int] = []
+    parent_keys: list[str] = []
+    detailed_rows = 0
     for row in rows:
         name = row.get("id_or_name") or ""
-        struct = row.get("smiles_or_inchikey") or ""
+        struct = (
+            row.get("canonical_smiles")
+            or row.get("parent_inchikey")
+            or row.get("smiles_or_inchikey")
+            or ""
+        )
         lipid = row.get("lipid_rationale") or ""
         tox = row.get("tox_rationale") or ""
+        try:
+            valid_ranks.append(int(row.get("rank") or ""))
+        except ValueError:
+            status_flags.append(f"row_{row.get('rank', '?')}_invalid_rank")
+        parent_key = row.get("parent_inchikey") or ""
+        if parent_key:
+            parent_keys.append(parent_key)
         if name.startswith("PENDING_") or not struct:
             pending_placeholder += 1
         if name and struct and lipid and tox:
             filled += 1
             # per-row dual readout
-            row_lint = lint_dual_readout(f"{lipid}\n{tox}", cfg)
+            row_lint = lint_dual_readout(
+                "\n".join(
+                    [
+                        lipid,
+                        tox,
+                        row.get("mechanism_hypothesis") or "",
+                        row.get("validation_readouts") or "",
+                    ]
+                ),
+                cfg,
+            )
             if not row_lint["ok"]:
                 status_flags.append(f"row_{row.get('rank', '?')}_dual_readout")
+            detail_fields = [
+                "library_id",
+                "parent_inchikey",
+                "target_or_pathway",
+                "evidence_level",
+                "lipid_score",
+                "safety_score",
+                "uncertainty_penalty",
+                "mechanism_hypothesis",
+                "validation_readouts",
+                "evidence_refs",
+                "library_source",
+            ]
+            missing_details = [field for field in detail_fields if field in cols and not row.get(field)]
+            if missing_details:
+                status_flags.append(
+                    f"row_{row.get('rank', '?')}_missing_evidence_fields:{','.join(missing_details)}"
+                )
+            else:
+                detailed_rows += 1
 
     checks.append(
         {
@@ -148,6 +203,35 @@ def validate_submission(
     )
     if filled < 10:
         status_flags.append("pending_library_nomination")
+    ranks_ok = sorted(valid_ranks) == list(range(1, 11))
+    checks.append(
+        {
+            "id": "top10_ranks",
+            "ok": ranks_ok,
+            "detail": f"ranks={sorted(valid_ranks)}",
+        }
+    )
+    if not ranks_ok:
+        status_flags.append("top10_rank_sequence_invalid")
+    unique_parents_ok = len(parent_keys) == len(set(parent_keys)) and len(parent_keys) >= 10
+    checks.append(
+        {
+            "id": "top10_parent_identity_unique",
+            "ok": unique_parents_ok,
+            "detail": f"parent_keys={len(parent_keys)} unique={len(set(parent_keys))}",
+        }
+    )
+    if not unique_parents_ok:
+        status_flags.append("top10_parent_identity_incomplete_or_duplicate")
+    checks.append(
+        {
+            "id": "top10_evidence_complete",
+            "ok": detailed_rows >= 10,
+            "detail": f"detailed_rows={detailed_rows}/10",
+        }
+    )
+    if detailed_rows < 10:
+        status_flags.append("top10_evidence_fields_incomplete")
 
     # Hard constraints surface
     for cid, text in (cfg.get("hard_constraints") or {}).items():
@@ -341,6 +425,18 @@ def pack_submission(
         "events.jsonl",
         "config_snapshot.yaml",
         "hepg2_validation_plan.md",
+        "evidence_task_plan.json",
+        "target_evidence.json",
+        "structure_candidates.csv",
+        "selected_structure.json",
+        "pocket_manifest.json",
+        "compound_evidence.jsonl",
+        "toxicity_evidence.csv",
+        "nomination_scorecard.csv",
+        "top10_nomination.csv",
+        "mechanism_validation.md",
+        "mechanism_validation.pdf",
+        "evidence_provenance.json",
     ]
     with zipfile.ZipFile(output_zip, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for name in include_names:

@@ -5,6 +5,16 @@ description: Plan, preflight, execute, resume, validate, and report the H0-H10 d
 
 # Funnel Orchestrator
 
+For a new target-based task, complete the evidence envelope first:
+
+1. `scope-molecular-nomination` (E0)
+2. `research-target-biology` (E1)
+3. `rank-protein-structures` (E2)
+4. `qualify-binding-pocket` (E3)
+
+Only start a structure-based H0-H10 branch when E3 recommends docking. A phenotype-first
+branch may continue without docking and must record structure evidence as `not_applicable`.
+
 Use the project-owned Python interface. Do not assemble long inline shell programs.
 
 ```bash
@@ -39,6 +49,11 @@ Scale truth tables: `config/funnel_profiles/full.yaml` and `test.yaml`. Stage ma
 H0 gate; H1a/H1b DiffDynamic; H2 primary SP; H3 FeatureHit/Shape;
 H4 explicit ADMET backend; H5 refined SP; H6 XP; H7 MMGBSA; H8 short MD;
 H9 long MD; H10 evidence curation.
+
+After H10, call `enrich-compound-evidence` (E4), `triage-compound-toxicity` (E5),
+`nominate-lipid-modulators`, and `write-mechanism-validation-report` (E6). These evidence
+stages do not change H0-H10 count contracts. Each E stage and H stage must produce its own
+JSON/Markdown status report before automatic continuation.
 
 Read `config/SOUL.md` and the campaign manifest before acting. Planned counts are
 not completed counts. Advance only after `funnel validate` reports `valid=true`.

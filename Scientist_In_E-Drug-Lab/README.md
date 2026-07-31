@@ -5,7 +5,7 @@
 - 仓库根：上一级 `e-drug-lab/`（Backend / Frontend 同仓）
 - 人设：[`config/SOUL.md`](config/SOUL.md)（启动时同步到 `.hermes/SOUL.md`）
 - 平台能力目录：[`config/platform/PLATFORM.md`](config/platform/PLATFORM.md) + [`catalog.yaml`](config/platform/catalog.yaml)（同步到 `.hermes/`，**不改人设**）
-- **AI4S 生命科学赛道**为可选竞赛预设（默认疾病 MASLD；可切 HCC，须向组委会确认，禁止混淆）。库内化合物 Top10（C1）仍由 `ai4s_masld_lipid` S01–S08 负责；本 Agent 侧重靶点 / 机制 / Proposal+Method。
+- **AI4S 生命科学赛道**为可选竞赛预设（默认疾病 MASLD；可切 HCC，须向组委会确认，禁止混淆）。本 Agent 可从官方 SDF/CSV/SMI 完成证据富集、毒性分层、Top10 排序、机制和验证报告。
 
 竞赛相关配置与报告含 **`competition_scope_warning`**（仅在讨论该赛道/提交时强调）。
 
@@ -57,12 +57,12 @@ hermes model
 
 详见 [docs/hermes_integration.md](docs/hermes_integration.md)。
 
-## Skills（精简可启动集）
+## Skills（项目顶层技能库）
 
 ```bash
 python scripts/import_drug_skills.py   # 从 skills/ 链接到 .hermes/skills + skills_pack/
-# funnel×14 | ddfast×4 | drug-design×3 | campaign×3
-# 已移除：MASLD s00–s08、hsv-*、writing/nature、未用 ddfast 00–05/08–10
+# funnel×14 | ddfast×4 | drug-design×3 | campaign×3 | evidence×8
+# 自动导入所有顶层 skills/*/SKILL.md；嵌套兼容工作流不会发布
 ```
 
 ## CLI（科学管线）
@@ -74,6 +74,12 @@ masld-agent run --competition config/competition_life_science.yaml \
 masld-agent evaluate-target --gene HSD17B13 --uniprot Q7Z5P4 --output runs/hsd17b13
 
 masld-agent offline-demo --fixture tests/fixtures/hsd17b13
+
+# E0-E6：生物学 → PDB → 条件口袋 → 化合物证据 → 毒性 → 提名报告
+masld-agent evidence target --gene HSD17B13 --disease MASLD --online
+masld-agent evidence structures --gene HSD17B13 --uniprot Q7Z5P4
+masld-agent evidence nominate --library official_library.sdf \
+  --output runs/nomination --final-count 10 --disease MASLD --target-gene HSD17B13 --online
 ```
 
 ## 三平台（DiffDynamic / e-drug-lab / 薛定谔）
@@ -108,7 +114,7 @@ masld-agent validate-submission --run-dir runs/<run_id>
 masld-agent pack-submission --run-dir runs/<run_id> --output runs/<run_id>/submission/ai4s_bundle.zip
 ```
 
-- 库内 Top10（C1）必须来自官方 SDF；未填结构时标记 `pending_library_nomination`。
+- 库内 Top10（C1）必须来自官方库；保存库文件哈希、稳定库 ID 和 parent InChIKey，缺失结构或证据时校验失败。
 - 评分维度 60/20/20 见 [`config/competition_life_science.yaml`](config/competition_life_science.yaml)。
 - `offline-demo` / `run` 会写入 `submission/README_AI4S.md` 指针。
 

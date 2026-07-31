@@ -14,11 +14,17 @@ from masld_agent.models import DiseaseScope
 from masld_agent.supervisor import evaluate_single_target, run_offline_demo, run_pipeline
 
 app = typer.Typer(add_completion=False, no_args_is_help=True, name="masld-agent")
+evidence_app = typer.Typer(
+    add_completion=False,
+    no_args_is_help=True,
+    help="Deterministic E0-E6 biology, structure, compound-evidence, and nomination tools.",
+)
 funnel_app = typer.Typer(
     add_completion=False,
     no_args_is_help=True,
     help="Deterministic H0-H10 campaign planning, execution, and validation.",
 )
+app.add_typer(evidence_app, name="evidence")
 app.add_typer(funnel_app, name="funnel")
 
 
@@ -30,8 +36,15 @@ def cmd_run(
     top_targets: int = typer.Option(10, "--top-targets"),
     output: Path = typer.Option(PKG_ROOT / "runs" / "demo", "--output"),
     online: bool = typer.Option(False, "--online/--offline-panel"),
+    offline_replay: bool = typer.Option(False, "--offline-replay"),
+    library: Optional[Path] = typer.Option(None, "--library", exists=True, dir_okay=False),
+    final_count: int = typer.Option(10, "--final-count", min=1),
+    target_gene: Optional[str] = typer.Option(None, "--target-gene"),
+    evidence_profile: str = typer.Option("generic", "--evidence-profile"),
+    online_enrichment_limit: int = typer.Option(50, "--online-enrichment-limit", min=0),
+    library_source: str = typer.Option("official_sdf_library", "--library-source"),
 ) -> None:
-    """Run supervisor pipeline (fixtures + optional online literature)."""
+    """Run target discovery, or E0-E6 nomination when a library is supplied."""
     out = run_pipeline(
         output,
         competition_config=competition,
@@ -39,6 +52,13 @@ def cmd_run(
         modality=modality,
         top_targets=top_targets,
         online=online,
+        offline_replay=offline_replay,
+        library_path=library,
+        final_count=final_count,
+        target_gene=target_gene,
+        evidence_profile=evidence_profile,
+        online_enrichment_limit=online_enrichment_limit,
+        library_source=library_source,
     )
     rprint(f"[green]OK[/green] wrote run to {out}")
 
@@ -189,6 +209,85 @@ def _json_print(payload: dict) -> None:
     import json
 
     print(json.dumps(payload, ensure_ascii=False, indent=2, default=str))
+
+
+@evidence_app.command("target")
+def cmd_evidence_target(
+    gene: str = typer.Option(..., "--gene"),
+    disease: str = typer.Option("MASLD", "--disease"),
+    online: bool = typer.Option(False, "--online/--offline"),
+    offline_replay: bool = typer.Option(False, "--offline-replay"),
+    output: Optional[Path] = typer.Option(None, "--output"),
+) -> None:
+    """Build a target biology card from verified public sources."""
+    from masld_agent.evidence_pipeline import build_target_evidence_card
+
+    from masld_agent.http_cache import CachedHttp
+
+    card = build_target_evidence_card(
+        gene,
+        disease,
+        online=online or offline_replay,
+        http=CachedHttp(cache_only=offline_replay),
+    )
+    payload = card.model_dump(mode="json")
+    if output:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            __import__("json").dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+    _json_print(payload)
+
+
+@evidence_app.command("structures")
+def cmd_evidence_structures(
+    gene: Optional[str] = typer.Option(None, "--gene"),
+    uniprot: Optional[str] = typer.Option(None, "--uniprot"),
+    limit: int = typer.Option(25, "--limit", min=1, max=100),
+    offline_replay: bool = typer.Option(False, "--offline-replay"),
+) -> None:
+    """Search and rank experimental RCSB structures for a target."""
+    from masld_agent.tools.pdb import discover_structure_candidates
+
+    from masld_agent.http_cache import CachedHttp
+
+    structures = discover_structure_candidates(
+        gene=gene,
+        uniprot_id=uniprot,
+        limit=limit,
+        http=CachedHttp(cache_only=offline_replay),
+    )
+    _json_print({"structures": [item.model_dump(mode="json") for item in structures]})
+
+
+@evidence_app.command("nominate")
+def cmd_evidence_nominate(
+    library: Path = typer.Option(..., "--library", exists=True, dir_okay=False),
+    output: Path = typer.Option(..., "--output"),
+    final_count: int = typer.Option(10, "--final-count", min=1),
+    disease: str = typer.Option("MASLD", "--disease"),
+    target_gene: Optional[str] = typer.Option(None, "--target-gene"),
+    online: bool = typer.Option(False, "--online/--offline"),
+    offline_replay: bool = typer.Option(False, "--offline-replay"),
+    online_enrichment_limit: int = typer.Option(50, "--online-enrichment-limit", min=0),
+    library_source: str = typer.Option("official_sdf_library", "--library-source"),
+) -> None:
+    """Run the complete E0-E6 evidence envelope and nominate compounds."""
+    from masld_agent.evidence_pipeline import run_evidence_nomination
+
+    result = run_evidence_nomination(
+        library,
+        output,
+        final_count=final_count,
+        disease=disease,
+        target_gene=target_gene,
+        online=online,
+        offline_replay=offline_replay,
+        online_enrichment_limit=online_enrichment_limit,
+        library_source=library_source,
+    )
+    _json_print({"status": "completed", "output_dir": str(result)})
 
 
 @funnel_app.command("plan")
