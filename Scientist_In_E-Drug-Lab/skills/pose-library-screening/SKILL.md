@@ -148,6 +148,10 @@ Hard validation should cover:
 Computational similarity, GlideScore, and Shape similarity are ranking evidence only;
 they are not experimental activity or target-inhibition proof.
 
+Hand the exact-N library manifest to `enrich-compound-evidence`. Preserve official library
+ID and parent InChIKey so E4 can join PubChem, ChEMBL, literature, QikProp, docking, and MD
+without using raw SMILES as the only key.
+
 ## References
 
 - `references/schrodinger-jobdj-recovery.md` — minimal probes, asynchronous wait,

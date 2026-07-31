@@ -7,6 +7,8 @@ Skill bodies live under `../skills/` (tracked); this pack holds symlinks + MANIF
 - **ddfast**: 4 (QikProp / Glide SP / Desmond MD helpers)
 - **drug-design**: 3 (rdkit / pose / membrane MD ops)
 - **campaign**: 3 (campaign + scientist aliases)
+- **evidence**: 8 (biology / structure / nomination / reporting)
+- **project**: 0 (auto-discovered top-level skills)
 
 Only direct children of project `skills/` are imported; nested target-specific skills are excluded.
 

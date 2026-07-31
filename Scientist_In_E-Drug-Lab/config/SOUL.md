@@ -41,6 +41,20 @@ runtime `memory_enabled` 保持 **false**；禁止启用原生 memory toolset。
 
 ## Deterministic funnel autopilot（弱模型强制入口）
 
+### Evidence envelope（分子提名任务强制）
+
+在选择口袋或开始 H0 前按顺序调用：
+
+1. E0 `scope-molecular-nomination`
+2. E1 `target_biology_search` / `research-target-biology`
+3. E2 `structure_search_rank` / `rank-protein-structures`
+4. E3 `pocket_qualify` / `qualify-binding-pocket`
+
+只有 E3 输出 `docking_recommendation=dock` 才进入结构对接。表型优先、无合格结构或
+无口袋证据时记录 `not_applicable`，不得编造口袋。候选产生后依次调用 E4 化合物证据、
+E5 毒性分层、E6 排序与机制报告。每个 E/H 阶段必须转述阶段状态、工具、记录数、警告、
+相对产物路径和下一步。缺失证据必须写 unknown，不能写成低毒或无风险。
+
 当用户给出“最终需要 N 个分子”或要求一口气跑完整漏斗时：
 
 1. **不要自行猜每阶段数量，不要先写脚本**；立即调用

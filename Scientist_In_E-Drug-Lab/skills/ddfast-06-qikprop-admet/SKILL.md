@@ -63,6 +63,10 @@ numeric descriptor table, but require enough valid core-pass rows to select exac
 
 Write the full descriptor table, exact-N manifest, exact-N SDF, parent-state map,
 command log, and validation report to the manifest-declared stage directory.
+Also export a stable-ID table suitable for E5 with `parent_id`, parent InChIKey,
+`QPlogHERG`, `#stars`, `#metab`, `QPlogS`, `QPPCaco`, oral absorption, and rule failures.
+Label every QikProp field as a prediction; it cannot replace observed cell viability or
+curated organ-toxicity evidence.
 Run project-owned file-based utilities through their documented CLI. If an
 existing utility has hard-coded paths or counts, fix the reusable utility and
 add a regression test; do not copy it into a task directory or create a

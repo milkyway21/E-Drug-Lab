@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import curated project skills into Hermes.
+"""Import all top-level project skills into Hermes.
 
 Installs into $HERMES_HOME/skills/<category>/<name>/ as symlinks (live update)
 and records skills.external_dirs + a MANIFEST under the project.
@@ -65,12 +65,46 @@ CAMPAIGN = [
     "edrug-capability-check",
 ]
 
-CATEGORIES: list[tuple[list[str], str]] = [
+EVIDENCE = [
+    "scope-molecular-nomination",
+    "research-target-biology",
+    "rank-protein-structures",
+    "qualify-binding-pocket",
+    "enrich-compound-evidence",
+    "triage-compound-toxicity",
+    "nominate-lipid-modulators",
+    "write-mechanism-validation-report",
+]
+
+_NAMED_CATEGORIES: list[tuple[list[str], str]] = [
     (FUNNEL_FLOWCHART, "funnel"),
     (DDFAST, "ddfast"),
     (DRUG_DESIGN, "drug-design"),
     (CAMPAIGN, "campaign"),
+    (EVIDENCE, "evidence"),
 ]
+
+
+def _direct_skill_names() -> list[str]:
+    if not PROJECT_SKILLS.is_dir():
+        return []
+    return sorted(
+        child.name
+        for child in PROJECT_SKILLS.iterdir()
+        if child.is_dir() and (child / "SKILL.md").is_file()
+    )
+
+
+def _build_categories() -> list[tuple[list[str], str]]:
+    assigned = {name for names, _category in _NAMED_CATEGORIES for name in names}
+    project_general = [name for name in _direct_skill_names() if name not in assigned]
+    categories = list(_NAMED_CATEGORIES)
+    if project_general:
+        categories.append((project_general, "project"))
+    return categories
+
+
+CATEGORIES = _build_categories()
 
 SEARCH_ROOTS = [
     PROJECT_SKILLS,
@@ -240,6 +274,8 @@ def _write_pack_docs(pack: Path, installed: list[dict], missing_all: list[str]) 
         "ddfast": DDFAST,
         "drug_design": DRUG_DESIGN,
         "campaign": CAMPAIGN,
+        "evidence": EVIDENCE,
+        "project": next((names for names, category in CATEGORIES if category == "project"), []),
         "installed": [
             {
                 "name": i["name"],
@@ -267,6 +303,8 @@ def _write_pack_docs(pack: Path, installed: list[dict], missing_all: list[str]) 
                 f"- **ddfast**: {len(DDFAST)} (QikProp / Glide SP / Desmond MD helpers)",
                 f"- **drug-design**: {len(DRUG_DESIGN)} (rdkit / pose / membrane MD ops)",
                 f"- **campaign**: {len(CAMPAIGN)} (campaign + scientist aliases)",
+                f"- **evidence**: {len(EVIDENCE)} (biology / structure / nomination / reporting)",
+                f"- **project**: {len(next((names for names, category in CATEGORIES if category == 'project'), []))} (auto-discovered top-level skills)",
                 "",
                 "Only direct children of project `skills/` are imported; nested target-specific skills are excluded.",
                 "",
@@ -325,7 +363,8 @@ def main() -> int:
         installed.extend(ok)
         missing_all.extend(missing)
 
-    for cat in ("funnel", "ddfast", "drug-design", "campaign"):
+    category_names = [category for _names, category in CATEGORIES]
+    for cat in category_names:
         (pack / cat).mkdir(parents=True, exist_ok=True)
     for item in installed:
         src = PROJECT_SKILLS / item["name"]
@@ -346,7 +385,7 @@ def main() -> int:
     print(f"Installed {len(installed)} skill links under {skills_root}")
     if removed_stale:
         print(f"Pruned stale skills/categories: {', '.join(sorted(set(removed_stale)))}")
-    for cat in ("funnel", "ddfast", "drug-design", "campaign"):
+    for cat in category_names:
         n = sum(1 for i in installed if i["category"] == cat)
         print(f"  {cat}: {n}")
     if missing_all:

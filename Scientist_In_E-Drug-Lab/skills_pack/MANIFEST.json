@@ -31,6 +31,17 @@
     "scientist-in-e-drug-lab",
     "edrug-capability-check"
   ],
+  "evidence": [
+    "scope-molecular-nomination",
+    "research-target-biology",
+    "rank-protein-structures",
+    "qualify-binding-pocket",
+    "enrich-compound-evidence",
+    "triage-compound-toxicity",
+    "nominate-lipid-modulators",
+    "write-mechanism-validation-report"
+  ],
+  "project": [],
   "installed": [
     {
       "name": "funnel-orchestrator",
@@ -174,6 +185,54 @@
       "name": "edrug-capability-check",
       "category": "campaign",
       "source": "skills/edrug-capability-check",
+      "action": "symlinked"
+    },
+    {
+      "name": "scope-molecular-nomination",
+      "category": "evidence",
+      "source": "skills/scope-molecular-nomination",
+      "action": "symlinked"
+    },
+    {
+      "name": "research-target-biology",
+      "category": "evidence",
+      "source": "skills/research-target-biology",
+      "action": "symlinked"
+    },
+    {
+      "name": "rank-protein-structures",
+      "category": "evidence",
+      "source": "skills/rank-protein-structures",
+      "action": "symlinked"
+    },
+    {
+      "name": "qualify-binding-pocket",
+      "category": "evidence",
+      "source": "skills/qualify-binding-pocket",
+      "action": "symlinked"
+    },
+    {
+      "name": "enrich-compound-evidence",
+      "category": "evidence",
+      "source": "skills/enrich-compound-evidence",
+      "action": "symlinked"
+    },
+    {
+      "name": "triage-compound-toxicity",
+      "category": "evidence",
+      "source": "skills/triage-compound-toxicity",
+      "action": "symlinked"
+    },
+    {
+      "name": "nominate-lipid-modulators",
+      "category": "evidence",
+      "source": "skills/nominate-lipid-modulators",
+      "action": "symlinked"
+    },
+    {
+      "name": "write-mechanism-validation-report",
+      "category": "evidence",
+      "source": "skills/write-mechanism-validation-report",
       "action": "symlinked"
     }
   ],

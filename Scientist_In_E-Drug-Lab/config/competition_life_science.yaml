@@ -22,13 +22,23 @@ scope_conflicts:
   - "Public brief focuses on MASLD lipid overload; some templates mention HCC new targets."
 
 hard_constraints:
-  C1: "Compound Top10 must come from official library SDF (handled by external library nomination; this agent provides CSV template + validation only)."
+  C1: "Compound Top10 must come from the official library SDF; preserve library ID, parent identity, file hash, and evidence provenance."
   C2: "Dual readout: lipid lowering AND cell viability (exclude cytotoxicity false positives)."
   C4: "Mechanism / target hypothesis + validation plan required."
   C5: "Reproducible agent methodology required."
 
-agent_role: "target_hypothesis_and_mechanism"
-compound_nomination_pipeline: "external official SDF library → Top10 CSV (pending_library_nomination until filled)"
+agent_role: "compound_nomination_evidence_and_mechanism"
+compound_nomination_pipeline: "E0-E3 evidence reconnaissance → H0-H10 conditional compute → E4-E6 evidence-weighted Top10 nomination"
+
+nomination_ranking:
+  lipid_evidence: 0.30
+  mechanism_relevance: 0.20
+  activity_quality: 0.15
+  safety: 0.20
+  structure_developability: 0.10
+  diversity: 0.05
+  uncertainty_penalty_max: 20
+  structure_policy: research_then_conditional_docking
 
 scoring_dimensions:
   discovery_and_reasoning:
@@ -112,10 +122,20 @@ hermes_eval_mode:
 
 top10_csv_columns:
   - rank
+  - library_id
   - id_or_name
+  - canonical_smiles
+  - parent_inchikey
   - smiles_or_inchikey
+  - target_or_pathway
+  - evidence_level
+  - lipid_score
+  - safety_score
+  - uncertainty_penalty
+  - structure_applicability
   - lipid_rationale
   - tox_rationale
   - mechanism_hypothesis
+  - validation_readouts
   - evidence_refs
   - library_source

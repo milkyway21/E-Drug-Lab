@@ -31,3 +31,6 @@ scripts/sitecustomize_fuckclau/
 # Local workflow notes / nested HSV skills — not part of this sync
 skills/scientist-in-e-drug-lab/WORKFLOW*.md
 skills/scientist-in-e-drug-lab/hsv-*/
+!src/masld_agent/tools/
+!src/masld_agent/tools/compound_evidence.py
+!src/masld_agent/tools/reactome.py

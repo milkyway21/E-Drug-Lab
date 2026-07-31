@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "MachineReadableReport",
   "type": "object",
-  "required": ["competition", "targets", "competition_scope_warning"],
+  "required": ["competition", "targets", "nominations", "competition_scope_warning"],
   "properties": {
     "competition_scope_warning": { "type": "string", "minLength": 20 },
     "competition": { "type": "object" },
@@ -20,6 +20,33 @@
           }
         }
       }
-    }
+    },
+    "nominations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "library_id",
+          "library_source",
+          "parent_inchikey",
+          "score",
+          "toxicity_rationale",
+          "mechanism_hypotheses"
+        ],
+        "properties": {
+          "library_id": { "type": "string", "minLength": 1 },
+          "library_source": { "type": "string", "minLength": 1 },
+          "parent_inchikey": { "type": "string", "minLength": 14 },
+          "identity_valid": { "const": true },
+          "score": {
+            "type": "object",
+            "required": ["final_score", "uncertainty_penalty"]
+          },
+          "toxicity_rationale": { "type": "string", "minLength": 1 },
+          "mechanism_hypotheses": { "type": "array" }
+        }
+      }
+    },
+    "evidence_provenance": { "type": "object" }
   }
 }

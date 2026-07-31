@@ -20,6 +20,19 @@ def fetch_compound_property_table(
     return client.get_json(url)
 
 
+def fetch_compound_by_inchikey(
+    inchikey: str,
+    *,
+    http: Optional[CachedHttp] = None,
+) -> dict[str, Any]:
+    client = http or CachedHttp(min_interval_s=0.21)
+    url = (
+        f"https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/inchikey/{inchikey}/property/"
+        "MolecularFormula,MolecularWeight,CanonicalSMILES,IsomericSMILES,InChIKey,IUPACName/JSON"
+    )
+    return client.get_json(url)
+
+
 def ligand_from_pubchem(
     cid: int,
     *,

@@ -54,6 +54,7 @@ def write_standard_reports(
     report = {
         "competition": profile.model_dump(mode="json"),
         "targets": [h.model_dump(mode="json") for h in hypotheses],
+        "nominations": [],
         "competition_scope_warning": profile.competition_scope_warning,
     }
     write_json_report(out_dir / "machine_readable_report.json", report)
