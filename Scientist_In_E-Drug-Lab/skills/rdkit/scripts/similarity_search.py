@@ -16,7 +16,7 @@ from pathlib import Path
 
 try:
     from rdkit import Chem
-    from rdkit.Chem import AllChem, MACCSkeys
+    from rdkit.Chem import MACCSkeys, rdFingerprintGenerator
     from rdkit import DataStructs
 except ImportError:
     print("Error: RDKit not installed. Install with: conda install -c conda-forge rdkit")
@@ -40,7 +40,8 @@ def generate_fingerprint(mol, method='morgan', radius=2, n_bits=2048):
     method = method.lower()
 
     if method == 'morgan':
-        return AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits)
+        generator = rdFingerprintGenerator.GetMorganGenerator(radius=radius, fpSize=n_bits)
+        return generator.GetFingerprint(mol)
     elif method == 'rdkit':
         return Chem.RDKFingerprint(mol, maxPath=7, fpSize=n_bits)
     elif method == 'maccs':
@@ -146,8 +147,8 @@ def similarity_search(query_mol, database, method='morgan', threshold=0.7,
                 'similarity': similarity
             })
 
-    # Sort by similarity (descending)
-    hits.sort(key=lambda x: x['similarity'], reverse=True)
+    # Stable campaign ordering: score descending, then molecule identity.
+    hits.sort(key=lambda item: (-item['similarity'], item['name'], item['index']))
 
     return hits
 

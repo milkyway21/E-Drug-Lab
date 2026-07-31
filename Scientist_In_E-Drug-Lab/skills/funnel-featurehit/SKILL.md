@@ -1,6 +1,6 @@
 ---
 name: funnel-featurehit
-description: H3 topology or pharmacophore library expansion with explicit backend provenance.
+description: Expand H3 hits from validated seed molecules using an explicitly named Morgan, Phase, or shape backend with deterministic lineage. Use after primary Glide SP selection; do not label topology similarity as pharmacophore evidence.
 ---
 
 # FeatureHit

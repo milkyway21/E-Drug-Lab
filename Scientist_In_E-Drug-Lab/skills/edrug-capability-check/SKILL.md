@@ -1,6 +1,6 @@
 ---
 name: "edrug-capability-check"
-description: "Run E-Drug Lab tool capability harness (MD dry_prep, UI navigate, agent tools). Invoke for TOOL_CAPABILITY、能力检验、harness。"
+description: "Run the project capability harness for platform APIs, registered agent tools, UI command routing, and MD dry-prep contracts. Use for capability checks, TOOL_CAPABILITY reports, environment diagnosis, or pre-task harness validation; it does not execute production science stages."
 ---
 
 # E-Drug Capability Check
@@ -10,8 +10,8 @@ description: "Run E-Drug Lab tool capability harness (MD dry_prep, UI navigate, 
 ## 运行
 
 ```bash
-cd /data/ye/e-drug-lab/Scientist_In_E-Drug-Lab
-python scripts/capability_harness.py \
+# Run from the Scientist_In_E-Drug-Lab project root.
+.venv/bin/python scripts/capability_harness.py \
   --api-base http://127.0.0.1:8001 \
   --cases scripts/capability_cases/core.yaml \
          scripts/capability_cases/tool_matrix_templates.yaml
@@ -48,7 +48,7 @@ python scripts/capability_harness.py \
 
 ## 环境：Desmond vs conda
 
-- Desmond / `schrodinger_md_*`：**`$SCHRODINGER`**（`/opt/schrodinger2023-3`），**不要**为 MD 建 conda env。
+- Desmond / `schrodinger_md_*`：使用已配置且可读的 **`$SCHRODINGER`**，**不要**为 MD 建 conda env，也不要硬编码安装路径。
 - conda **`diffdynamic`**：仅 DiffDynamic；与 Desmond multisim 无关。
 
 ## 相关

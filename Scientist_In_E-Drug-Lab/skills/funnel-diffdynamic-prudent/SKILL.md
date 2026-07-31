@@ -1,6 +1,6 @@
 ---
 name: funnel-diffdynamic-prudent
-description: H1b Prudent generation, isolated extraction, and canonical dedup with resume-first behavior.
+description: Run H1b DiffDynamic Prudent generation, no-Vina physicochemical reconstruction, and canonical deduplication with resume-first behavior. Use for the prudent branch before Glide SP; do not execute Vina docking, scoring, or minimization.
 ---
 
 # H1b DiffDynamic Prudent

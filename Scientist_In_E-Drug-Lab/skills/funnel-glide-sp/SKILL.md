@@ -1,6 +1,6 @@
 ---
 name: funnel-glide-sp
-description: H2/H5 LigPrep and Glide SP with parent-state lineage and deterministic parent ranking.
+description: Run H2 or H5 LigPrep and Glide SP with parent-state lineage, non-interactive launch safeguards, and deterministic parent ranking. Use with a validated existing receptor grid; do not rebuild the grid or rank prepared states as independent parents.
 ---
 
 # Glide SP

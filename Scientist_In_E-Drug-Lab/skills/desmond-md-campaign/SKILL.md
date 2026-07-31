@@ -12,11 +12,11 @@ Operate decision-grade Desmond campaigns without treating a submitted job, a 190
 1. Use the registered `schrodinger_md_submit` / `schrodinger_md_status` tools for `dry_prep`, smoke, and supported short jobs.
 2. Use this skill's scripts for corrected-pose or medoid starts, multi-ligand queues, full 200 ns validation, SEA, unified analysis, and figures.
 3. Read [references/campaign-contract.md](references/campaign-contract.md) before preparing or submitting production.
-4. Read [references/script-index.md](references/script-index.md) only when selecting a bundled implementation or reproducing the HSD17B13 campaign.
+4. Read [references/script-index.md](references/script-index.md) only when selecting a bundled portable implementation.
 
 ## Hard Gates
 
-- Use `$SCHRODINGER` (normally `/opt/schrodinger2023-3`) for Desmond. Do not create or activate a conda environment for MD.
+- Require a configured, readable `$SCHRODINGER` for Desmond. Do not create or activate a conda environment for MD or hard-code an installation path.
 - Require explicit user confirmation before submitting new 50 ns or 200 ns production jobs. Read-only checks, analysis, plotting, and recovery of already authorized queues do not need a new confirmation.
 - Never kill or reassign an existing GPU process unless the user explicitly requests it and the exact process ownership is known.
 - Start long MD from a validated corrected pose or a late-pose medoid, never from a known frame-mismatched CMS.
@@ -36,6 +36,7 @@ For late-pose starts, prepare an input CSV and run:
 "$SCHRODINGER/run" python3 scripts/extract_medoid_cms.py \
   --input-csv medoid_inputs.csv \
   --output-root 03_systems/<batch> \
+  --ligand-asl '<ligand_asl>' \
   --late-start-ns 40 \
   --cluster-cutoff-a 2.0
 ```
@@ -83,7 +84,7 @@ Run only on hard-validated attempts:
   --ids <ID1> <ID2> \
   --jobs 2 \
   --protein-asl protein \
-  --ligand-asl 'res.ptype UNK' \
+  --ligand-asl '<ligand_asl>' \
   --official-report
 ```
 
@@ -94,6 +95,8 @@ portable CSV instead of writing a target-specific SEA script:
 "$SCHRODINGER/run" python3 scripts/run_sea.py \
   --sources-csv sea_sources.csv \
   --output-root 05_analysis/<batch>/sea \
+  --protein-asl '<protein_asl>' \
+  --ligand-asl '<ligand_asl>' \
   --jobs 2 --official-report
 ```
 
@@ -110,6 +113,9 @@ Use pocket retention and direct contacts before absolute ligand RMSD:
   --trajectory-root 04_trajectories/<batch> \
   --sea-root 05_analysis/<batch>/sea \
   --manifest 05_analysis/<batch>/selection_manifest.csv \
+  --protein-asl '<protein_asl>' \
+  --ligand-asl '<ligand_asl>' \
+  --target-label '<target_id>' \
   --outdir 05_analysis/<batch>/final_200ns
 ```
 
@@ -127,7 +133,7 @@ Do not promote a high numeric score over an unfavorable class. Independent repea
 Generate the portrait-A4 5-row by 4-column plate:
 
 ```bash
-python3 scripts/plot_md200_plate.py \
+"$SCHRODINGER/run" python3 scripts/plot_md200_plate.py \
   --traces 05_analysis/<batch>/final_200ns/md200_traces.csv \
   --decisions 05_analysis/<batch>/final_200ns/md200_decision_table.csv \
   --output 05_analysis/<batch>/figures/md200_plate
@@ -143,7 +149,7 @@ The plot uses 5 pt ticks, 7 pt molecule IDs, A/B/C title colors, a white page, p
 - `scripts/run_sea.py`: portable validated-trajectory SEA runner.
 - `scripts/analyze_md200.py`: portable pocket/contact-aware 200 ns decision analysis.
 - `scripts/plot_md200_plate.py`: portable 20-panel publication plot.
-- `scripts/hsd17b13_reference/`: complete original HSD17B13 implementation, including corrected-pose audits, queues, watchdogs, incremental analysis, and protocols. Use as an audited reference; its constants are target-specific.
+- Target-specific reference implementations are not portable runners. Do not copy their constants, paths, selectors, or IDs into another task.
 
 ## Completion Report
 

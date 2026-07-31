@@ -1,6 +1,6 @@
 ---
 name: ddfast-06-qikprop-admet
-description: Schrödinger 2023-3 LigPrep/QikProp ADMET with parent lineage, strict data validation, and deterministic exact-N selection.
+description: Run Schrödinger LigPrep and QikProp ADMET with parent-state lineage, strict numeric validation, and deterministic exact-N selection. Use for the funnel H4 ADMET gate; do not use DrugFlow, mock values, or RDKit descriptors as substitutes.
 ---
 
 # Schrödinger QikProp ADMET
@@ -63,6 +63,8 @@ numeric descriptor table, but require enough valid core-pass rows to select exac
 
 Write the full descriptor table, exact-N manifest, exact-N SDF, parent-state map,
 command log, and validation report to the manifest-declared stage directory.
-Run existing file-based Python utilities with their documented CLI; if a useful
-script has hard-coded paths, copy it into the current stage and adapt only path
-constants and requested N rather than creating a new pipeline.
+Run project-owned file-based utilities through their documented CLI. If an
+existing utility has hard-coded paths or counts, fix the reusable utility and
+add a regression test; do not copy it into a task directory or create a
+one-off pipeline. If no validated adapter exists, stop at a capability gate
+instead of improvising scientific results.

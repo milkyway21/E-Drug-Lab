@@ -29,10 +29,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--protein-asl", default="protein")
-    parser.add_argument("--ligand-asl", default="res.ptype UNK")
-    parser.add_argument("--schrodinger", default=os.environ.get("SCHRODINGER", "/opt/schrodinger2023-3"))
+    parser.add_argument("--ligand-asl", required=True)
+    parser.add_argument("--schrodinger", default=os.environ.get("SCHRODINGER"))
     parser.add_argument("--official-report", action="store_true")
-    return parser.parse_args()
+    args = parser.parse_args()
+    if not args.schrodinger:
+        parser.error("set SCHRODINGER or pass --schrodinger")
+    return args
 
 
 def load_sources(path: Path) -> dict[str, tuple[Path, Path]]:

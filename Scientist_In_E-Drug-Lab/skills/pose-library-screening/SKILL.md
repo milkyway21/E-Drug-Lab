@@ -1,6 +1,6 @@
 ---
 name: pose-library-screening
-description: Reproducible pose-seeded library screening with Morgan, Schrödinger Phase 1D/QuickShape, exact-N canonical freezing, and JobDJ recovery.
+description: Run reproducible pose-seeded library screening with Morgan, Schrödinger Phase 1D or QuickShape, exact-N canonical freezing, and JobDJ recovery. Use after validated docking-pose extraction to expand a library while preserving query and parent lineage.
 ---
 
 # Pose-Seeded Library Screening

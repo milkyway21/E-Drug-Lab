@@ -1,6 +1,6 @@
 ---
 name: funnel-campaign-memory
-description: Read and update structured task state (CAMPAIGN.md) without enabling Hermes native memory.
+description: Read and update structured task state in CAMPAIGN.md without enabling Hermes native memory. Use before execution, after every stage decision, and when resuming a task; never treat chat text as scientific completion evidence.
 ---
 
 # Funnel Campaign Memory

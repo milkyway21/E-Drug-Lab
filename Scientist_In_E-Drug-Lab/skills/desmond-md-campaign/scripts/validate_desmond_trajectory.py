@@ -17,7 +17,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cms", type=Path, required=True)
     parser.add_argument("--trajectory", type=Path, required=True)
-    parser.add_argument("--minimum-ns", type=float, default=200.0)
+    parser.add_argument("--minimum-ns", type=float, required=True)
     parser.add_argument("--expected-interval-ps", type=float, default=200.0)
     parser.add_argument("--interval-tolerance", type=float, default=1.26)
     parser.add_argument("--minimum-cms-bytes", type=int, default=100_000)

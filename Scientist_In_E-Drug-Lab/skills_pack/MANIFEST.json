@@ -168,7 +168,7 @@
       "name": "scientist-in-e-drug-lab",
       "category": "campaign",
       "source": "skills/scientist-in-e-drug-lab",
-      "action": "symlinked"
+      "action": "symlinked-filtered"
     },
     {
       "name": "edrug-capability-check",
