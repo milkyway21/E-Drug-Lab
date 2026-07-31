@@ -16,7 +16,7 @@ from pathlib import Path
 
 try:
     from rdkit import Chem
-    from rdkit.Chem import Descriptors, Lipinski
+    from rdkit.Chem import Descriptors
 except ImportError:
     print("Error: RDKit not installed. Install with: conda install -c conda-forge rdkit")
     sys.exit(1)
@@ -62,7 +62,7 @@ def calculate_properties(mol):
 
         # Flexibility
         'Rotatable_Bonds': Descriptors.NumRotatableBonds(mol),
-        'Fraction_Csp3': Descriptors.FractionCsp3(mol),
+        'Fraction_Csp3': Descriptors.FractionCSP3(mol),
 
         # Complexity
         'BertzCT': Descriptors.BertzCT(mol),

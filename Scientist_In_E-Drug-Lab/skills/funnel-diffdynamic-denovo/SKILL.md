@@ -1,6 +1,6 @@
 ---
 name: funnel-diffdynamic-denovo
-description: H1a DiffDynamic pocket-conditioned de novo generation through a reusable campaign runner.
+description: Run H1a DiffDynamic pocket-conditioned de novo generation through a reusable manifest-configured runner. Use when the selected profile enables the de novo branch; do not create a task-local launcher or use prepared receptor output in place of the original receptor input.
 ---
 
 # H1a DiffDynamic De Novo

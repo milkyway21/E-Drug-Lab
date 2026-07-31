@@ -1,6 +1,6 @@
 ---
 name: funnel-mmgbsa
-description: H7 Prime MMGBSA on frozen XP poses with optional, explicit IFD only.
+description: Run H7 Prime MMGBSA on frozen validated XP poses while preserving molecule and pose lineage. Use after H6; perform IFD only when explicitly requested and never substitute missing energy rows.
 ---
 
 # H7 MMGBSA

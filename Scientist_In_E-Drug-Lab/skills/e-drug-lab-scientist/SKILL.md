@@ -1,6 +1,6 @@
 ---
 name: e-drug-lab-scientist
-description: Scientist behavior for reproducible, resume-first e-drug-lab tasks.
+description: Apply reproducible, resume-first scientist behavior to E-Drug Lab tasks, including evidence checks, capability gates, and concise stage reporting. Use as the behavior policy for any planned, running, resumed, or reviewed funnel task.
 ---
 
 # E-Drug Lab Scientist

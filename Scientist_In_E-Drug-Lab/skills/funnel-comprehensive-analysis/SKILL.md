@@ -1,6 +1,6 @@
 ---
 name: funnel-comprehensive-analysis
-description: H10 auditable curation of docking, ADMET, and validated MD evidence.
+description: Curate H10 docking, ADMET, and hard-validated MD evidence into an auditable final ranking and human report. Use only after enabled upstream stages pass validation; do not present computational nominations as experimental confirmation.
 ---
 
 # H10 Comprehensive Analysis

@@ -40,7 +40,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-csv", type=Path, required=True)
     parser.add_argument("--output-root", type=Path, required=True)
-    parser.add_argument("--ligand-asl", default="res.ptype UNK")
+    parser.add_argument("--ligand-asl", required=True)
     parser.add_argument("--pocket-asl", help="Global pocket ASL if input CSV lacks pocket_asl")
     parser.add_argument("--late-start-ns", type=float, default=40.0)
     parser.add_argument("--cluster-cutoff-a", type=float, default=2.0)

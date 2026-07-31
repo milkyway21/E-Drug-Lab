@@ -1,6 +1,6 @@
 ---
 name: funnel-orchestrator
-description: H0-H10 drug-discovery funnel orchestration, resume, validation, and stage routing.
+description: Plan, preflight, execute, resume, validate, and report the H0-H10 drug-discovery funnel from a requested final molecule count. Use as the mandatory entrypoint for end-to-end tasks; use the test profile only for explicit smoke or test requests.
 ---
 
 # Funnel Orchestrator
@@ -8,14 +8,14 @@ description: H0-H10 drug-discovery funnel orchestration, resume, validation, and
 Use the project-owned Python interface. Do not assemble long inline shell programs.
 
 ```bash
-masld-agent funnel autopilot --final-count 10 --profile full --target-id HSD17B13
-masld-agent funnel autopilot --final-count 2 --profile test --target-id HSD17B13
-masld-agent funnel autopilot --final-count 10 --profile full --target-id HSD17B13 --execute --confirm --background
-masld-agent funnel autopilot-status --target-id HSD17B13
-masld-agent funnel preflight --manifest /abs/path/inputs/manifest.json
-masld-agent funnel status --manifest /abs/path/inputs/manifest.json
-masld-agent funnel run --manifest /abs/path/inputs/manifest.json --stage H3
-masld-agent funnel validate --manifest /abs/path/inputs/manifest.json --stage H3
+masld-agent funnel autopilot --final-count 10 --profile full --target-id TARGET
+masld-agent funnel autopilot --final-count 2 --profile test --target-id TARGET
+masld-agent funnel autopilot --final-count 10 --profile full --target-id TARGET --execute --confirm --background
+masld-agent funnel autopilot-status --target-id TARGET
+masld-agent funnel preflight --manifest MANIFEST
+masld-agent funnel status --manifest MANIFEST
+masld-agent funnel run --manifest MANIFEST --stage H3
+masld-agent funnel validate --manifest MANIFEST --stage H3
 ```
 
 If the human supplies only a desired final count, `autopilot` is the mandatory first

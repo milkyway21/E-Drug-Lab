@@ -8,6 +8,6 @@ Skill bodies live under `../skills/` (tracked); this pack holds symlinks + MANIF
 - **drug-design**: 3 (rdkit / pose / membrane MD ops)
 - **campaign**: 3 (campaign + scientist aliases)
 
-Removed from public bootstrap: MASLD s00–s08, hsv-*, writing/nature, unused ddfast 00–05/08–10.
+Only direct children of project `skills/` are imported; nested target-specific skills are excluded.
 
 Re-run: `python scripts/import_drug_skills.py`

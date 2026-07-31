@@ -42,7 +42,8 @@ SEA_ROOT = Path(".")
 UPSTREAM_DECISION = Path("/__desmond_md_no_upstream_decision__")
 MANIFEST = Path(".")
 PROTEIN_ASL = "protein"
-LIGAND_ASL = "res.ptype UNK"
+LIGAND_ASL = ""
+TARGET_LABEL = "Target"
 
 CONTACT_TYPES = (
     "HBond",
@@ -1408,7 +1409,7 @@ def plot_summary(results: list[dict[str, Any]], decision: pd.DataFrame, outdir: 
     )
     axis.set_xlabel("MD score (0-100)")
     axis.set_xlim(0, 100)
-    axis.set_title("HSD17B13 200 ns MD ranking")
+    axis.set_title(f"{TARGET_LABEL} 200 ns MD ranking")
     figure.tight_layout()
     figure.savefig(figures / "md_score_ranking.png", dpi=220)
     plt.close(figure)
@@ -1504,7 +1505,7 @@ def write_summary(results: list[dict[str, Any]], decision: pd.DataFrame, outdir:
         f"{int(row['rank'])}. **{row['molecule_id']}** - `{row['md_class']}`, score {row['md_score']:.1f}, `{row['wetlab_recommendation']}`"
         for _, row in decision.iterrows()
     ]
-    text = f"""# HSD17B13 Desmond 200 ns selection summary
+    text = f"""# {TARGET_LABEL} Desmond 200 ns selection summary
 
 ## Data integrity and method
 
@@ -1545,7 +1546,8 @@ The ranking first asks whether the ligand remains in the target pocket, then whe
 
 
 def main() -> None:
-    global TRAJ_ROOT, SEA_ROOT, MANIFEST, UPSTREAM_DECISION, PROTEIN_ASL, LIGAND_ASL
+    global TRAJ_ROOT, SEA_ROOT, MANIFEST, UPSTREAM_DECISION
+    global PROTEIN_ASL, LIGAND_ASL, TARGET_LABEL
     parser = argparse.ArgumentParser()
     parser.add_argument("--ids", nargs="+", required=True)
     parser.add_argument("--outdir", type=Path, required=True)
@@ -1555,7 +1557,8 @@ def main() -> None:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--upstream-decision", type=Path)
     parser.add_argument("--protein-asl", default="protein")
-    parser.add_argument("--ligand-asl", default="res.ptype UNK")
+    parser.add_argument("--ligand-asl", required=True)
+    parser.add_argument("--target-label", default="Target")
     args = parser.parse_args()
     TRAJ_ROOT = args.trajectory_root.resolve()
     SEA_ROOT = args.sea_root.resolve()
@@ -1564,6 +1567,7 @@ def main() -> None:
         UPSTREAM_DECISION = args.upstream_decision.resolve()
     PROTEIN_ASL = args.protein_asl
     LIGAND_ASL = args.ligand_asl
+    TARGET_LABEL = args.target_label
     molecule_ids = args.ids
     outdir = args.outdir.resolve()
     outdir.mkdir(parents=True, exist_ok=True)

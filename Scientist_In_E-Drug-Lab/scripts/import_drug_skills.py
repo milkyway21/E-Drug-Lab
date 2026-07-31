@@ -78,18 +78,13 @@ SEARCH_ROOTS = [
 
 
 def _find_skill(name: str) -> Path | None:
-    nested_roots = [
-        PROJECT_SKILLS,
-        PROJECT_SKILLS / "scientist-in-e-drug-lab",
-    ]
-    search = nested_roots + [r for r in SEARCH_ROOTS if r not in nested_roots]
-    for root in search:
+    for root in SEARCH_ROOTS:
         cand = root / name
         if (cand / "SKILL.md").is_file():
             return cand.resolve()
     # case-insensitive fallback
     lower = name.lower()
-    for root in search:
+    for root in SEARCH_ROOTS:
         if not root.is_dir():
             continue
         for child in root.iterdir():
@@ -110,6 +105,22 @@ def _link_skill(src: Path, dest: Path, *, mode: str) -> str:
     source = src.resolve()
     if source == dest.absolute():
         raise ValueError(f"refusing self-referential skill link: {dest}")
+    standard_skill_assets = {
+        "SKILL.md",
+        "agents",
+        "assets",
+        "references",
+        "scripts",
+        "LICENSE",
+        "LICENSE.md",
+        "NOTICE",
+    }
+    nested_skill_children = {
+        skill_path.relative_to(source).parts[0]
+        for skill_path in source.rglob("SKILL.md")
+        if skill_path.parent != source
+    }
+    publishable_assets = standard_skill_assets - nested_skill_children
     dest.parent.mkdir(parents=True, exist_ok=True)
     if dest.exists() or dest.is_symlink():
         if dest.is_symlink() or dest.is_file():
@@ -117,8 +128,24 @@ def _link_skill(src: Path, dest: Path, *, mode: str) -> str:
         else:
             shutil.rmtree(dest)
     if mode == "copy":
-        shutil.copytree(source, dest, symlinks=True)
-        return "copied"
+        shutil.copytree(
+            source,
+            dest,
+            symlinks=True,
+            ignore=lambda current, _names: (
+                set(_names) - publishable_assets
+                if nested_skill_children and Path(current).resolve() == source
+                else set()
+            ),
+        )
+        return "copied-filtered" if nested_skill_children else "copied"
+    if nested_skill_children:
+        dest.mkdir()
+        for child in source.iterdir():
+            if child.name not in publishable_assets:
+                continue
+            (dest / child.name).symlink_to(child.resolve(), target_is_directory=child.is_dir())
+        return "symlinked-filtered"
     dest.symlink_to(source, target_is_directory=True)
     return "symlinked"
 
@@ -241,7 +268,7 @@ def _write_pack_docs(pack: Path, installed: list[dict], missing_all: list[str]) 
                 f"- **drug-design**: {len(DRUG_DESIGN)} (rdkit / pose / membrane MD ops)",
                 f"- **campaign**: {len(CAMPAIGN)} (campaign + scientist aliases)",
                 "",
-                "Removed from public bootstrap: MASLD s00–s08, hsv-*, writing/nature, unused ddfast 00–05/08–10.",
+                "Only direct children of project `skills/` are imported; nested target-specific skills are excluded.",
                 "",
                 "Re-run: `python scripts/import_drug_skills.py`",
                 "",

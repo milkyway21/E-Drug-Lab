@@ -1,6 +1,6 @@
 ---
 name: funnel-glide-xp
-description: H6 Glide XP refinement using frozen SP parents and the same receptor grid.
+description: Refine the frozen H5 parent set with H6 Glide XP using preserved poses and the same validated receptor grid. Use only after H5 validation; do not redock the entire upstream library.
 ---
 
 # H6 Glide XP

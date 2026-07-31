@@ -255,7 +255,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Filter molecules by substructure patterns',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=f"""
+        epilog="""
 Pattern libraries:
   --filter-type functional-groups    Common functional groups
   --filter-type rings               Ring systems
@@ -351,7 +351,7 @@ Examples:
         sys.exit(1)
 
     # Print filter configuration
-    print(f"\nFilter configuration:")
+    print("\nFilter configuration:")
     if include_patterns:
         print(f"  Include patterns: {len(include_patterns)}")
         if args.match_all:

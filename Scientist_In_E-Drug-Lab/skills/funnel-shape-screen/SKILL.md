@@ -1,6 +1,6 @@
 ---
 name: funnel-shape-screen
-description: H3 pose-based Shape screening with Schrödinger-version-aware command validation.
+description: Run H3 pose-based Schrödinger Shape screening from extracted best Glide poses with version-aware command validation and recoverable outputs. Use for pose-shape expansion; do not treat JobDJ submission or wrapper exit as completion.
 ---
 
 # Shape Screen

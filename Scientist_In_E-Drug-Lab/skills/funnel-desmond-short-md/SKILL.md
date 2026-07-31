@@ -1,6 +1,6 @@
 ---
 name: funnel-desmond-short-md
-description: H8 corrected-pose Desmond short MD with hard validation and SEA.
+description: Run the H8 corrected-pose Desmond short-MD gate with manifest-defined duration, hard CMS/DTR validation, and official SEA. Use after MMGBSA selection; do not infer completion from submission, dry preparation, or a readable CMS alone.
 ---
 
 # H8 Short MD
@@ -12,4 +12,7 @@ confirmation and one known GPU per job.
 
 Validate the final production CMS/DTR with the bundled
 `desmond-md-campaign/scripts/validate_desmond_trajectory.py`, then run SEA only on
-validated trajectories. A submitted job, readable CMS alone, or dry prep is not PASS.
+validated trajectories. Always pass `--minimum-ns` equal to the manifest's short
+production duration and `--expected-interval-ps` equal to its recording interval;
+never rely on validator defaults. A submitted job, readable CMS alone, or dry prep
+is not PASS.

@@ -1,6 +1,6 @@
 ---
 name: funnel-desmond-long-md
-description: H9 resumable 200 ns Desmond production from short-MD-qualified corrected poses.
+description: Run or resume H9 200 ns Desmond production from short-MD-qualified corrected poses with attempt isolation and hard trajectory validation. Use only for H8-pass candidates and after explicit compute confirmation.
 ---
 
 # H9 Long MD
