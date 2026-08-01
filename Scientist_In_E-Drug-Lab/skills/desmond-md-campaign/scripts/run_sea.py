@@ -186,6 +186,13 @@ def process_one(args: argparse.Namespace, molecule_id: str) -> str:
 
 def main() -> None:
     args = parse_args()
+    # Commands run from each molecule output directory. Resolve shared paths
+    # once so report generation cannot accidentally prepend that cwd again.
+    args.output_root = args.output_root.resolve()
+    if args.trajectory_root is not None:
+        args.trajectory_root = args.trajectory_root.resolve()
+    if args.sources_csv is not None:
+        args.sources_csv = args.sources_csv.resolve()
     args.source_map = load_sources(args.sources_csv) if args.sources_csv else {}
     ids = list(args.ids or args.source_map)
     if not ids:

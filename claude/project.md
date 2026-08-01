@@ -1,243 +1,254 @@
-# GLARE 多模态强化筛选升级项目（Project Brief）
+# VAV1 / ALLIN 项目现状与数据地图
 
-> **状态**：立项 / 理解旧模型阶段（改动前）  
-> **日期**：2026-07-24  
-> **备份基线**：`/data/ye/glare-backup-20260723`（代码 + 数据 + 实验，约 51G）  
-> **实验真源**：`backend/outputs/vav1_rl_project/reports/experiment_log.md`  
-> （下文简称 **experiment.md**；同目录还有 `glare_experiment_comparison.md`）
+> **状态**：ALLIN（`ginl_pc_gl`）R0→R3 持续学习 + 三轮相似物排名已完成；库 1/2 Glide 覆盖不足，待审计后重排  
+> **更新日期**：2026-08-01  
+> **备份基线**：`/data/ye/glare-backup-20260723`（约 51G）  
+> **实验真源**：[`backend/outputs/vav1_rl_project/reports/experiment_log.md`](../backend/outputs/vav1_rl_project/reports/experiment_log.md)
 
----
-
-## 0. 一句话目标
-
-在**保留现有 GLARE 强化学习 + 持续学习范式**的前提下，把策略网络从「几乎只吃分子指纹 / 图拓扑」升级为：
-
-\[
-\mathbf{h} = \mathrm{Fuse}\big(\underbrace{\mathrm{FP/Graph}}_{\text{现有}},\;
-\underbrace{\mathrm{PhysChem}_{101}}_{\text{新增}},\;
-\underbrace{\mathrm{MD}}_{\text{新增}}\big)
-\]
-
-完成改动与训练后，在 **experiment.md 已记录的可比协议**下，**全面优于旧模型最佳表现**（见 §5 成功标准）。
+本文档是「东西在哪、现在跑到哪」的导航真源。详表下钻见 [`data-storage-binding-rl.md`](data-storage-binding-rl.md)；落地状态见 [`glare-multimodal-rl-status.md`](glare-multimodal-rl-status.md)。
 
 ---
 
-## 1. 角色与项目定位
+## 0. 一句话目标与当前阶段
 
-| 维度 | 定义 |
-|------|------|
-| 角色 | 资深 AI 工程师 × 计算药物学家 |
-| 软件宿主 | `e-drug-lab`（编排 / API / 实验记录） |
-| 模型宿主 | `/data/ye/diffgui/third_party/GLARE`（策略网络本体） |
-| 业务封装 | `/data/ye/diffgui/glare_selector` + `backend/.../glare_gnn_adapter.py` |
-| 靶点场景 | VAV1 分子胶：专利 pDC50 + 湿实验反馈 → 大库排序 / Active Learning |
-| 架构原则 | **软件主体 + 可插拔模型**；模型模块只做结构化 IO，流程逻辑留在软件层 |
+**目标**：在保留 GLARE RL / 持续学习闭环的前提下，用多模态策略（图 + 101D 理化 + Glide SP，可选 MD）做 VAV1 分子胶大库排序与湿实验反馈强化。
 
-本项目是 **模型层升级**，不是另起筛选流程。RL 闭环（生成 → 筛选 → 湿实验 → 强化 → 再筛选）保持不变。
+**当前阶段（2026-07-31 主线完成）**：
+
+| 项 | 状态 |
+|----|------|
+| ALLIN 架构 `ginl_pc_gl` | ✅ 已落地（E50 专利测试 ROC≈0.831） |
+| R0→R3 累积训练 + 三轮相似物排名 | ✅ 产出在 `validation/allin_pc_gl_progressive/` |
+| 第三轮生成库 Glide SP（≤30 核） | ✅ ~9209 分子 |
+| 第二轮实体 Glide | ✅ 19/19 |
+| 生成库预计算 101D | ❌ 仅有专利级表；query 时多现场算 |
+| 库 1 / 库 2 全库或相似物 Glide | ❌ query 时多为 `mask=0` |
+| 审计后重排 `allin_pc_gl_rerank_v2` | ⏳ 待办 |
 
 ---
 
-## 2. 旧模型现状（必须先理解的事实）
+## 1. 命名铁律
 
-### 2.1 论文定位
-
-GLARE（NeurIPS 2025）：将大规模虚拟筛选写成 MDP，用 **GRPO（Group Relative Policy Optimization）** 学习可适应的分子选取策略，替代手工 acquisition heuristic。
-
-### 2.2 当前表征（改动前）
-
-实践中 VAV1 路径常用 **GIN / GINE + ECFP 指纹**：
-
-| 通道 | 来源 | 在网络中的角色 |
+| 名称 | 含义 | 是否可称 ALLIN |
 |------|------|----------------|
-| 分子图 | atom / bond featurization → GIN/GINE | `global_add_pool` 得到图向量 |
-| 指纹 FP | ECFP（预处理写入 `graph.fp` / `x`） | MLP 投影后与图向量 **相加融合**（`x = x + fp`） |
-| 理化性质 | **未进入策略网络主路径** | 仅出现在后处理打分 / wrapper 表格特征 / 分析脚本 |
-| 分子动力学 MD | **未进入策略网络** | 若有 Desmond 等结果，目前最多作外部排序信号 |
+| **`ginl_pc_gl`** | 图 GNN + 101D PhysChem + Glide SP | **是（ALLIN）** |
+| `ginl_pc_gl_md` | ALLIN + MD 八体系 | 扩展，另称 |
+| `ginl` / `ginl_pc` | 仅图 / 图+理化 | **否** |
+| `validation/allin_progressive/` | 历史误跑：纯 `ginl` | **非 ALLIN 基线** |
+| `validation/allin_pc_gl_progressive/` | ALLIN 持续学习主线 | **是** |
 
-结论（与你的判断一致）：现有 GLARE 强化学习 / 持续学习，**本质上是在指纹（+图拓扑）维度上更新策略**；对 ADMET 相关理化剖面、结合动力学 / 构象稳定性等信息利用不足。
+CLI：`glare_gnn_cli.py --architecture ginl_pc_gl`。
 
-### 2.3 持续学习与湿实验闭环（已验证）
-
-```
-Round N: DiffGUI 生成 → 评估 → GLARE query
-              ↓
-         合成 + 湿实验 pDC50
-              ↓
-       wetlab reinforce / 累积训练 → Round N+1
-```
-
-关键文档：`claude/workflow-diffgui-glare-wetlab.md`、`claude/rl-path.md`。
-
-### 2.4 旧实验里已踩过的坑（改动时禁止重蹈）
-
-摘自 experiment.md / comparison：
-
-1. **小批量增量 AL 易假收敛**（E13/E14）：轮间排名相关 ≈ 1.0，后续轮几乎不动。  
-2. **Vina 伪标签作负样本有害**（E13）：对接弱 ≠ inactive。  
-3. **纯 GRPO 在小 decoy 上易坍缩**（select_prob→1）；大 decoy 可不坍缩但排序仍可能差。  
-4. **监督 / 受控反馈放大**在多轮指标上更稳（E22 `fb_amp` 等）。  
-5. **评估必须防泄漏**：训练分子不可混进「提升」叙事的测试探针（E43/E44 教训）。  
-6. **排名绝对值依赖池大小**：跨实验比 ΔROC / ΔRank / 分离度，勿裸比不同池的 rank。
+约束备忘：训练/query 时图与 101D **CRBN strip**；Glide / MD 特征 **不 strip**。
 
 ---
 
-## 3. 改造范围（In / Out）
+## 2. 根路径速查（找东西先看这里）
 
-### 3.1 In Scope
-
-1. **特征层**  
-   - 固定 **101 维理化性质向量**（每分子可复现计算 / 缓存）。  
-   - **分子动力学信息向量**（对接后 MD / 轨迹摘要；缺失时有明确 fallback）。  
-2. **模型层**  
-   - 为 PhysChem / MD 增加独立 encoder（或门控融合），接入 GLARE policy / classifier head。  
-   - 保持 GRPO / supervised / ensemble 等训练接口兼容，或提供显式 `architecture` 开关。  
-3. **数据层**  
-   - 训练 / 筛选池为每个 SMILES 附带 `physchem_101`、`md_feat`（或路径引用）。  
-   - 与现有 `patent_train/test`、`new_13`、decoy 拆分协议对齐（E26+ 不可擅自重拆）。  
-4. **实验层**  
-   - 新实验编号续写 experiment.md（建议从 **E47+**）。  
-   - 对照：**同一评估协议** 下新旧模型 head-to-head。  
-5. **工程层**  
-   - 改动落在工作副本；回滚以 `/data/ye/glare-backup-20260723` 为准。
-
-### 3.2 Out of Scope（本阶段不做）
-
-- 更换生成模型（DiffGUI / DiffDynamic）本体  
-- 重写湿实验 / 合成物流  
-- 用对接分数重新发明标签体系  
-- 删除或覆盖旧实验目录与 checkpoint  
-
----
-
-## 4. 拟议技术设计（理解旧模型后的默认方案）
-
-> 实施前仍可微调；**101 维清单与 MD 维定义见 §7 待确认项**。
-
-### 4.1 三分支融合
-
-```
-SMILES / Graph
-   ├─ GraphEncoder (现有 GIN/GINE)     → h_g
-   ├─ FingerprintEncoder (现有 ECFP)   → h_fp
-   ├─ PhysChemEncoder (101 → MLP)     → h_pc     [NEW]
-   └─ MDEncoder (d_md → MLP)          → h_md     [NEW]
-                ↓
-        Fuse = Gate/Concat+MLP / 加权和
-                ↓
-           Policy / Logits (active vs inactive)
+```text
+$EDRUG     = /data/ye/e-drug-lab
+$VAV1      = $EDRUG/backend/outputs/vav1_rl_project
+$BINDING_RL = $VAV1/binding_RL
+$VALIDATION = $VAV1/validation
+$ALLIN     = /data/ye/ALLIN
+$GLARE     = /data/ye/diffgui/third_party/GLARE
 ```
 
-设计约束：
-
-- **缺失 MD**：用零向量 + `md_mask`，训练时对 mask 样本降低 MD 分支梯度，避免「无 MD 分子被系统性惩罚」。  
-- **PhysChem 必须可批量、CPU 可算**，筛选 10k–100k 库时不能依赖 MD。  
-- **归一化**：PhysChem / MD 用训练集统计量做 z-score 或 robust scale，统计量写入 checkpoint sidecar。  
-- **消融必做**：FP-only（旧） / +PC / +MD / +PC+MD，证明增益来自新模态而非偶然超参。
-
-### 4.2 训练策略（继承旧最优经验）
-
-默认对照配置（可被实验推翻）：
-
-| 阶段 | 策略建议 | 备注 |
-|------|----------|------|
-| R0 | supervised warmup，lr≈3e-4，ensemble≥3 | 对齐 E22/E26 稳基线 |
-| R1+ | 湿实验反馈：weight 放大优先于盲目 10× LR | E24+：high_weight 比 fb_amp 更稳 |
-| 负样本 | 独立 Enamine / 多样性 decoy，禁止 Vina 伪 inactive | experiment.md 明确结论 |
-| 持续学习 | 累积真实标签；OOD 探针不得进训练集 | E43 修正版协议 |
-
-### 4.3 软件接入点（改模型时同步碰）
-
-| 组件 | 路径 |
-|------|------|
-| 核心网络 | `diffgui/third_party/GLARE/model.py` |
-| 数据加载 | `diffgui/third_party/GLARE/dataset.py` + preprocess |
-| VAV1 封装 | `diffgui/glare_selector/*` |
-| 后端 adapter | `backend/app/pipelines/vav1_rl/glare_gnn_*.py` |
-| API | `backend/app/api/routes/glare.py`、`services/glare_runner.py` |
-| 配置 | `diffgui/glare_selector/glare_config.yaml` |
-
----
-
-## 5. 成功标准（必须优于 experiment.md）
-
-### 5.1 硬门槛（全部满足才算升级成功）
-
-在 **与旧实验相同的数据拆分与标签定义**（见 experiment.md「评估标准 E24+」）下：
-
-| # | 指标 | 旧基线（摘录） | 新模型要求 |
-|---|------|----------------|------------|
-| H1 | patent_test **ROC-AUC** | E22 `fb_amp` 终值 **0.976**；监督线常见 **≥0.95** | **≥ 旧对照 + 0.01**，且不得低于对照 |
-| H2 | patent_test **PR-AUC / Combined** | 同协议记录值 | **≥ 对照** |
-| H3 | PASS 判定 | `ΔRank_strong < 0` 且 `ΔROC ≥ -0.03` | **PASS**，且 ΔRank_strong **优于** 同协议旧最佳 |
-| H4 | 持续学习 within-round 正负分离 | E43：训后分离度大幅提升（量级 10³） | **同协议下分离度 ≥ 旧模型** |
-| H5 | 消融 | — | **FP+PC+MD ≥ FP+PC ≥ FP**（允许 MD 仅在有 MD 子集上显著） |
-
-### 5.2 软门槛（优先争取）
-
-| # | 指标 | 参考 |
-|---|------|------|
-| S1 | 高活性检索 / 大池排序 | E11 自合成 mean rank 百分位 **~18.5%**；E21/E22 `rank_ge7` **~177** |
-| S2 | AL 场景 | 不低于 E41b-Chase 量级的有效命中（同池注明） |
-| S3 | 跨轮 OOD | 相对 E43 修正版「跨轮几乎无区分」有可报告改善 |
-
-### 5.3 明确不算成功的情况
-
-- 只在训练过的分子上「完美记忆」（E44 式污染），无 OOD / held-out 增益。  
-- ROC 虚高但强活性排名恶化，或排名变好但 ROC 崩（旧 `fb_amp` 翻车模式）。  
-- 换了更大 / 更小排名池却直接比绝对 rank。  
-
----
-
-## 6. 工作阶段（建议顺序）
-
-| Phase | 内容 | 产出 |
-|:-----:|------|------|
-| **P0** | 读透旧模型 + 冻结备份 + 本文档 | ✅ 进行中 |
-| **P1** | 锁定 101 维 PhysChem schema + MD schema | `features_spec.md` + 可跑脚本 |
-| **P2** | 特征缓存管线（专利 / decoy / wetlab） | `*.pt` / parquet 特征库 |
-| **P3** | 改 GLARE 融合网络 + 训练接口 | 新 `architecture`，单测 forward |
-| **P4** | 对照训练（旧 vs 新，消融） | E47+ 写入 experiment.md |
-| **P5** | 达标判定 / 不达则迭代融合与正则 | PASS 报告 |
-| **P6** | 接入 e-drug-lab API / 筛选闭环 | 生产路径可用 |
-
-当前停留在 **P0 → 准备 P1**。未确认 §7 前不改网络权重训练协议。
-
----
-
-## 7. 待你确认的关键歧义（停下询问）
-
-按项目约定：**模糊处不猜死**。请确认后再动代码：
-
-1. **101 维理化性质** — ✅ 已定位：`PAT_training_database_101D.csv`（101 个 `RDKit_*` + 10 元数据；**388 行**，详见数据地图）。仍需确认：如何映射到 403 专利缺行、以及是否按同列定义扩展到 DrugFlow/wetlab。  
-2. **MD 信息** — ✅ 八体系发布树已登记（`all8_*.parquet`）。仍需确认：编码进网络的具体向量（window 摘要？occupancy？MMGBSA？）以及无 MD 分子的 mask/代理策略。  
-3. **主对照实验锚点**  
-   - 建议默认：**E26 拆分 + E22/E24+ PASS 协议** 为硬门槛；大池排序以同池复现旧 checkpoint 为对照。是否同意？  
-4. **训练主策略**  
-   - 新模态上线首轮：先做 **supervised + 反馈 weight**，还是直接上 **GRPO**？  
-5. **代码落点**  
-   - 在 `third_party/GLARE` 原地改（易与备份 diff），还是 `glare_selector` 外包一层 MultiModalGLARE？
-
----
-
-## 8. 路径速查
-
-| 用途 | 路径 |
-|------|------|
-| 本项目定义 | `e-drug-lab/claude/project.md`（本文） |
-| **Glide/MD/101D 数据地图** | [`claude/data-storage-binding-rl.md`](data-storage-binding-rl.md) |
-| Glide+MD 根目录 | `backend/outputs/vav1_rl_project/binding_RL/` |
-| 101 维理化表 | `backend/outputs/vav1_rl_project/PAT_training_database_101D.csv`（388×101 RDKit） |
-| 实验记录（experiment.md） | `backend/outputs/vav1_rl_project/reports/experiment_log.md` |
-| 实验对比 | `.../reports/glare_experiment_comparison.md` |
-| 实验汇总入口 | `.../glare_experiments_summary/README.md` |
+| 你想找 | 去哪 |
+|--------|------|
+| **本文 / 项目导航** | `$EDRUG/claude/project.md` |
+| Glide / MD / 101D 详表 | `$EDRUG/claude/data-storage-binding-rl.md` |
+| 实验流水账 | `$VAV1/reports/experiment_log.md` |
+| 对接 + 特征 + 分轮 docking | `$BINDING_RL/`（旁路入口：`PROJECT.md`） |
+| ALLIN 代码精简仓 | `$ALLIN/`（入口：`docs/project.md`） |
+| 三轮生成库 / 实体 CSV·SDF | `$ALLIN/data/` |
+| ALLIN 训练权重 + 排名 | `$VALIDATION/allin_pc_gl_progressive/` |
+| 纯 ginl 误跑基线 | `$VALIDATION/allin_progressive/` |
+| E43 持续学习对照 | `$VALIDATION/glare_e43_progressive/` |
+| E47–E53 消融 | `$VALIDATION/glare_e47_e53_ablation/` |
+| 专利 101D 原表 | `$VAV1/PAT_training_database_101D.csv`（388 行） |
+| 合并 Glide 特征表 | `$BINDING_RL/features_v1/glide/allin_glide_feature_table.csv` |
+| GLARE 网络本体 | `$GLARE/model.py` |
+| VAV1 流水线 Python | `$EDRUG/backend/app/pipelines/vav1_rl/` |
 | 改动前备份 | `/data/ye/glare-backup-20260723` |
-| 训练数据 | `e-drug-lab/glaretrain/` |
-| 种子 / 湿实验相关 | `diffgui/data/seed/` |
+
+数据盘约定：大文件一律在 `/data/ye`，勿占系统盘。
 
 ---
 
-## 9. 变更日志
+## 3. 代码入口
+
+| 角色 | 路径 |
+|------|------|
+| ALLIN / GLARE CLI | `$EDRUG/backend/app/pipelines/vav1_rl/glare_gnn_cli.py` |
+| PhysChem 101 | `.../physchem_101.py` |
+| Glide 特征加载 | `.../glide_features.py`（可读 `ALLIN_GLIDE_TABLE`） |
+| MD 特征 | `.../md_features.py` |
+| CRBN strip | `.../crbn_strip.py` |
+| ALLIN 持续学习驱动 | `$EDRUG/backend/scripts/run_allin_pc_gl_progressive.py`（副本：`$ALLIN/pipelines/`） |
+| 纯 ginl 误跑脚本 | `$EDRUG/backend/scripts/run_allin_progressive_rl.py` |
+| 构建合并 Glide 表 | `$BINDING_RL/features_v1/glide/build_allin_glide_table.py` |
+| 第三轮对接编排 | `$BINDING_RL/round3_docking/scripts/`（`01_prepare_smi_shards.py` · `02_run_round3_docking.py` · `03_fast_vav1_contacts_round3.py`） |
+| 第二轮实体对接 | `$BINDING_RL/round2_entity_docking/scripts/` |
+| 消融 E47–E53 | `$EDRUG/backend/scripts/run_e47_e53_ablation.py` |
+| Conda（GLARE 训练） | `diffgui_new`（`/home/user/anaconda3/bin/conda`） |
+
+Glide 资源约束：**≤30 核**（实践：`--parallel 1 --host localhost:30`）。
+
+---
+
+## 4. 数据目录树（精简）
+
+### 4.1 `$BINDING_RL` — 对接 / MD / 特征
+
+```text
+binding_RL/
+├── PROJECT.md                 # 本目录旁路入口（指向本文件）
+├── README_zh.md               # DrugFlow 去重说明（历史）
+├── docking/                   # DrugFlow ~1.16 万 Glide SP + 格点
+├── patent_docking/            # 专利 403/403
+├── wetlab_docking/            # wetlab 13/13
+├── round2_entity_docking/     # 第二轮实体 19 Glide
+├── round3_docking/            # 第三轮生成库 Glide（~9209）
+├── MD_information/            # 八体系 MD + 发布树
+├── features_v1/
+│   ├── glide/                 # allin_glide_feature_table.csv 等
+│   ├── physchem/              # 专利级 strip/scaled 101D（非生成库）
+│   ├── md/                    # md8_molecule_features.*
+│   └── strip_qc/
+├── patent_screening/          # 衍生筛选表
+├── DrugFlow_jobs_unique.csv / *.sdf
+└── 9nfr.pdb · scaffold …
+```
+
+详列与 QC：[`data-storage-binding-rl.md`](data-storage-binding-rl.md)。
+
+### 4.2 `$ALLIN/data` — 业务分子与三轮库
+
+| 资产 | 路径（相对 `$ALLIN/data/`） | 约行数 / 规模 |
+|------|------------------------------|---------------|
+| 第一轮生成库 | `第一轮生成分子库.csv` | ~13586 |
+| 第二轮生成库 | `第二轮生成分子库.csv` | ~10242 |
+| 第三轮生成库 | `第三轮生成分子库.csv` | ~9214 |
+| 第一轮实体 | `第一轮分子生成15个实体分子/` | 湿实验相关实体 SDF |
+| 第二轮实体 | `第二轮动力学指导的分子生成/` | 含 19 实体等 |
+| 第三轮实体 | `第三轮限制范围的分子生成/` | 限制范围实体 |
+| 专利 / 合成库 | `01-MGDs-Patent-DataBase*` · `00-MGDs-Synthesis-DataBase/` | — |
+| 标签表等 | `DataSet-GNN-SMILES-pDC50.xlsx` 等 | — |
+
+库 CSV 常带 MolFactory 列（MW/TPSA/LogP/CarsiScore 等），**不等于** ALLIN 冻结 101D。
+
+### 4.3 `$VALIDATION` — 实验产物
+
+| 目录 | 含义 |
+|------|------|
+| `allin_pc_gl_progressive/` | **ALLIN 主线**：`model_R{0..3}.pt`、`dataset_R*.json`、`ranks/`、`RANK_SUMMARY.md` |
+| `allin_progressive/` | 纯 `ginl` 误跑基线（勿当 ALLIN） |
+| `glare_e43_progressive/` | E43 持续学习（图为主） |
+| `glare_e47_e53_ablation/` | 消融；E50=`ginl_pc_gl` |
+| `glare_e32_*` / `glare_e33_*` | 历史论文 / 全专利实验 |
+
+---
+
+## 5. 特征表真源
+
+| 模态 | 真源路径 | 覆盖范围 | 备注 |
+|------|----------|----------|------|
+| Glide SP（合并） | `$BINDING_RL/features_v1/glide/allin_glide_feature_table.csv` | ~9644 行（含 DrugFlow + 专利 + wetlab + R3 等 merge） | `glide_features.py` keep=last by `molecule_id` |
+| Glide 构建脚本 | `.../glide/build_allin_glide_table.py` | — | 改对接结果后需重建 |
+| PhysChem 101（专利） | `$VAV1/PAT_training_database_101D.csv` | **388 行** | 原始 |
+| PhysChem strip/scaled | `$BINDING_RL/features_v1/physchem/` | 专利级 | **生成库 1/2/3 无此预计算表** |
+| MD 八体系 | `$BINDING_RL/features_v1/md/md8_molecule_features.csv` | 8 systems | 另有 parquet / scaler / QC |
+
+第三轮原始对接结果：`$BINDING_RL/round3_docking/results/glide_sp_docking_results.csv`。  
+第二轮实体：`$BINDING_RL/round2_entity_docking/results/glide_sp_docking_results.csv`。
+
+---
+
+## 6. ALLIN 训练与排名产物
+
+**目录**：`$VALIDATION/allin_pc_gl_progressive/`（约 558M）
+
+| 文件 / 子目录 | 说明 |
+|---------------|------|
+| `model_R0.pt` … `model_R3.pt` | `architecture=ginl_pc_gl`，`use_glide=True` |
+| `dataset_R0.json` … `dataset_R3.json` | 含 `molecule_id`；R0≈专利 352；+R1 13；+R2 19；+R3 6 |
+| `query_lib_round{1,2,3}.json` | 各轮大库 query 缓存 |
+| `ranks/rank_round{1,2,3}.csv` | 相似物名次明细 |
+| `RANK_SUMMARY.md` | 活性 vs 非活性相似物均值名次摘要 |
+| `similarity/` · `logs/` | 相似检索与日志 |
+
+**排名摘要（摘自 RANK_SUMMARY，仅供定位；以文件为准）**：
+
+| 轮次 | 模型→库 | 活性相似物均值名次 | 非活性均值名次 |
+|------|---------|-------------------|----------------|
+| R1 | R0→库1 | #11338 | #10872（非活性略好） |
+| R2 | R1→库2 | #5840 | #4796（非活性更好） |
+| R3 | R2→库3（有 Glide） | #7164 | #7563（活性略好） |
+
+注意：专利 held-out ROC（E50≈0.831）**不能**直接等同于「未标注生成库上的 Tanimoto 邻居排名好坏」。
+
+---
+
+## 7. 对接覆盖一览
+
+| 集合 | 路径 | 规模 | 状态 |
+|------|------|------|------|
+| DrugFlow 大库 | `$BINDING_RL/docking/` | ~11659/11682 | ✅ |
+| 专利 403 | `$BINDING_RL/patent_docking/` | 403/403 | ✅ |
+| wetlab 13 | `$BINDING_RL/wetlab_docking/` | 13/13 | ✅ |
+| 第二轮实体 | `$BINDING_RL/round2_entity_docking/` | 19/19 | ✅ |
+| 第三轮生成库 | `$BINDING_RL/round3_docking/` | ~9209 unique | ✅ |
+| 第一/二轮生成库全库或相似物子集 | — | — | ❌ 待补（计划：相似物子集 ≤30 核） |
+
+共用格点：`$BINDING_RL/docking/grid/9nfr_grid.zip`。
+
+---
+
+## 8. 已知缺口（找问题先看）
+
+1. **生成库无预计算 ALLIN 101D**：`features_v1/physchem/` 与 `PAT_training_database_101D.csv` 只覆盖专利量级；库 1/2 query 时 101D 多为现场计算，未落盘缓存。  
+2. **库 1/2 Glide 缺失**：ALLIN 前两轮大库排序时 Glide 通道大量 `mask=0`；仅 R3 库有较完整对接。  
+3. **库 CSV 理化列 ≠ 101D**：MolFactory 的 MW/TPSA/LogP/Carsi 等不是冻结 101 维向量。  
+4. **命名坑**：`allin_progressive/` 目录名带 allin，实为纯 `ginl`。  
+5. **评估语义**：专利 ROC 高 ≠ 生成库相似物排名分离好。
+
+---
+
+## 9. 待办（下一刀）
+
+1. 写 `MODALITY_AUDIT.md`：实验记录 / 库 CSV / 101D 表 / Glide 覆盖对照。  
+2. 预计算并缓存第 1/2/3 轮库 ALLIN 101D。  
+3. DrugFlow SMILES 命中 + 缺口相似物子集 Glide（≤30 核）→ 并入 `allin_glide_feature_table.csv`。  
+4. 重排到新目录 `$VALIDATION/allin_pc_gl_rerank_v2/`（**不覆盖**现有 progressive）。
+
+---
+
+## 10. 立项目标摘要（历史，仍有效）
+
+保留 GLARE 闭环，融合 PhysChem（+ 可选 MD），在 experiment.md 可比协议下优于旧最佳。成功标准与旧坑见历史简报逻辑（E13 假收敛、禁止 Vina 伪负、防泄漏、勿跨池裸比 rank）。消融锚点：E48–E52（见 `glare-multimodal-rl-status.md`）。
+
+工作流文档：[`workflow-diffgui-glare-wetlab.md`](workflow-diffgui-glare-wetlab.md) · [`rl-path.md`](rl-path.md)。
+
+---
+
+## 11. 相关文档索引
+
+| 文档 | 内容 |
+|------|------|
+| [`data-storage-binding-rl.md`](data-storage-binding-rl.md) | Glide / MD / 101D 列级详表与 QC |
+| [`glare-multimodal-rl-status.md`](glare-multimodal-rl-status.md) | 残差多模态落地 + ALLIN 命名 + E47–E52 |
+| [`project-structure.md`](project-structure.md) | e-drug-lab 平台总览 |
+| `$ALLIN/README.md` · `STRUCTURE.md` | ALLIN 代码仓说明 |
+| `$ALLIN/docs/ALLIN_设计到测试完整报告.md` | 设计到实测长报告 |
+| `$BINDING_RL/PROJECT.md` | 数据目录旁路入口 |
+| `$VALIDATION/allin_pc_gl_progressive/RANK_SUMMARY.md` | 三轮排名摘要 |
+
+---
+
+## 12. 变更日志
 
 | 日期 | 变更 |
 |------|------|
-| 2026-07-24 | 初版：定义旧模型边界、多模态升级目标、成功标准与待确认项 |
+| 2026-07-24 | 初版：多模态立项 brief（目标 / 成功标准 / 待确认） |
+| 2026-08-01 | **重写为项目现状 + 数据地图**：ALLIN 主线路径、对接覆盖、特征真源、缺口与待办；binding_RL / ALLIN 旁路入口 |

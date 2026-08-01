@@ -261,6 +261,43 @@ def cmd_evidence_structures(
     _json_print({"structures": [item.model_dump(mode="json") for item in structures]})
 
 
+@evidence_app.command("prepare-structure")
+def cmd_evidence_prepare_structure(
+    pdb_id: str = typer.Option(..., "--pdb-id"),
+    ligand_id: str = typer.Option(..., "--ligand-id"),
+    output: Path = typer.Option(..., "--output"),
+    chains: str = typer.Option("", "--chains", help="Comma-separated target protein chains"),
+    ligand_chain: Optional[str] = typer.Option(None, "--ligand-chain"),
+    ligand_resseq: Optional[int] = typer.Option(None, "--ligand-resseq"),
+    ligand_icode: Optional[str] = typer.Option(None, "--ligand-icode"),
+    keep_hetero: str = typer.Option("", "--keep-hetero", help="Comma-separated cofactors/metals"),
+    model: int = typer.Option(1, "--model", min=1),
+    source_pdb: Optional[Path] = typer.Option(None, "--source-pdb", exists=True),
+    source_mmcif: Optional[Path] = typer.Option(None, "--source-mmcif", exists=True),
+    ccd_cif: Optional[Path] = typer.Option(None, "--ccd-cif", exists=True),
+    offline_replay: bool = typer.Option(False, "--offline-replay"),
+) -> None:
+    """Download and prepare a clean receptor plus native-coordinate ligand."""
+    from masld_agent.tools.structure_prep import prepare_native_structure
+
+    manifest = prepare_native_structure(
+        pdb_id=pdb_id,
+        ligand_id=ligand_id,
+        output_dir=output,
+        chains=[value.strip() for value in chains.split(",") if value.strip()],
+        ligand_chain=ligand_chain,
+        ligand_resseq=ligand_resseq,
+        ligand_icode=ligand_icode,
+        keep_hetero=[value.strip() for value in keep_hetero.split(",") if value.strip()],
+        model=model,
+        source_pdb=source_pdb,
+        source_mmcif=source_mmcif,
+        ccd_cif=ccd_cif,
+        offline_replay=offline_replay,
+    )
+    _json_print(manifest)
+
+
 @evidence_app.command("nominate")
 def cmd_evidence_nominate(
     library: Path = typer.Option(..., "--library", exists=True, dir_okay=False),

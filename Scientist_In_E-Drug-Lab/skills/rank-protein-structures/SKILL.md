@@ -18,6 +18,10 @@ Ranking priority:
 4. fewer disruptive mutations or construct artifacts
 5. suitable biological assembly and better experimental resolution
 
-Write `structure_candidates.csv` and `selected_structure.json`. If no experimental
-candidate is qualified, record that result. A predicted structure may support a cautious
-hypothesis but must not be presented as equivalent to a ligand-supported experimental pocket.
+Write `structure_candidates.csv` and `selected_structure.json`. For a selected ligand-bound
+entry, call `structure_prepare_native` through `prepare-native-protein-ligand` before pocket
+qualification. Metadata ranking alone is not a downloaded or docking-ready structure.
+
+If no experimental candidate is qualified, record that result. A predicted structure may
+support a cautious hypothesis but must not be presented as equivalent to a ligand-supported
+experimental pocket.

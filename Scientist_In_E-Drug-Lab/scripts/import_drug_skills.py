@@ -69,6 +69,7 @@ EVIDENCE = [
     "scope-molecular-nomination",
     "research-target-biology",
     "rank-protein-structures",
+    "prepare-native-protein-ligand",
     "qualify-binding-pocket",
     "enrich-compound-evidence",
     "triage-compound-toxicity",

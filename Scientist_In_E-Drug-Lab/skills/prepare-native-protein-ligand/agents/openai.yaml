@@ -1,0 +1,4 @@
+interface:
+  display_name: Prepare Native Protein Ligand
+  short_description: Clean receptor and retain native ligand pose
+  default_prompt: Download the selected RCSB complex, clean the target chains, extract the correct native ligand copy without moving it, and validate all coordinate artifacts before pocket qualification.

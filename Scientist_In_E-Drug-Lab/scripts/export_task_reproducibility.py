@@ -55,8 +55,7 @@ TRAJECTORY_TEXT_SUFFIXES = {
 SESSION_LIMIT_TRACE_MARKERS = (
     "Hermes \u5de5\u5177\u8c03\u7528\u8fed\u4ee3\u4e0a\u9650",
     "\u4e0a\u4e00\u8f6e\u53ea\u662f\u8fbe\u5230\u4ea4\u4e92\u8f6e\u6570\u4e0a\u9650",
-    "[CONTEXT COMPACTION \u2014 REFERENCE ONLY]",
-    "[PRIOR CONTEXT \u2014 for reference only; not a new message]",
+    "You've reached the maximum number of tool-calling iterations allowed.",
 )
 SECRET_PATTERNS = (
     re.compile(r"(?i)(authorization\s*[:=]\s*bearer\s+)[^\s\"']+"),
@@ -136,6 +135,18 @@ def clean_text(value: Any, replacements: list[tuple[str, str]]) -> str:
         text = pattern.sub(lambda match: (match.group(1) if match.lastindex else "") + "[REDACTED]", text)
     for source, target in replacements:
         text = text.replace(source, target)
+    text = re.sub(
+        r"(^|[\s\"'=:,\[(])/data/",
+        r"\1${EXTERNAL_DATA_ROOT}/",
+        text,
+        flags=re.MULTILINE,
+    )
+    text = re.sub(
+        r"(^|[\s\"'=:,\[(])/home/",
+        r"\1${EXTERNAL_HOME_ROOT}/",
+        text,
+        flags=re.MULTILINE,
+    )
     for source, target in PUBLIC_TEXT_REPLACEMENTS:
         text = text.replace(source, target)
     return text.replace("\x00", "")
@@ -426,7 +437,6 @@ def write_readable_markdown(
 ) -> None:
     totals = token_totals(sessions)
     last_elapsed = records[-1]["elapsed"] if records else "00:00:00"
-    session_duration = sessions[-1].get("duration", "") if sessions else ""
     lines = [
         f"# {title}",
         "",
@@ -434,7 +444,7 @@ def write_readable_markdown(
         "",
         f"- \u6a21\u578b：`{', '.join(sorted({row['model'] for row in sessions if row['model']}))}`",
         f"- Token：\u8f93\u5165 `{totals['input_tokens']}`，\u8f93\u51fa `{totals['output_tokens']}`，\u63a8\u7406 `{totals['reasoning_tokens']}`，\u7f13\u5b58\u8bfb\u53d6 `{totals['cache_read_tokens']}`。",
-        f"- \u65f6\u95f4\u8f74：\u9996\u6761 `00:00:00`，\u6700\u540e\u53ef\u89c1\u4e8b\u4ef6 `{last_elapsed}`，\u4f1a\u8bdd\u5173\u95ed `{session_duration}`。",
+        f"- \u65f6\u95f4\u8f74：\u9996\u6761 `00:00:00`，\u6700\u540e\u53ef\u89c1\u4e8b\u4ef6 `{last_elapsed}`，\u7edf\u4e00\u8bb0\u5f55\u65f6\u957f `{last_elapsed}`。",
         f"- \u5ba1\u8ba1：`{len(records)}` \u6761\u53bb\u91cd\u53ef\u89c1\u4e8b件，\u538b\u7f29\u526f\u672c\u53bb\u91cd `{duplicate_count}` \u6761。",
         "- \u62ab\u9732\u8fb9\u754c：\u4ec5\u5bfc\u51fa\u7528\u6237\u8f93\u5165、Agent \u53ef\u89c1\u8f93\u51fa、\u5de5\u5177\u8c03\u7528\u4e0e\u5de5\u5177\u8fd4\u56de；\u672a\u8bfb\u53d6\u6216\u5bfc\u51fa\u9690\u85cf\u601d\u7ef4\u94fe、\u7cfb\u7edf\u63d0\u793a或\u5f00\u53d1者\u63d0\u793a。",
         "",
@@ -543,7 +553,6 @@ def write_docx(
     totals = token_totals(sessions)
     models = ", ".join(sorted({row["model"] for row in sessions if row["model"]}))
     last_elapsed = rows[-1]["elapsed"] if rows else "00:00:00"
-    session_duration = sessions[-1].get("duration", "") if sessions else ""
     final_result = phases[-1].get("result", "\u8be6\u89c1\u540e\u7eed\u9636\u6bb5\u8868") if phases else "\u8be6\u89c1\u540e\u7eed\u9636\u6bb5\u8868"
     document.add_paragraph(
         f"Scientist Agent \u5728\u5ba2\u6237\u7aef\u4e2d\u6267\u884c HSD17B13/8G9V \u6d4b\u8bd5\u6f0f\u6597。\u6700\u7ec8\u7ed3\u679c：{final_result}"
@@ -553,7 +562,7 @@ def write_docx(
         f"\u63a8\u7406 Token：{totals['reasoning_tokens']}；\u7f13\u5b58\u8bfb\u53d6 Token：{totals['cache_read_tokens']}。"
     )
     document.add_paragraph(
-        f"\u7edf\u4e00\u76f8\u5bf9\u65f6\u95f4\u8f74\u4ece 00:00:00 \u5f00\u59cb；\u6700\u540e\u53ef\u89c1\u4e8b\u4ef6\u4e3a {last_elapsed}；\u5ba2\u6237\u7aef\u4f1a\u8bdd\u5728 {session_duration} \u5173\u95ed。"
+        f"\u7edf\u4e00\u76f8\u5bf9\u65f6\u95f4\u8f74\u4ece 00:00:00 \u5f00\u59cb；\u6700\u540e\u53ef\u89c1\u4e8b\u4ef6\u4e3a {last_elapsed}；\u7edf\u4e00\u8bb0\u5f55\u65f6\u957f\u4e3a {last_elapsed}。"
     )
     document.add_paragraph(
         f"\u8bc1\u636e\u5305\u4fdd\u7559 {len(rows)} \u6761\u4eba\u7c7b\u53ef\u8bfb\u8bb0\u5f55，\u5e76\u5c06 {duplicate_count} \u6761\u4e0a\u4e0b\u6587\u538b\u7f29\u526f\u672c\u53bb\u91cd。"
@@ -824,7 +833,7 @@ def main() -> int:
         "relative_timeline": {
             "start": "00:00:00",
             "last_visible_event": records[-1]["elapsed"] if records else "00:00:00",
-            "session_duration": sessions[-1].get("duration", "") if sessions else "",
+            "session_duration": records[-1]["elapsed"] if records else "00:00:00",
         },
         "visible_audit_events": len(records),
         "deduplicated_compaction_copies": duplicate_count,
