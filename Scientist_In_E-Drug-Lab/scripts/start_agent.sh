@@ -5,13 +5,10 @@
 #   bash scripts/start_agent.sh chat         # same
 #   bash scripts/start_agent.sh shell        # bash with masld-agent CLI
 #   bash scripts/start_agent.sh sync         # refresh provider config from templates
-# Extra args after mode are forwarded to hermes chat, e.g.:
-#   bash scripts/start_agent.sh chat --provider openai-relay
+# Extra args after mode are forwarded to hermes chat.
 #
-# Credentials (never commit):
-#   export OPENAI_API_KEY=...
-#   export OPENAI_BASE_URL=https://your-openai-compatible-endpoint/v1
-#   # or put them in .env / .hermes/.env after copying .env.example
+# Credentials (never commit) are synced from the selected CC-Switch Claude
+# provider into .hermes/.env.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -30,18 +27,15 @@ export HERMES_HOME="${HERMES_HOME:-$ROOT/.hermes}"
 export MASLD_COMPETITION_EVAL_MODE="${MASLD_COMPETITION_EVAL_MODE:-true}"
 export PYTHONPATH="$ROOT/src:${PYTHONPATH:-}"
 export HERMES_ENABLE_PROJECT_PLUGINS="${HERMES_ENABLE_PROJECT_PLUGINS:-true}"
-unset ANTHROPIC_API_KEY ANTHROPIC_BASE_URL ARK_API_KEY MASLD_LLM_API_KEY MASLD_LLM_BASE_URL 2>/dev/null || true
+unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN ANTHROPIC_TOKEN ANTHROPIC_BASE_URL 2>/dev/null || true
+unset OPENAI_API_KEY OPENAI_BASE_URL ARK_API_KEY MASLD_LLM_API_KEY MASLD_LLM_BASE_URL 2>/dev/null || true
 
-export HERMES_INFERENCE_PROVIDER="${HERMES_INFERENCE_PROVIDER:-openai-relay}"
-export HERMES_INFERENCE_MODEL="${HERMES_INFERENCE_MODEL:-gpt-5.6-sol}"
-export HERMES_MODEL_CONTEXT_LENGTH="${HERMES_MODEL_CONTEXT_LENGTH:-1050000}"
+export HERMES_CCSWITCH_PROVIDER="${HERMES_CCSWITCH_PROVIDER:-DeepSeek Official}"
+export HERMES_INFERENCE_PROVIDER="${HERMES_INFERENCE_PROVIDER:-deepseek-official}"
+export HERMES_INFERENCE_MODEL="${HERMES_INFERENCE_MODEL:-deepseek-v4-flash}"
+export HERMES_MODEL_CONTEXT_LENGTH="${HERMES_MODEL_CONTEXT_LENGTH:-1000000}"
 export HERMES_REASONING_EFFORT="${HERMES_REASONING_EFFORT:-xhigh}"
 export HERMES_MAX_TURNS="${HERMES_MAX_TURNS:-600}"
-export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://your-openai-compatible-endpoint/v1}"
-
-if [[ -z "${OPENAI_API_KEY:-}" ]]; then
-  echo "WARNING: OPENAI_API_KEY is unset. Copy .env.example → .env and fill keys before chat." >&2
-fi
 
 MODE="${1:-chat}"
 if [[ $# -ge 1 ]]; then
@@ -50,10 +44,8 @@ fi
 
 python "$ROOT/scripts/sync_providers_from_ccswitch.py" \
   --hermes-home "$HERMES_HOME" \
-  --skip-ccswitch \
+  --ccswitch-provider "$HERMES_CCSWITCH_PROVIDER" \
   --strip-provider-env \
-  --prune-unlisted-providers \
-  --activate-provider "$HERMES_INFERENCE_PROVIDER" \
   --model "$HERMES_INFERENCE_MODEL" \
   --context-length "$HERMES_MODEL_CONTEXT_LENGTH" \
   --reasoning-effort "$HERMES_REASONING_EFFORT" \
@@ -66,12 +58,13 @@ cat <<BANNER
   跨靶点/跨疾病；AI4S/MASLD 仅为竞赛预设
   任务记忆: memory/MAIN_PLAYBOOK.md + targets/<id>/CAMPAIGN.md
   HERMES_HOME=$HERMES_HOME
+  CC-Switch配置: $HERMES_CCSWITCH_PROVIDER
   模型来源: $HERMES_INFERENCE_PROVIDER
   推理模型: $HERMES_INFERENCE_MODEL
   推理强度: $HERMES_REASONING_EFFORT
   单会话轮次: $HERMES_MAX_TURNS
   上下文窗口: $HERMES_MODEL_CONTEXT_LENGTH tokens
-  OPENAI_BASE_URL: $OPENAI_BASE_URL
+  API协议: Anthropic Messages（密钥仅存 .hermes/.env）
 ============================================================
   对话:
     bash scripts/start_agent.sh

@@ -214,12 +214,16 @@ def process_one(args: argparse.Namespace, row: pd.Series) -> dict:
             f"{molecule_id}: invalid selections ligand={len(ligand_heavy_aids)} "
             f"pocket={len(pocket_heavy_aids)} pocket_CA={len(pocket_ca_aids)}"
         )
+    row_late_start = optional_float(row, "late_start_ns")
+    late_start_ns = (
+        row_late_start if row_late_start is not None else args.late_start_ns
+    )
     medoid = pose_medoid(
         cms,
         frames,
         ligand_heavy_aids,
         pocket_ca_aids,
-        args.late_start_ns,
+        late_start_ns,
         args.cluster_cutoff_a,
     )
     planned = optional_float(row, "planned_medoid_time_ns")
@@ -274,6 +278,7 @@ def process_one(args: argparse.Namespace, row: pd.Series) -> dict:
         )
     result = {
         "molecule_id": molecule_id,
+        "late_start_ns": late_start_ns,
         **medoid,
         "source_cms": str(cms_path.resolve()),
         "source_trajectory": str(trajectory_path.resolve()),

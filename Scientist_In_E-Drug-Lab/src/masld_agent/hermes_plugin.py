@@ -153,6 +153,62 @@ def _structure_search_rank(args: dict, **kwargs) -> str:
     )
 
 
+def _structure_prepare_native(args: dict, **kwargs) -> str:
+    from masld_agent.tools.structure_prep import prepare_native_structure
+
+    pdb_id = str(args.get("pdb_id") or "").strip()
+    ligand_id = str(args.get("ligand_id") or "").strip()
+    if not pdb_id or not ligand_id:
+        return json.dumps(
+            {"status": "error", "error": "pdb_id and ligand_id are required"}
+        )
+    try:
+        output = resolve_under(
+            PKG_ROOT,
+            args.get("output"),
+            default=PKG_ROOT / "runs" / "structure_preparation" / pdb_id.upper(),
+        )
+        source_pdb = (
+            resolve_under(PKG_ROOT, args.get("source_pdb"))
+            if args.get("source_pdb")
+            else None
+        )
+        ccd_cif = (
+            resolve_under(PKG_ROOT, args.get("ccd_cif"))
+            if args.get("ccd_cif")
+            else None
+        )
+        source_mmcif = (
+            resolve_under(PKG_ROOT, args.get("source_mmcif"))
+            if args.get("source_mmcif")
+            else None
+        )
+        result = prepare_native_structure(
+            pdb_id=pdb_id,
+            ligand_id=ligand_id,
+            output_dir=output,
+            chains=[str(value) for value in args.get("chains") or []],
+            ligand_chain=(
+                str(args.get("ligand_chain")) if args.get("ligand_chain") is not None else None
+            ),
+            ligand_resseq=(
+                int(args.get("ligand_resseq")) if args.get("ligand_resseq") is not None else None
+            ),
+            ligand_icode=(
+                str(args.get("ligand_icode")) if args.get("ligand_icode") is not None else None
+            ),
+            keep_hetero=[str(value) for value in args.get("keep_hetero") or []],
+            model=int(args.get("model") or 1),
+            source_pdb=source_pdb,
+            source_mmcif=source_mmcif,
+            ccd_cif=ccd_cif,
+            offline_replay=bool(args.get("offline_replay", False)),
+        )
+    except (OSError, RuntimeError, UnsafePathError, ValueError) as exc:
+        return json.dumps({"status": "error", "error": str(exc)})
+    return json.dumps(result, ensure_ascii=False, default=str)
+
+
 def _pocket_qualify(args: dict, **kwargs) -> str:
     from masld_agent.models import StructureCandidate
     from masld_agent.tools.pdb import qualify_pocket
@@ -609,6 +665,36 @@ STRUCTURE_SEARCH_SCHEMA = {
             "offline_replay": {"type": "boolean"},
         },
         "required": [],
+    },
+}
+
+STRUCTURE_PREPARE_SCHEMA = {
+    "name": "structure_prepare_native",
+    "description": (
+        "E2b download the selected RCSB coordinate model and CCD topology, remove water and "
+        "unselected heterogens, extract one native ligand instance without moving it, and write "
+        "a clean receptor, native ligand mmCIF/SDF, optional lossless PDB derivatives, pocket "
+        "center, instance table, hashes, and "
+        "coordinate-validation manifest. Call after structure_search_rank and before pocket_qualify."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "pdb_id": {"type": "string"},
+            "ligand_id": {"type": "string"},
+            "output": {"type": "string"},
+            "chains": {"type": "array", "items": {"type": "string"}},
+            "ligand_chain": {"type": "string"},
+            "ligand_resseq": {"type": "integer"},
+            "ligand_icode": {"type": "string"},
+            "keep_hetero": {"type": "array", "items": {"type": "string"}},
+            "model": {"type": "integer", "minimum": 1},
+            "source_pdb": {"type": "string"},
+            "source_mmcif": {"type": "string"},
+            "ccd_cif": {"type": "string"},
+            "offline_replay": {"type": "boolean"},
+        },
+        "required": ["pdb_id", "ligand_id", "output"],
     },
 }
 
@@ -1197,6 +1283,7 @@ def register(ctx):
         ("masld_pack_submission", PACK_SCHEMA, _pack_submission),
         ("target_biology_search", TARGET_BIOLOGY_SCHEMA, _target_biology_search),
         ("structure_search_rank", STRUCTURE_SEARCH_SCHEMA, _structure_search_rank),
+        ("structure_prepare_native", STRUCTURE_PREPARE_SCHEMA, _structure_prepare_native),
         ("pocket_qualify", POCKET_QUALIFY_SCHEMA, _pocket_qualify),
         ("compound_evidence_enrich", COMPOUND_ENRICH_SCHEMA, _compound_evidence_enrich),
         ("toxicity_triage", TOXICITY_TRIAGE_SCHEMA, _toxicity_triage),

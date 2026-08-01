@@ -7,9 +7,9 @@ rather than duplicating.
 
 ## Index
 
-- [project.md](project.md) — **GLARE 多模态升级立项**：旧模型边界、PhysChem101+MD 改造目标、相对 experiment.md 的成功标准与待确认项。改 GLARE 前先读。
+- [project.md](project.md) — **项目现状 + 数据地图真源**（ALLIN=`ginl_pc_gl` 主线路径、对接覆盖、特征表、缺口/待办）。找东西先读这个。旁路入口：`binding_RL/PROJECT.md`、`ALLIN/docs/project.md`。
 - [glare-multimodal-rl-status.md](glare-multimodal-rl-status.md) — **残差多模态落地状态**；**ALLIN 命名**=`ginl_pc_gl`（图+理化+Glide SP 三类联合，E47–E52 数字）。
-- [data-storage-binding-rl.md](data-storage-binding-rl.md) — **Glide / MD / 101D 数据存储地图**（`binding_RL` + `PAT_training_database_101D.csv`），含 QC 与列清单。
+- [data-storage-binding-rl.md](data-storage-binding-rl.md) — **Glide / MD / 101D 列级详表**（`binding_RL` + `features_v1` + round2/3 docking + `PAT_training_database_101D.csv`），含 QC 与列清单。
 - [project-structure.md](project-structure.md) — full repo layout, runtimes,
   routes, data model, and current status. **平台总览先读这个。**
 - [env-and-tool-runtime.md](env-and-tool-runtime.md) — 五个工具的 conda 环境与调用方案、关键事实、既有 bug。

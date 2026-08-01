@@ -1,23 +1,24 @@
 # Project Hermes home template — copied to $PROJECT/.hermes/config.yaml by
 # scripts/sync_providers_from_ccswitch.py (secrets stay in .hermes/.env).
 #
-# Set OPENAI_BASE_URL / OPENAI_API_KEY (or key_env) locally; do not commit real endpoints or keys.
+# Credentials are synced from CC-Switch's "DeepSeek Official" entry into
+# .hermes/.env. Never commit real keys to this template.
 
 model:
-  provider: openai-relay
-  default: gpt-5.6-sol
-  context_length: 1050000
+  provider: deepseek-official
+  default: deepseek-v4-flash
+  context_length: 1000000
 
 providers:
-  openai-relay:
-    name: OpenAI Responses Relay
-    base_url: "https://your-openai-compatible-endpoint/v1"
-    key_env: OPENAI_API_KEY
-    api_mode: codex_responses
-    default_model: gpt-5.6-sol
+  deepseek-official:
+    name: DeepSeek Official
+    base_url: "https://api.deepseek.com/anthropic"
+    key_env: ANTHROPIC_API_KEY
+    api_mode: anthropic_messages
+    default_model: deepseek-v4-flash
     models:
-      gpt-5.6-sol:
-        context_length: 1050000
+      deepseek-v4-flash:
+        context_length: 1000000
 
 # Competition eval mode: disable uncontrolled long-term memory writes
 memory:

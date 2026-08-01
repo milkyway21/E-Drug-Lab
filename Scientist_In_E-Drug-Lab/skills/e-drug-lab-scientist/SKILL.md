@@ -17,6 +17,7 @@ Required routing:
 - task/library/count: `scope-molecular-nomination`
 - target biology: `research-target-biology`
 - PDB/structure: `rank-protein-structures`
+- native receptor/ligand coordinates: `prepare-native-protein-ligand`
 - docking decision: `qualify-binding-pocket`
 - compound annotations: `enrich-compound-evidence`
 - observed/predicted/unknown toxicity: `triage-compound-toxicity`

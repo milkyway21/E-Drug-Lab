@@ -1,8 +1,8 @@
 # GLARE 升级 — Glide / MD / 101D 数据存储地图
 
-> **用途**：多模态 GLARE（指纹 + 101 维理化 + 对接/动力学）的数据真源索引。  
-> **核对日期**：2026-07-24（路径均已实地 `ls` / 读表头验证）  
-> **关联**：[`project.md`](project.md) · 实验记录 `backend/outputs/vav1_rl_project/reports/experiment_log.md`
+> **用途**：多模态 GLARE（指纹 + 101 维理化 + 对接/动力学）的数据真源索引（列级详表）。  
+> **核对日期**：2026-08-01（在 2026-07-24 基线上补 round2/3 与 `features_v1`）  
+> **关联**：项目导航真源 [`project.md`](project.md) · 旁路 [`binding_RL/PROJECT.md`](../backend/outputs/vav1_rl_project/binding_RL/PROJECT.md) · 实验记录 `backend/outputs/vav1_rl_project/reports/experiment_log.md`
 
 **根目录（Glide + MD）**
 
@@ -27,17 +27,25 @@
 | DrugFlow Glide SP | `$BINDING_RL/docking/` | ~293M | 11659 / 11682 成功 | 大库对接 + 接触矩阵 |
 | 专利 403 Glide SP | `$BINDING_RL/patent_docking/` | ~16M | **403/403** | 有标签训练集对接 |
 | wetlab 13 Glide SP | `$BINDING_RL/wetlab_docking/` | ~1.5M | **13/13** | 湿实验探针对接 |
-| MD 八体系 | `$BINDING_RL/MD_information/` | ~296M（含 tar） | **8 systems** | 动力学状态 / reward |
+| 第二轮实体 Glide | `$BINDING_RL/round2_entity_docking/` | ~1.6M | **19/19** | R2 实体对接 |
+| 第三轮生成库 Glide | `$BINDING_RL/round3_docking/` | ~205M | **~9209** unique | R3 库对接（≤30 核） |
+| 合并 Glide 特征表 | `$BINDING_RL/features_v1/glide/` | — | ~9644 行表 | ALLIN 训练/query 加载 |
+| PhysChem / MD 特征 | `$BINDING_RL/features_v1/{physchem,md}/` | ~2.5M 合计 features_v1 | 专利 101D；MD 8 体系 | 多模态特征缓存 |
+| MD 八体系原始 | `$BINDING_RL/MD_information/` | ~296M（含 tar） | **8 systems** | 动力学状态 / reward |
 | 衍生特征 | `$BINDING_RL/patent_screening/` | ~0.7M | 403 | Glide+IFP+MD 权重+split |
-| 101D 理化 | `.../PAT_training_database_101D.csv` | ~0.6M | **388 行** | 101 维 RDKit 特征 + 标签 |
+| 101D 理化原表 | `.../PAT_training_database_101D.csv` | ~0.6M | **388 行** | 101 维 RDKit 特征 + 标签 |
 
-三套 Glide **共用格点**：`$BINDING_RL/docking/grid/9nfr_grid.zip`（受体 `docking/prep/9nfr_prepared.mae`）。
+Glide **共用格点**：`$BINDING_RL/docking/grid/9nfr_grid.zip`（受体 `docking/prep/9nfr_prepared.mae`）。
 
 ```
 binding_RL/
+├── PROJECT.md            # 旁路入口 → claude/project.md
 ├── docking/              # DrugFlow ~1.1 万
 ├── patent_docking/       # 专利 403
 ├── wetlab_docking/       # wetlab 13
+├── round2_entity_docking/# 第二轮实体 19
+├── round3_docking/       # 第三轮生成库 ~9209
+├── features_v1/          # glide / physchem / md / strip_qc
 ├── MD_information/       # 八体系 MD + tar 备份
 ├── patent_screening/     # 衍生特征表
 ├── patent_to_wetlab/     # 专利→湿实验相关（旁路）
@@ -48,7 +56,7 @@ binding_RL/
 
 ---
 
-## 一、Glide SP 数据（3 套）
+## 一、Glide SP 数据（历史 3 套 + 分轮补充）
 
 ### 1.1 DrugFlow 全库（~1.1 万分子）
 
@@ -78,6 +86,29 @@ binding_RL/
 **主表列（19）**：`mol_id`, `docking_score`, `glide_gscore`, `ligand_efficiency`, `glide_emodel`, `glide_evdw`, `glide_ecoul`, `n_contact_residues`, `n_crbn_residues`, `n_vav1_residues`, `n_ddb1_residues`, `crbn_residues`, `vav1_residues`, `ddb1_residues`, `hbond_residues`, `salt_bridge_residues`, `pi_pi_residues`, `pi_cation_residues`, `hydrophobic_residues`
 
 **原始库旁路**：根目录 `DrugFlow_jobs_unique.csv` / `DrugFlow_jobs_*_unique.sdf`（对接输入侧）。
+
+---
+
+### 1.1b 第二轮实体 / 第三轮生成库（2026-07 补）
+
+| 集合 | 路径 | 规模 | 主结果 |
+|------|------|------|--------|
+| Round-2 实体 | `$BINDING_RL/round2_entity_docking/` | 19/19 | `results/glide_sp_docking_results.csv` · `qc_report.json` |
+| Round-3 生成库 | `$BINDING_RL/round3_docking/` | ~9209 unique；24/24 shards | `results/glide_sp_docking_results.csv` · `qc_report.json` |
+| R3 编排脚本 | `$BINDING_RL/round3_docking/scripts/` | — | `01_prepare_smi_shards.py` · `02_run_round3_docking.py` · `03_fast_vav1_contacts_round3.py` |
+
+约束：Glide **≤30 核**（`--parallel 1 --host localhost:30`）。  
+第一/二轮**生成库全库**对接尚未做；ALLIN 前两轮 query 时 Glide 多为 `mask=0`（见 [`project.md`](project.md) §8）。
+
+**合并特征表（训练/query 真源）**
+
+| 内容 | 路径 |
+|------|------|
+| 合并 CSV | `$BINDING_RL/features_v1/glide/allin_glide_feature_table.csv`（~9644 行） |
+| 构建脚本 | `$BINDING_RL/features_v1/glide/build_allin_glide_table.py` |
+| meta | `allin_glide_feature_meta.json` 等 |
+
+加载：`backend/app/pipelines/vav1_rl/glide_features.py`（可经 `ALLIN_GLIDE_TABLE` 合并，按 `molecule_id` keep=last）。
 
 ---
 
@@ -254,9 +285,9 @@ assert state.groupby("molecule_id")["window_id"].nunique().eq(100).all()
 | 模态 | 覆盖范围 | 建议用法 |
 |------|----------|----------|
 | 指纹 / 图 | 任意 SMILES | 现有 GLARE 主路径 |
-| PhysChem 101 | 当前表 388 专利；可按同列定义扩展到 DrugFlow/wetlab | 全库可算，筛选必选通道 |
-| Glide SP | DrugFlow 11k + 专利 403 + wetlab 13 | 对接分 / IFP / 接触 residual 作静态结合特征 |
-| MD | **仅 8 体系** | 高价值子集：动力学 encoder / reward；其余分子 `md_mask=0` |
+| PhysChem 101 | 当前表 388 专利 + `features_v1/physchem/`；**生成库 1/2/3 尚无预计算落盘** | 全库可算，筛选必选通道；库 query 目前多现场算 |
+| Glide SP | DrugFlow 11k + 专利 403 + wetlab 13 + R2 实体 + R3 库；合并表 `features_v1/glide/` | 对接分 / IFP；缺对接则 `mask=0` |
+| MD | **仅 8 体系**（`features_v1/md/`） | 高价值子集：动力学 encoder / reward；其余分子 `md_mask=0` |
 
 **Join 键约定（建议）**
 
@@ -286,3 +317,4 @@ assert state.groupby("molecule_id")["window_id"].nunique().eq(100).all()
 | 日期 | 变更 |
 |------|------|
 | 2026-07-24 | 初版：登记 Glide 三套、MD 八体系、衍生表、101D 清单与 QC 实测数字 |
+| 2026-08-01 | 补 `round2_entity_docking` / `round3_docking` / `features_v1`；交叉链到重写后的 [`project.md`](project.md) |

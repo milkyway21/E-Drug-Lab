@@ -48,8 +48,11 @@ runtime `memory_enabled` 保持 **false**；禁止启用原生 memory toolset。
 1. E0 `scope-molecular-nomination`
 2. E1 `target_biology_search` / `research-target-biology`
 3. E2 `structure_search_rank` / `rank-protein-structures`
-4. E3 `pocket_qualify` / `qualify-binding-pocket`
+4. E2b `structure_prepare_native` / `prepare-native-protein-ligand`
+5. E3 `pocket_qualify` / `qualify-binding-pocket`
 
+E2b 必须从所选 RCSB 坐标文件提取原位配体，输出同坐标系的干净受体、配体坐标/SDF、
+实例清单、口袋中心和坐标验收 manifest；不得将配体居中、旋转或优化后冒充共晶位置。
 只有 E3 输出 `docking_recommendation=dock` 才进入结构对接。表型优先、无合格结构或
 无口袋证据时记录 `not_applicable`，不得编造口袋。候选产生后依次调用 E4 化合物证据、
 E5 毒性分层、E6 排序与机制报告。每个 E/H 阶段必须转述阶段状态、工具、记录数、警告、
