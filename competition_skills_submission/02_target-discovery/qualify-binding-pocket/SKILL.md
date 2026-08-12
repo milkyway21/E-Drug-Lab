@@ -21,3 +21,46 @@ A pocket qualifies only when all applicable conditions hold:
 Write `pocket_manifest.json` with `applicable`, `qualified`, evidence basis, rejection
 reasons, and `docking_recommendation`. If qualification fails, continue the nomination as
 a phenotype or annotation branch and mark docking `not_applicable`; do not invent a grid center.
+
+## Universal Manifest Invocation
+
+Provide the evidence dossier, structure-preparation manifest, ligand centroid or declared
+site evidence, and an explicit qualification command or ordered steps. This skill never
+chooses a pocket center from a target name.
+
+```bash
+bash scripts/run_skill.sh --skill qualify-binding-pocket --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill qualify-binding-pocket --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill qualify-binding-pocket --manifest MANIFEST --execute --confirm
+```
+
+Validate assembly, chains, ligand instance, frame equality, contacts, cofactor state,
+missing residues, and site-supporting sources. The output contains a machine-readable
+`qualified` decision, evidence IDs, center definition, excluded residues, warnings, and
+the exact downstream skill allowed next. `not_applicable` is a valid result.
+## Concrete Operation Procedure
+
+Load the target evidence, selected structure, and preparation manifest, then call the registered `pocket_qualify` tool with a structured payload containing target gene, selected structure, key residues, evidence IDs, ligand instance, cofactor state, mechanism policy, frame check, and pocket-center source.
+
+The tool must write `pocket_manifest.json` with `applicable`, `qualified`, `docking_recommendation`, center definition, evidence basis, warnings, and rejection reasons. Accept `docking_recommendation=dock` only when the native ligand/site evidence and same-frame checks pass. For `not_applicable`, preserve the reason and route to ligand/evidence nomination.
+
+## Standalone Command-Line Procedure
+
+Qualify a pocket from explicit structure-preparation and evidence files without a manifest:
+
+```bash
+PREP_MANIFEST="${PREP_MANIFEST:?structure preparation manifest JSON}"
+EVIDENCE="${EVIDENCE:?target/pocket evidence JSON}"
+OUT="${OUT:-pocket}"
+mkdir -p "$OUT"
+jq -e '.receptor_pdb and .native_ligand_sdf and .coordinate_delta_angstrom != null' \
+  "$PREP_MANIFEST" > /dev/null
+jq -e '.target_id and (.sources | length > 0)' "$EVIDENCE" > /dev/null
+printf '%s\n' 'Inspect contacts, ligand instance, assembly, cofactors, missing residues, and frame equality with a structure viewer or validated structural parser.'
+```
+
+Write `pocket_manifest.json` with selected receptor/ligand hashes, ligand chain and
+residue, contact residues, center source, evidence IDs, coordinate delta, exclusions,
+warnings, and `qualified`/`not_applicable`. Compute a grid center only from the native
+ligand or an explicitly cited site. If frame, identity, or site evidence fails, stop the
+docking branch and preserve the rejection reason.

@@ -5,15 +5,19 @@ description: Perform reproducible local cheminformatics with RDKit, including st
 
 # RDKit Cheminformatics
 
-Prefer the bundled command-line utilities over one-off Python programs. Run
-them with the project's existing Python environment from the repository root.
+Prefer the bundled command-line utilities over one-off Python programs. Set
+`SKILLS_ROOT` to the root of the installed shared skill tree and choose any Python
+interpreter that has RDKit available; no repository-specific virtual environment is
+required by this skill.
 
 ## Choose the existing utility
 
 ### Physicochemical properties
 
 ```bash
-.venv/bin/python skills/rdkit/scripts/molecular_properties.py \
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+PYTHON="${PYTHON:-python3}"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/molecular_properties.py" \
   --file <input.smi-or-sdf> \
   --output <properties.csv>
 ```
@@ -25,7 +29,7 @@ features, not a replacement for the manifest-selected ADMET backend.
 ### Similarity screening
 
 ```bash
-.venv/bin/python skills/rdkit/scripts/similarity_search.py \
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/similarity_search.py" \
   <query-smiles-or-file> <library.smi-or-sdf> \
   --method morgan --radius 2 --bits 2048 --metric tanimoto \
   --threshold <threshold> --output <hits.csv>
@@ -39,7 +43,7 @@ sort: similarity descending, then molecule ID ascending.
 ### Substructure filtering
 
 ```bash
-.venv/bin/python skills/rdkit/scripts/substructure_filter.py \
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/substructure_filter.py" \
   <input.smi-or-sdf> \
   --exclude '<SMARTS>' \
   --output <filtered.sdf> \
@@ -90,3 +94,66 @@ configuration, not as hidden constants in code.
 
 Report after the stage: inputs, RDKit version, command/parameters, valid and
 rejected counts, deduplication counts, exact-N status, and output paths.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill rdkit --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill rdkit --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill rdkit --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill rdkit --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest supplies the existing utility command, input/output paths, descriptor or
+fingerprint parameters, invalid-record policy, resource limits, and output validation.
+For feature-hit work, record whether RDKit is used for topology similarity, physchem
+triage, canonicalization, or SMARTS filtering. RDKit does not create a Schrödinger
+pharmacophore hypothesis, docking pose, ADMET result, or MD conclusion.
+
+## Concrete Operation Procedure
+
+Run from the project root with the existing scripts; never replace them with an inline
+Python snippet:
+
+```bash
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+PYTHON="${PYTHON:-python3}"
+mkdir -p "$CAMPAIGN_ROOT/chemistry"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/molecular_properties.py" \
+  --file "$INPUT_SDF" --output "$CAMPAIGN_ROOT/chemistry/properties.csv"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/similarity_search.py" \
+  "$QUERY_SDF" "$LIBRARY_SDF" --method morgan --radius 2 --bits 2048 \
+  --metric tanimoto --threshold "$THRESHOLD" \
+  --output "$CAMPAIGN_ROOT/chemistry/morgan_hits.csv"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/substructure_filter.py" \
+  "$INPUT_SDF" --exclude "$SMARTS" \
+  --output "$CAMPAIGN_ROOT/chemistry/filtered.sdf" \
+  --report "$CAMPAIGN_ROOT/chemistry/filter_report.csv"
+```
+
+Record RDKit version, parse failures, invalid records, SMARTS, threshold, fingerprint
+parameters, canonicalization policy, and output counts. A shortfall is reported rather
+than filled by duplicates or a silently relaxed threshold.
+
+## Standalone Command-Line Procedure
+
+The RDKit child is directly reusable when the shared skill tree and a Python environment
+are supplied by the caller:
+
+```bash
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+PYTHON="${PYTHON:-python3}"
+INPUT_SDF="${INPUT_SDF:?input SDF}"
+LIBRARY_SDF="${LIBRARY_SDF:?reference library SDF}"
+OUT_DIR="${OUT_DIR:-rdkit}"
+mkdir -p "$OUT_DIR"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/molecular_properties.py" \
+  --file "$INPUT_SDF" --output "$OUT_DIR/properties.csv"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/similarity_search.py" \
+  "$INPUT_SDF" "$LIBRARY_SDF" --method morgan --radius 2 --bits 2048 \
+  --metric tanimoto --threshold "${THRESHOLD:-0.7}" --output "$OUT_DIR/morgan_hits.csv"
+```
+
+Use the bundled `substructure_filter.py` for SMARTS exclusions, preserve parse failures,
+and record RDKit version, fingerprint settings, threshold, canonicalization policy, and
+input/output counts. Do not relax a threshold or fill a shortfall with duplicate records.

@@ -32,6 +32,7 @@ def test_one_tool_collision_does_not_block_funnel_registration() -> None:
 
     assert context.attempted[0] == "masld_offline_demo"
     assert "platform_catalog" in context.attempted
+    assert "platform_resolve" in context.attempted
     assert "funnel_autopilot" in context.attempted
     assert "target_biology_search" in context.attempted
     assert "structure_prepare_native" in context.attempted

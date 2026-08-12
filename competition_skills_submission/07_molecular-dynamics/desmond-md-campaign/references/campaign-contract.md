@@ -12,8 +12,11 @@
 
 ## Environment
 
-- Run Desmond and Schrodinger API code with `$SCHRODINGER/run python3`.
-- Use a large local `SCHRODINGER_TEMPDIR` for production and SEA scratch data.
+- Resolve `sz.bin.run` from the platform registry and use the returned `RUN` launcher
+  for Desmond and Schrödinger API code.
+- Pass that same value to adapters with `--run-launcher "$RUN"`; do not reconstruct
+  a host installation root inside a task.
+- Use a manifest-declared scratch directory; do not embed a host-specific temporary path.
 - Do not use conda for Desmond. RDKit-only selection steps may use an existing chemistry environment when needed.
 
 ## Directory Layout

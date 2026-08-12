@@ -29,10 +29,6 @@ def _utc() -> str:
 
 def _md_jobs_path(target_id: Optional[str]) -> Path:
     tid = (target_id or "").strip() or "_unset_"
-    # Prefer HSD17B13 default when unset for campaign continuity
-    if tid == "_unset_":
-        # Keep literal _unset_ path as specified; also ensure HSD17B13 exists separately
-        pass
     d = MEMORY_ROOT / "targets" / tid
     d.mkdir(parents=True, exist_ok=True)
     return d / "MD_JOBS.jsonl"
@@ -121,8 +117,9 @@ def schrodinger_md_submit(
         "simulation_time_ns": simulation_time_ns,
         "host": host,
         "molecule_id": molecule_id,
-        "target_id": tid or "HSD17B13",
     }
+    if tid is not None:
+        payload["target_id"] = tid
     # Drop Nones for cleaner HTTP body
     body = {k: v for k, v in payload.items() if v is not None}
 
@@ -151,7 +148,7 @@ def schrodinger_md_submit(
             "stub": False,
         }
 
-    mem_target = tid or "HSD17B13"
+    mem_target = tid or "_unset_"
     mem_path = append_md_job(
         {
             "event": "submit",
@@ -170,20 +167,6 @@ def schrodinger_md_submit(
         },
         target_id=mem_target,
     )
-    # Also append to _unset_ if no target given
-    if not tid:
-        append_md_job(
-            {
-                "event": "submit",
-                "via": via,
-                "task_id": result.get("task_id"),
-                "status": result.get("status"),
-                "mode": mode,
-                "note": "target_id unset; mirrored from default HSD17B13 write",
-            },
-            target_id="_unset_",
-        )
-
     return {
         **result,
         "tool": "schrodinger_md_submit",
@@ -211,7 +194,7 @@ def schrodinger_md_status(
         result = _local_status(task_id)
         via = "local_service"
 
-    tid = (target_id or "").strip() or "HSD17B13"
+    tid = (target_id or "").strip() or "_unset_"
     mem_path = append_md_job(
         {
             "event": "status",

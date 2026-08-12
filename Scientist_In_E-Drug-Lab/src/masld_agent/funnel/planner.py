@@ -35,7 +35,12 @@ def resolve_manifest(
     configured = os.environ.get("EDRUG_FUNNEL_MANIFEST")
     if configured:
         return Path(configured).expanduser().resolve()
-    target = (target_id or "HSD17B13").strip()
+    target = (target_id or "").strip()
+    if not target:
+        raise FileNotFoundError(
+            "campaign manifest unresolved; pass --manifest or --target-id; "
+            "the generic launcher does not assume a target"
+        )
     session_path = PKG_ROOT / "memory" / "targets" / target / "session.json"
     if session_path.is_file():
         data = json.loads(session_path.read_text(encoding="utf-8"))

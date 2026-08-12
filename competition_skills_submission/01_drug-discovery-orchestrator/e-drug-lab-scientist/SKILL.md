@@ -5,6 +5,25 @@ description: Apply reproducible, resume-first scientist behavior to E-Drug Lab t
 
 # E-Drug Lab Scientist
 
+## Concrete Operation Procedure
+
+For a fresh task, complete E0-E3 and then call the deterministic worker:
+
+```bash
+masld-agent evidence target --gene "$TARGET_ID" --disease "$DISEASE" --online \
+  --output "$CAMPAIGN_ROOT/01_target/target_evidence.json"
+masld-agent evidence structures --gene "$TARGET_ID" --limit 25 \
+  > "$CAMPAIGN_ROOT/01_target/structure_candidates.json"
+masld-agent funnel plan --final-count "$FINAL_COUNT" --profile full --target-id "$TARGET_ID"
+masld-agent funnel autopilot --final-count "$FINAL_COUNT" --profile full \
+  --target-id "$TARGET_ID" --execute --confirm --background
+masld-agent funnel autopilot-status --target-id "$TARGET_ID"
+```
+
+Before H1 verify that the preparation manifest points to clean PDB plus native SDF. After
+each validated stage report observed counts and relative artifacts; never use chat text or
+a submitted job as completion evidence.
+
 Start by loading the `drug-discovery-orchestrator` master skill and route through its eight
 master categories rather than answering from memory. Load only the current master category
 and required child skill; use `time-scheduler` for long-task wake/recovery and `reporting`
@@ -57,9 +76,51 @@ in parallel.
 If preflight returns `gated_preflight`, stop before compute and relay its exact blockers.
 Do not repair a missing adapter by improvising Python/Bash inside the task directory.
 
-When speaking to the user, say 「任务」 not 「战役」 (internal `CAMPAIGN` /
-`campaign_memory_*` / `funnel-campaign-memory` IDs stay unchanged).
+Use the user-facing term "task" rather than the legacy term "campaign" in Chinese output;
+internal `CAMPAIGN`, `campaign_memory_*`, and `funnel-campaign-memory` IDs stay unchanged.
+
+Human-readable task artifacts default to Chinese. Pass `language=en` in a tool call or
+`--language en` on a CLI command when an English report is required; machine-readable JSON
+keys and registry IDs remain stable.
 
 When the human supplies only a final molecule count, call `funnel_autopilot` with
 `profile=full`. Use `profile=test` only after an explicit test/smoke request. Never
 infer the test profile merely because the requested final count is small.
+
+## Universal Manifest Invocation
+
+Use this agent skill for any target or disease by passing a manifest that declares
+the task, stage, inputs, outputs, resources, validation, reporting, and explicit
+argv `command` or ordered `steps`. It must not infer a target or backend.
+
+```bash
+bash scripts/run_skill.sh --skill e-drug-lab-scientist --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill e-drug-lab-scientist --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill e-drug-lab-scientist --manifest MANIFEST --status
+bash scripts/run_skill.sh --skill e-drug-lab-scientist --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill e-drug-lab-scientist --manifest MANIFEST --resume --execute --confirm
+```
+
+Keep the full task record and validated artifacts below `campaign_root`; `full`
+remains the funnel planner default and `test` is explicit only.
+
+## Standalone Command-Line Procedure
+
+When the human provides only a target and final count, the reusable non-manifest route is
+the following. Resources and intermediate quantities are calculated by the planner:
+
+```bash
+TARGET_ID="${TARGET_ID:?target gene or protein identifier}"
+FINAL_COUNT="${FINAL_COUNT:?requested final molecule count}"
+masld-agent funnel plan --target-id "$TARGET_ID" --final-count "$FINAL_COUNT" --profile full
+masld-agent funnel autopilot --target-id "$TARGET_ID" --final-count "$FINAL_COUNT" \
+  --profile full --execute --confirm --background
+while :; do
+  masld-agent funnel autopilot-status --target-id "$TARGET_ID" || true
+  sleep "${MONITOR_SECONDS:-900}"
+done
+```
+
+The loop is a terminal supervisor, not model memory. Stop it when status is `completed`
+or `failed`; preserve the task root, logs, and cumulative report. If a capability is
+unavailable, keep the stage gated and do not substitute a guessed backend.

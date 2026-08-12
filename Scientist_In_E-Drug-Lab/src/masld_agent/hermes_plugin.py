@@ -28,7 +28,7 @@ def _run_offline(args: dict, **kwargs) -> str:
         )
     except UnsafePathError as exc:
         return json.dumps({"status": "error", "error": str(exc)})
-    out = run_offline_demo(fixture, output)
+    out = run_offline_demo(fixture, output, language=str(args.get("language") or "zh"))
     return json.dumps({"status": "ok", "output_dir": str(out)})
 
 
@@ -64,6 +64,7 @@ def _run_pipeline(args: dict, **kwargs) -> str:
         evidence_profile=str(args.get("evidence_profile") or "generic"),
         online_enrichment_limit=int(args.get("online_enrichment_limit") or 50),
         library_source=str(args.get("library_source") or "official_sdf_library"),
+        language=str(args.get("language") or "zh"),
     )
     return json.dumps({"status": "ok", "output_dir": str(out), "online": online})
 
@@ -71,7 +72,9 @@ def _run_pipeline(args: dict, **kwargs) -> str:
 def _competition_brief(args: dict, **kwargs) -> str:
     from masld_agent.tools.ai4s_brief import format_competition_brief, load_ai4s_config
 
-    return format_competition_brief(load_ai4s_config())
+    return format_competition_brief(
+        load_ai4s_config(), language=str(args.get("language") or "zh")
+    )
 
 
 def _validate_submission(args: dict, **kwargs) -> str:
@@ -91,8 +94,9 @@ def _validate_submission(args: dict, **kwargs) -> str:
         )
     except UnsafePathError as exc:
         return json.dumps({"status": "error", "error": str(exc)})
+    language = str(args.get("language") or "zh")
     result = validate_submission(run_dir, top10_csv=top10_path)
-    write_validation_report(run_dir, result)
+    write_validation_report(run_dir, result, language=language)
     return json.dumps({"status": "ok", **result}, default=str)
 
 
@@ -112,7 +116,7 @@ def _pack_submission(args: dict, **kwargs) -> str:
         )
     except UnsafePathError as exc:
         return json.dumps({"status": "error", "error": str(exc)})
-    path = pack_submission(run_dir, output)
+    path = pack_submission(run_dir, output, language=str(args.get("language") or "zh"))
     return json.dumps({"status": "ok", "zip": str(path)})
 
 
@@ -305,6 +309,7 @@ def _nominate_compounds(args: dict, **kwargs) -> str:
         online_enrichment_limit=int(args.get("online_enrichment_limit") or 50),
         library_source=str(args.get("library_source") or "official_sdf_library"),
         mechanism_is_target_based=bool(args.get("mechanism_is_target_based", True)),
+        language=str(args.get("language") or "zh"),
     )
     return json.dumps({"status": "completed", "output_dir": str(result)})
 
@@ -316,9 +321,10 @@ def _build_validation_report(args: dict, **kwargs) -> str:
         run_dir = resolve_under(PKG_ROOT, args.get("run_dir"), default=PKG_ROOT / "runs")
     except UnsafePathError as exc:
         return json.dumps({"status": "error", "error": str(exc)})
-    write_hepg2_plan(run_dir)
+    language = str(args.get("language") or "zh")
+    write_hepg2_plan(run_dir, language=language)
     result = validate_submission(run_dir)
-    report = write_validation_report(run_dir, result)
+    report = write_validation_report(run_dir, result, language=language)
     return json.dumps(
         {"status": "ok" if result["ok"] else "incomplete", "report": str(report), **result},
         ensure_ascii=False,
@@ -339,6 +345,28 @@ def _platform_catalog(args: dict, **kwargs) -> str:
     )
     return json.dumps(
         {"status": "ok", "summary": summarize_systems(), "entries": entries},
+        default=str,
+    )
+
+
+def _platform_resolve(args: dict, **kwargs) -> str:
+    from masld_agent.platform.catalog import get_entry, resolve_entry
+
+    entry_id = str(args.get("id") or args.get("entry_id") or "").strip()
+    if not entry_id:
+        return json.dumps({"status": "error", "error": "id is required"})
+    try:
+        value = resolve_entry(entry_id, field=args.get("field"))
+    except (KeyError, ValueError) as exc:
+        return json.dumps({"status": "error", "id": entry_id, "error": str(exc)})
+    return json.dumps(
+        {
+            "status": "ok",
+            "id": entry_id,
+            "field": args.get("field"),
+            "value": value,
+            "entry": get_entry(entry_id),
+        },
         default=str,
     )
 
@@ -611,6 +639,7 @@ OFFLINE_SCHEMA = {
         "properties": {
             "fixture": {"type": "string", "description": "Path to fixture directory"},
             "output": {"type": "string", "description": "Output runs directory"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
         },
         "required": [],
     },
@@ -637,6 +666,7 @@ RUN_SCHEMA = {
             "evidence_profile": {"type": "string", "enum": ["generic", "competition"]},
             "online_enrichment_limit": {"type": "integer", "minimum": 0},
             "library_source": {"type": "string"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
         },
         "required": [],
     },
@@ -648,7 +678,11 @@ BRIEF_SCHEMA = {
         "Print AI4S life-science track brief: dual readout, scoring 60/20/20, "
         "submission artifacts, resources. Does not change agent identity (SOUL)."
     ),
-    "parameters": {"type": "object", "properties": {}, "required": []},
+    "parameters": {
+        "type": "object",
+        "properties": {"language": {"type": "string", "enum": ["zh", "en"]}},
+        "required": [],
+    },
 }
 
 VALIDATE_SCHEMA = {
@@ -662,6 +696,7 @@ VALIDATE_SCHEMA = {
         "properties": {
             "run_dir": {"type": "string"},
             "top10_csv": {"type": "string"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
         },
         "required": [],
     },
@@ -675,6 +710,7 @@ PACK_SCHEMA = {
         "properties": {
             "run_dir": {"type": "string"},
             "output": {"type": "string"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
         },
         "required": [],
     },
@@ -817,6 +853,7 @@ NOMINATE_COMPOUNDS_SCHEMA = {
             "online_enrichment_limit": {"type": "integer", "minimum": 0},
             "library_source": {"type": "string"},
             "mechanism_is_target_based": {"type": "boolean"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
         },
         "required": ["library"],
     },
@@ -830,7 +867,10 @@ BUILD_VALIDATION_REPORT_SCHEMA = {
     ),
     "parameters": {
         "type": "object",
-        "properties": {"run_dir": {"type": "string"}},
+        "properties": {
+            "run_dir": {"type": "string"},
+            "language": {"type": "string", "enum": ["zh", "en"]},
+        },
         "required": ["run_dir"],
     },
 }
@@ -852,10 +892,34 @@ CATALOG_SCHEMA = {
     },
 }
 
+PLATFORM_RESOLVE_SCHEMA = {
+    "name": "platform_resolve",
+    "description": (
+        "Resolve one registered DiffDynamic / e-drug-lab / Schrödinger capability against "
+        "the current environment. Call before composing a command; skills must not contain "
+        "machine-specific installation paths."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "id": {"type": "string", "description": "Registered catalog ID"},
+            "field": {
+                "type": "string",
+                "description": "Optional field, such as python or conda_name",
+            },
+        },
+        "required": ["id"],
+    },
+}
+
 HEALTH_SCHEMA = {
     "name": "platform_health",
     "description": "Probe DiffDynamic conda/root, e-drug-lab backend import, Schrödinger install.",
-    "parameters": {"type": "object", "properties": {}, "required": []},
+    "parameters": {
+        "type": "object",
+        "properties": {"language": {"type": "string", "enum": ["zh", "en"]}},
+        "required": [],
+    },
 }
 
 DD_STATUS_SCHEMA = {
@@ -995,7 +1059,10 @@ FUNNEL_CONTEXT_PROPERTIES = {
         "type": "string",
         "description": "Optional absolute campaign manifest; otherwise resolve target session memory.",
     },
-    "target_id": {"type": "string", "description": "Campaign target, default HSD17B13."},
+    "target_id": {
+        "type": "string",
+        "description": "Optional campaign target namespace; provide it for task-specific memory and provenance.",
+    },
 }
 
 FUNNEL_PROFILE_PROPERTY = {
@@ -1379,6 +1446,7 @@ def register(ctx):
         ("nominate_compounds", NOMINATE_COMPOUNDS_SCHEMA, _nominate_compounds),
         ("build_validation_report", BUILD_VALIDATION_REPORT_SCHEMA, _build_validation_report),
         ("platform_catalog", CATALOG_SCHEMA, _platform_catalog),
+        ("platform_resolve", PLATFORM_RESOLVE_SCHEMA, _platform_resolve),
         ("platform_health", HEALTH_SCHEMA, _platform_health),
         ("diffdynamic_status", DD_STATUS_SCHEMA, _diffdynamic_status),
         ("diffdynamic_generate", DD_GEN_SCHEMA, _diffdynamic_generate),

@@ -5,6 +5,24 @@ description: Plan, preflight, execute, resume, validate, and report the H0-H10 d
 
 # Funnel Orchestrator
 
+## Concrete Operation Procedure
+
+Use this operator sequence for any target. It plans from the requested final count and
+leaves the manifest as parameter storage for reusable adapters:
+
+```bash
+masld-agent platform-health
+masld-agent funnel plan --final-count "$FINAL_COUNT" --profile full --target-id "$TARGET_ID"
+masld-agent funnel autopilot --final-count "$FINAL_COUNT" --profile full --target-id "$TARGET_ID"
+masld-agent funnel autopilot --final-count "$FINAL_COUNT" --profile full \
+  --target-id "$TARGET_ID" --execute --confirm --background
+masld-agent funnel autopilot-status --target-id "$TARGET_ID"
+```
+
+If a manifest is already resolved, run `funnel preflight`, then `funnel run --stage Hn`
+and `funnel validate --stage Hn` one stage at a time. Stop on gated preflight, missing
+adapter, wrong format, or failed validation; never write a task-local replacement script.
+
 This child skill is the deterministic execution component of the
 `drug-discovery-orchestrator` master. Load the master first, then use this child only for
 planning, preflight, execution, resume, and validation.
@@ -75,3 +93,37 @@ JSON/Markdown status report before automatic continuation.
 
 Read `config/SOUL.md` and the campaign manifest before acting. Planned counts are
 not completed counts. Advance only after `funnel validate` reports `valid=true`.
+
+## Universal Manifest Invocation
+
+Use this orchestrator for any target and requested final count with a manifest that
+declares all stage inputs/outputs, resources, validation, reporting, and explicit
+argv `command` or ordered `steps`. Do not infer a target or switch to test mode.
+
+```bash
+bash scripts/run_skill.sh --skill funnel-orchestrator --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill funnel-orchestrator --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill funnel-orchestrator --manifest MANIFEST --status
+bash scripts/run_skill.sh --skill funnel-orchestrator --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill funnel-orchestrator --manifest MANIFEST --resume --execute --confirm
+```
+
+Keep planned versus observed counts separate, report each stage, and stop on
+failed validation or missing capability.
+
+## Standalone Command-Line Procedure
+
+Use the orchestrator without supplying a manifest; the planner creates the task state
+and stage plan from the target and requested final count:
+
+```bash
+TARGET_ID="${TARGET_ID:?target gene or protein identifier}"
+FINAL_COUNT="${FINAL_COUNT:?requested final molecule count}"
+masld-agent funnel autopilot --target-id "$TARGET_ID" --final-count "$FINAL_COUNT" \
+  --profile "${PROFILE:-full}" --execute --confirm --background
+masld-agent funnel autopilot-status --target-id "$TARGET_ID"
+```
+
+Use the stage-specific native sections when an adapter is not available. Do not pass a
+test target, fixed local path, or guessed stage count into a general task. Stop and write
+a gate when an input format, coordinate frame, backend, resource, or validator fails.

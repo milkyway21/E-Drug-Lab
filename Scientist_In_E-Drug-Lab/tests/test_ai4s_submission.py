@@ -10,7 +10,12 @@ from masld_agent.submission import (
     validate_submission,
     write_hepg2_plan,
 )
-from masld_agent.tools.ai4s_brief import format_competition_brief, lint_dual_readout, load_ai4s_config
+from masld_agent.tools.ai4s_brief import (
+    format_competition_brief,
+    lint_dual_readout,
+    lint_hepg2_validation_plan,
+    load_ai4s_config,
+)
 
 
 def test_soul_identity_unchanged():
@@ -93,3 +98,22 @@ def test_hepg2_plan_mentions_dual_readout(tmp_path: Path):
     text = path.read_text(encoding="utf-8")
     assert "活力" in text
     assert "脂质" in text or "降脂" in text
+
+
+def test_human_report_language_defaults_to_chinese_and_supports_english(tmp_path: Path):
+    run = tmp_path / "run"
+    run.mkdir()
+    chinese = write_hepg2_plan(run)
+    chinese_text = chinese.read_text(encoding="utf-8")
+    assert "HepG2-FFA 双读出验证方案" in chinese_text
+    assert lint_hepg2_validation_plan(chinese_text)["ok"] is True
+
+    english = write_hepg2_plan(run, language="en")
+    english_text = english.read_text(encoding="utf-8")
+    assert "HepG2-FFA Dual-Readout Validation Plan" in english_text
+    assert lint_hepg2_validation_plan(english_text)["ok"] is True
+
+    assert "官网赛道" in format_competition_brief(load_ai4s_config())
+    assert "Competition URL" in format_competition_brief(
+        load_ai4s_config(), language="en"
+    )

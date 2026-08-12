@@ -7,6 +7,22 @@ description: "Run or resume Schrödinger Desmond MD on docked protein-ligand com
 
 # DD MD Desmond — Post-Docking Molecular Dynamics
 
+## Concrete Operation Procedure
+
+Resolve launchers from the registry and inspect help:
+
+```bash
+MULTISIM="$(masld-agent platform-resolve --id sz.bin.multisim)"
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
+"$MULTISIM" -h; "$RUN" -h
+```
+
+For a supported job call `schrodinger_md_submit` with `mode=dry_prep`, inspect its
+protocol/job directory, then submit `mode=short` only with confirmation. For a campaign,
+launch the declared MSJ from `attempt_XX` with `"$MULTISIM" -WAIT -HOST "$HOST_SPEC"
+-maxjob 1`, set both CUDA variables, verify GPU placement, and validate CMS/DTR before
+SEA. Never infer ASL or duration from this skill.
+
 Target-agnostic operator skill for Schrödinger Desmond stability MD.
 
 Use the funnel Desmond skills for stage policy and `desmond-md-campaign` for
@@ -33,3 +49,50 @@ membrane-system builds and GPU-parallel launch patterns.
    when assigning a GPU.
 5. **Verify GPU placement ~30 s after launch** with `nvidia-smi` + log
    `JobId:` line.
+
+## Universal Manifest Invocation
+
+Use this cross-cutting skill when the manifest needs system QC, launch diagnostics,
+recovery, or GPU policy shared by a short or long run. It does not replace the H8/H9
+stage-specific gates.
+
+```bash
+bash scripts/run_skill.sh --skill dd-md-desmond --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill dd-md-desmond --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill dd-md-desmond --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill dd-md-desmond --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest supplies the existing system-build or multisim command, full-system input,
+component expectations, GPU IDs, attempt path, timeout, and validation outputs. Use an
+empty CUDA assignment for CPU-only SEA steps. Never infer membrane composition, ligand
+ASL, target label, or production duration.
+
+## Standalone Command-Line Procedure
+
+For a direct Desmond launch, use a validated full-system CMS and an existing MSJ protocol:
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+MULTISIM="${MULTISIM:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="${SCHRODINGER:-$(masld-agent platform-resolve --id sz.env)}"
+  MULTISIM="${MULTISIM:-$(masld-agent platform-resolve --id sz.bin.multisim)}"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+MULTISIM="${MULTISIM:-$SCHRODINGER/utilities/multisim}"
+CMS="$(realpath inputs/validated_system.cms)"
+MSJ="$(realpath inputs/prod_protocol.msj)"
+OUT="$(realpath -m outputs/md/attempt_01)"
+mkdir -p "$OUT"
+JOBNAME="${JOBNAME:-md}"
+FINAL_CMS="$OUT/${JOBNAME}-out.cms"
+CUDA_VISIBLE_DEVICES="${GPU_ID:?approved GPU}" \
+SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
+  "$MULTISIM" -WAIT -HOST "${HOST_SPEC:-localhost}" -maxjob 1 -JOBNAME "$JOBNAME" \
+  -m "$MSJ" -o "$FINAL_CMS" "$CMS"
+```
+
+Keep one attempt per physical GPU, record JobDJ IDs and input hashes, and validate
+continuity, topology, and final CMS/DTR before running SEA. Do not hand-write a new MSJ
+to compensate for a failed monitor.

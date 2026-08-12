@@ -152,7 +152,7 @@
       "kind": "master",
       "source": "skills/admet",
       "destination": "admet/admet",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "ddfast-06-qikprop-admet",
@@ -160,7 +160,7 @@
       "kind": "child",
       "source": "skills/admet/ddfast-06-qikprop-admet",
       "destination": "admet/ddfast-06-qikprop-admet",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "enrich-compound-evidence",
@@ -168,7 +168,7 @@
       "kind": "child",
       "source": "skills/admet/enrich-compound-evidence",
       "destination": "admet/enrich-compound-evidence",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-drugflow-hepg2",
@@ -176,7 +176,7 @@
       "kind": "child",
       "source": "skills/admet/funnel-drugflow-hepg2",
       "destination": "admet/funnel-drugflow-hepg2",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "triage-compound-toxicity",
@@ -184,7 +184,7 @@
       "kind": "child",
       "source": "skills/admet/triage-compound-toxicity",
       "destination": "admet/triage-compound-toxicity",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "all-analysis",
@@ -192,7 +192,7 @@
       "kind": "master",
       "source": "skills/all-analysis",
       "destination": "all-analysis/all-analysis",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "funnel-comprehensive-analysis",
@@ -200,7 +200,7 @@
       "kind": "child",
       "source": "skills/all-analysis/funnel-comprehensive-analysis",
       "destination": "all-analysis/funnel-comprehensive-analysis",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "nominate-lipid-modulators",
@@ -208,7 +208,7 @@
       "kind": "child",
       "source": "skills/all-analysis/nominate-lipid-modulators",
       "destination": "all-analysis/nominate-lipid-modulators",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "write-mechanism-validation-report",
@@ -216,7 +216,7 @@
       "kind": "child",
       "source": "skills/all-analysis/write-mechanism-validation-report",
       "destination": "all-analysis/write-mechanism-validation-report",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "dd-generation",
@@ -224,7 +224,7 @@
       "kind": "master",
       "source": "skills/dd-generation",
       "destination": "dd-generation/dd-generation",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "funnel-diffdynamic-denovo",
@@ -232,7 +232,7 @@
       "kind": "child",
       "source": "skills/dd-generation/funnel-diffdynamic-denovo",
       "destination": "dd-generation/funnel-diffdynamic-denovo",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-diffdynamic-prudent",
@@ -240,7 +240,7 @@
       "kind": "child",
       "source": "skills/dd-generation/funnel-diffdynamic-prudent",
       "destination": "dd-generation/funnel-diffdynamic-prudent",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "drug-discovery-orchestrator",
@@ -248,7 +248,7 @@
       "kind": "master",
       "source": "skills/drug-discovery-orchestrator",
       "destination": "drug-discovery-orchestrator/drug-discovery-orchestrator",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "e-drug-lab-scientist",
@@ -256,7 +256,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/e-drug-lab-scientist",
       "destination": "drug-discovery-orchestrator/e-drug-lab-scientist",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "edrug-capability-check",
@@ -264,7 +264,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/edrug-capability-check",
       "destination": "drug-discovery-orchestrator/edrug-capability-check",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-campaign-memory",
@@ -272,7 +272,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/funnel-campaign-memory",
       "destination": "drug-discovery-orchestrator/funnel-campaign-memory",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-orchestrator",
@@ -280,7 +280,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/funnel-orchestrator",
       "destination": "drug-discovery-orchestrator/funnel-orchestrator",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "reporting",
@@ -288,7 +288,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/reporting",
       "destination": "drug-discovery-orchestrator/reporting",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "scientist-in-e-drug-lab",
@@ -296,7 +296,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/scientist-in-e-drug-lab",
       "destination": "drug-discovery-orchestrator/scientist-in-e-drug-lab",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "time-scheduler",
@@ -304,7 +304,7 @@
       "kind": "child",
       "source": "skills/drug-discovery-orchestrator/time-scheduler",
       "destination": "drug-discovery-orchestrator/time-scheduler",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "featurehit-finding",
@@ -312,7 +312,7 @@
       "kind": "master",
       "source": "skills/featurehit-finding",
       "destination": "featurehit-finding/featurehit-finding",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "funnel-featurehit",
@@ -320,7 +320,7 @@
       "kind": "child",
       "source": "skills/featurehit-finding/funnel-featurehit",
       "destination": "featurehit-finding/funnel-featurehit",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-shape-screen",
@@ -328,7 +328,7 @@
       "kind": "child",
       "source": "skills/featurehit-finding/funnel-shape-screen",
       "destination": "featurehit-finding/funnel-shape-screen",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "pose-library-screening",
@@ -336,7 +336,7 @@
       "kind": "child",
       "source": "skills/featurehit-finding/pose-library-screening",
       "destination": "featurehit-finding/pose-library-screening",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "rdkit",
@@ -344,7 +344,7 @@
       "kind": "child",
       "source": "skills/featurehit-finding/rdkit",
       "destination": "featurehit-finding/rdkit",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "dd-md-desmond",
@@ -352,7 +352,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/dd-md-desmond",
       "destination": "molecular-dynamics/dd-md-desmond",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "dd-md-desmond-sea-qc",
@@ -360,7 +360,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/dd-md-desmond-sea-qc",
       "destination": "molecular-dynamics/dd-md-desmond-sea-qc",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "desmond-md-campaign",
@@ -368,7 +368,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/desmond-md-campaign",
       "destination": "molecular-dynamics/desmond-md-campaign",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "desmond-membrane-md-ops",
@@ -376,7 +376,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/desmond-membrane-md-ops",
       "destination": "molecular-dynamics/desmond-membrane-md-ops",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-desmond-long-md",
@@ -384,7 +384,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/funnel-desmond-long-md",
       "destination": "molecular-dynamics/funnel-desmond-long-md",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-desmond-short-md",
@@ -392,7 +392,7 @@
       "kind": "child",
       "source": "skills/molecular-dynamics/funnel-desmond-short-md",
       "destination": "molecular-dynamics/funnel-desmond-short-md",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "molecular-dynamics",
@@ -400,7 +400,7 @@
       "kind": "master",
       "source": "skills/molecular-dynamics",
       "destination": "molecular-dynamics/molecular-dynamics",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "assess-computational-pharmacology",
@@ -408,7 +408,7 @@
       "kind": "child",
       "source": "skills/target-discovery/assess-computational-pharmacology",
       "destination": "target-discovery/assess-computational-pharmacology",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "assess-target-pharmacology",
@@ -416,7 +416,7 @@
       "kind": "child",
       "source": "skills/target-discovery/assess-target-pharmacology",
       "destination": "target-discovery/assess-target-pharmacology",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "prepare-native-protein-ligand",
@@ -424,7 +424,7 @@
       "kind": "child",
       "source": "skills/target-discovery/prepare-native-protein-ligand",
       "destination": "target-discovery/prepare-native-protein-ligand",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "qualify-binding-pocket",
@@ -432,7 +432,7 @@
       "kind": "child",
       "source": "skills/target-discovery/qualify-binding-pocket",
       "destination": "target-discovery/qualify-binding-pocket",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "rank-protein-structures",
@@ -440,7 +440,7 @@
       "kind": "child",
       "source": "skills/target-discovery/rank-protein-structures",
       "destination": "target-discovery/rank-protein-structures",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "research-target-biology",
@@ -448,7 +448,7 @@
       "kind": "child",
       "source": "skills/target-discovery/research-target-biology",
       "destination": "target-discovery/research-target-biology",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "scope-molecular-nomination",
@@ -456,7 +456,7 @@
       "kind": "child",
       "source": "skills/target-discovery/scope-molecular-nomination",
       "destination": "target-discovery/scope-molecular-nomination",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "search-biomedical-evidence",
@@ -464,7 +464,7 @@
       "kind": "child",
       "source": "skills/target-discovery/search-biomedical-evidence",
       "destination": "target-discovery/search-biomedical-evidence",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "target-discovery",
@@ -472,7 +472,7 @@
       "kind": "master",
       "source": "skills/target-discovery",
       "destination": "target-discovery/target-discovery",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     },
     {
       "name": "ddfast-07-glide-sp",
@@ -480,7 +480,7 @@
       "kind": "child",
       "source": "skills/virtual-docking/ddfast-07-glide-sp",
       "destination": "virtual-docking/ddfast-07-glide-sp",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-glide-sp",
@@ -488,7 +488,7 @@
       "kind": "child",
       "source": "skills/virtual-docking/funnel-glide-sp",
       "destination": "virtual-docking/funnel-glide-sp",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-glide-xp",
@@ -496,7 +496,7 @@
       "kind": "child",
       "source": "skills/virtual-docking/funnel-glide-xp",
       "destination": "virtual-docking/funnel-glide-xp",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "funnel-mmgbsa",
@@ -504,7 +504,7 @@
       "kind": "child",
       "source": "skills/virtual-docking/funnel-mmgbsa",
       "destination": "virtual-docking/funnel-mmgbsa",
-      "action": "symlinked"
+      "action": "copied"
     },
     {
       "name": "virtual-docking",
@@ -512,7 +512,7 @@
       "kind": "master",
       "source": "skills/virtual-docking",
       "destination": "virtual-docking/virtual-docking",
-      "action": "symlinked-filtered"
+      "action": "copied-filtered"
     }
   ],
   "published_count": 46,

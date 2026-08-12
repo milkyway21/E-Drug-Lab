@@ -8,13 +8,15 @@ description: Run Schrödinger LigPrep and QikProp ADMET with parent-state lineag
 Use this skill for H4. The backend must be the installed Schrödinger QikProp;
 do not substitute DrugFlow, a mock, or RDKit descriptors.
 
-## Supported 2023-3 invocation
+## Supported invocation
 
 Probe both commands once and retain the help output in the stage directory:
 
 ```bash
-"$SCHRODINGER/ligprep" -h
-"$SCHRODINGER/qikprop" -h
+LIGPREP="$(masld-agent platform-resolve --id sz.bin.ligprep)"
+QIKPROP="$(masld-agent platform-resolve --id sz.bin.qikprop)"
+"$LIGPREP" -h
+"$QIKPROP" -h
 ```
 
 LigPrep accepts structure input through `-isd`/`-imae` and output through
@@ -22,8 +24,8 @@ LigPrep accepts structure input through `-isd`/`-imae` and output through
 argument:
 
 ```bash
-"$SCHRODINGER/ligprep" -isd input.sdf -osd prepared.sdf -epik -WAIT
-"$SCHRODINGER/qikprop" -fast -nosim -LOCAL -WAIT -outname qikprop prepared_beststate.sdf
+"$LIGPREP" -isd input.sdf -osd prepared.sdf -epik -WAIT
+"$QIKPROP" -fast -nosim -LOCAL -WAIT -outname qikprop prepared_beststate.sdf
 ```
 
 Never pass SMILES directly to QikProp. Under 2023-3, `qikprop -inp ...` and a
@@ -72,3 +74,80 @@ existing utility has hard-coded paths or counts, fix the reusable utility and
 add a regression test; do not copy it into a task directory or create a
 one-off pipeline. If no validated adapter exists, stop at a capability gate
 instead of improvising scientific results.
+
+## Universal Manifest Invocation
+
+Use this skill with any target or library by declaring all inputs, parent-state
+lineage, outputs, resources, validation, reporting, and an explicit argv `command`
+or ordered `steps` in the manifest. Do not infer structures, counts, or backend.
+
+```bash
+bash scripts/run_skill.sh --skill ddfast-06-qikprop-admet --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill ddfast-06-qikprop-admet --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill ddfast-06-qikprop-admet --manifest MANIFEST --status
+bash scripts/run_skill.sh --skill ddfast-06-qikprop-admet --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill ddfast-06-qikprop-admet --manifest MANIFEST --resume --execute --confirm
+```
+
+Preview first, keep relative paths under `campaign_root`, and stop when numeric
+validation or exact-N selection fails.
+
+## Concrete Operation Procedure
+
+Resolve the two installed binaries through the registry and save their help output:
+
+```bash
+mkdir -p "$CAMPAIGN_ROOT/04_admet"
+LIGPREP="$(masld-agent platform-resolve --id sz.bin.ligprep)"
+QIKPROP="$(masld-agent platform-resolve --id sz.bin.qikprop)"
+"$LIGPREP" -h > "$CAMPAIGN_ROOT/04_admet/ligprep.help.txt"
+"$QIKPROP" -h > "$CAMPAIGN_ROOT/04_admet/qikprop.help.txt"
+```
+
+Run LigPrep on the frozen H3 SDF, retaining `parent_id` in a separate lineage table,
+then run QikProp with the prepared SDF as the final positional argument:
+
+```bash
+"$LIGPREP" -isd "$H3_SDF" -osd "$CAMPAIGN_ROOT/04_admet/prepared.sdf" \
+  -epik -WAIT
+"$QIKPROP" -fast -nosim -LOCAL -WAIT \
+  -outname "$CAMPAIGN_ROOT/04_admet/qikprop" \
+  "$CAMPAIGN_ROOT/04_admet/prepared_beststate.sdf"
+```
+
+If upstream records carry excessive SD fields, create a minimal structure SDF with title
+and one lineage field before QikProp, while retaining the full SDF as evidence. Parse and
+require numeric `mol_MW`, `QPlogS`, `QPPCaco`, oral absorption, `QPlogHERG`, `#stars`,
+`#metab`, `QPlogPo/w`, and `RuleOfFive`. Apply this skill's fixed core filters, select
+only passing parents, preserve failures, and run `masld-agent funnel validate --manifest
+"$MANIFEST" --stage H4`. Never pass SMILES directly, relabel predictions as HepG2 data,
+or loosen filters to fill a shortfall.
+
+## Standalone Command-Line Procedure
+
+Run native LigPrep and QikProp without a manifest. Set `SCHRODINGER` or the individual
+binary variables; the final QikProp argument is the prepared structure file.
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="${SCHRODINGER:-$(masld-agent platform-resolve --id sz.env)}"
+  LIGPREP="${LIGPREP:-$(masld-agent platform-resolve --id sz.bin.ligprep)}"
+  QIKPROP="${QIKPROP:-$(masld-agent platform-resolve --id sz.bin.qikprop)}"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+LIGPREP="${LIGPREP:-$SCHRODINGER/ligprep}"
+QIKPROP="${QIKPROP:-$SCHRODINGER/qikprop}"
+INPUT_SDF="$(realpath inputs/h3_frozen.sdf)"
+OUT="$(realpath -m outputs/04_admet)"
+mkdir -p "$OUT"
+"$LIGPREP" -isd "$INPUT_SDF" -osd "$OUT/prepared.sdf" -epik -WAIT
+"$QIKPROP" -fast -nosim -LOCAL -WAIT -outname "$OUT/qikprop" \
+  "$OUT/prepared.sdf"
+```
+
+If the installed LigPrep writes a different final-state filename, locate it from the
+completed log rather than guessing. Export the QikProp table with the native output
+format, join rows to the parent-state table, and apply the fixed filters in this skill.
+`qikprop -inp` and a QikProp `-osd` output flag are not part of the tested interface;
+probe `-h` before adapting to another release.

@@ -30,11 +30,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--jobs", type=int, default=2)
     parser.add_argument("--protein-asl", default="protein")
     parser.add_argument("--ligand-asl", required=True)
-    parser.add_argument("--schrodinger", default=os.environ.get("SCHRODINGER"))
+    parser.add_argument(
+        "--run-launcher",
+        help="Registry-resolved sz.bin.run executable",
+    )
+    parser.add_argument(
+        "--schrodinger",
+        help="Legacy Schrödinger root; prefer --run-launcher",
+    )
     parser.add_argument("--official-report", action="store_true")
     args = parser.parse_args()
-    if not args.schrodinger:
-        parser.error("set SCHRODINGER or pass --schrodinger")
+    if args.run_launcher:
+        args.run_launcher = str(Path(args.run_launcher).expanduser())
+    elif args.schrodinger:
+        args.run_launcher = str(Path(args.schrodinger).expanduser() / "run")
+    else:
+        parser.error(
+            "resolve sz.bin.run with platform-resolve and pass --run-launcher"
+        )
+    args.schrodinger_root = str(Path(args.run_launcher).expanduser().parent)
     return args
 
 
@@ -106,7 +120,7 @@ def process_one(args: argparse.Namespace, molecule_id: str) -> str:
     environment = os.environ.copy()
     environment.update(
         {
-            "SCHRODINGER": args.schrodinger,
+            "SCHRODINGER": args.schrodinger_root,
             "CUDA_VISIBLE_DEVICES": "",
             "SCHRODINGER_CUDA_VISIBLE_DEVICES": "",
             "MPLBACKEND": "Agg",
@@ -121,7 +135,7 @@ def process_one(args: argparse.Namespace, molecule_id: str) -> str:
     if not input_eaf.is_file():
         run(
             [
-                f"{args.schrodinger}/run",
+                args.run_launcher,
                 "event_analysis.py",
                 "analyze",
                 str(cms),
@@ -143,7 +157,7 @@ def process_one(args: argparse.Namespace, molecule_id: str) -> str:
                 "nice",
                 "-n",
                 "10",
-                f"{args.schrodinger}/run",
+                args.run_launcher,
                 "analyze_simulation.py",
                 "-LOCAL",
                 "-WAIT",
@@ -162,7 +176,7 @@ def process_one(args: argparse.Namespace, molecule_id: str) -> str:
     with REPORT_LOCK:
         if not rmsd.is_file():
             command = [
-                f"{args.schrodinger}/run",
+                args.run_launcher,
                 "event_analysis.py",
                 "report",
                 str(output_eaf),

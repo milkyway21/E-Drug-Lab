@@ -82,6 +82,25 @@ experimental_readouts:
     仅在未明显损伤细胞活力的前提下实现脂质蓄积降低的分子，方计为有效命中。
     只看脂滴下降而忽略毒性，易将杀伤细胞的化合物误判为有效。
 
+experimental_validation_plan:
+  status: proposed_for_pre_registration
+  model: "HepG2 cells with FFA-induced intracellular neutral-lipid accumulation"
+  induction: "Optimize the FFA mixture and exposure in a pilot while preserving viability and assay window."
+  concentration_response: "At least six non-precipitating concentrations spanning the expected activity range; use the same concentrations for lipid and viability readouts."
+  exposure: "Pre-register induction and compound exposure times after the pilot; keep them identical across candidates and controls."
+  controls:
+    - untreated_cells
+    - vehicle_control
+    - FFA_model_control
+    - assay_positive_lipid_lowering_control
+    - viability_assay_dynamic_range_control
+  replicates: "At least three independent experiments with technical replicate wells; randomize plate positions and record exclusions."
+  lipid_readout: "Neutral-lipid or lipid-droplet imaging/dye assay normalized to viable-cell number, total protein, or DNA, with raw and normalized values retained."
+  viability_readout: "Matched CellTiter/ATP, resazurin, MTT, or equivalent viability readout; add morphology and optional membrane-integrity readout."
+  provisional_hit_rule: "Prioritize compounds with concentration-dependent lipid reduction versus the FFA model while matched viability remains at least 80% of vehicle and morphology shows no major injury; confirm thresholds with the assay QC plan."
+  toxicity_rule: "A lipid decrease accompanied by material viability loss is a cytotoxic false positive and is not an effective hit."
+  mechanism_follow_up: "For each surviving candidate, test target engagement and pathway direction using candidate-supported expression, phosphorylation, flux, uptake/efflux, autophagy, or lipid-droplet readouts; retain alternative mechanisms and falsifiers."
+
 mechanisms_of_interest:
   - SREBP-1c
   - ACC
@@ -132,6 +151,8 @@ top10_csv_columns:
   - lipid_score
   - safety_score
   - uncertainty_penalty
+  - ranking_basis
+  - score_components
   - structure_applicability
   - lipid_rationale
   - tox_rationale
@@ -139,3 +160,6 @@ top10_csv_columns:
   - validation_readouts
   - evidence_refs
   - library_source
+  - library_sha256
+  - toxicity_evidence_status
+  - nomination_status

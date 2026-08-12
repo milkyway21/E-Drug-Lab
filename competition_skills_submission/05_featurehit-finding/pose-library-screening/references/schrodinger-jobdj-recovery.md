@@ -9,11 +9,14 @@ task's scientific outputs.
 Run help with the exact installed binary before composing arguments:
 
 ```bash
-PYTHONPATH= "$SCHRODINGER/glide" -h
-PYTHONPATH= "$SCHRODINGER/oned_screen" -h
-PYTHONPATH= "$SCHRODINGER/oned_screen" run -h
-PYTHONPATH= "$SCHRODINGER/quick_shape" -h
-PYTHONPATH= "$SCHRODINGER/jobcontrol" -h
+GLIDE="$(masld-agent platform-resolve --id sz.bin.glide)"
+ONED="$(masld-agent platform-resolve --id sz.bin.oned_screen)"
+QUICK_SHAPE="$(masld-agent platform-resolve --id sz.bin.quick_shape)"
+JOBCONTROL="$(masld-agent platform-resolve --id sz.bin.jobcontrol)"
+"$GLIDE" -h
+"$ONED" -h
+"$QUICK_SHAPE" -h
+"$JOBCONTROL" -h
 ```
 
 If help imports a project `sitecustomize.py` instead of Schrödinger's module, the
@@ -26,7 +29,7 @@ Create a one-state prepared-ligand SDF and a minimal Glide input. Do not put
 `JOBNAME` in the input during this diagnostic. Launch:
 
 ```bash
-PYTHONPATH= "$SCHRODINGER/glide" probe.in \
+"$GLIDE" probe.in \
   -HOST localhost:1 \
   -WAIT \
   -OVERWRITE \
@@ -51,10 +54,10 @@ A `.1dbin` file is a Phase 1D database. `shape_screen_gpu run` expects a generat
 
 ```bash
 cd MANIFEST_NUMBERED_SHAPE_DIR
-PYTHONPATH= "$SCHRODINGER/quick_shape" \
+"$QUICK_SHAPE" \
   -nocopy \
   -shape query_ligand_poses.sdf \
-  -screen /absolute/library.1dbin \
+  -screen "$LIBRARY_1DBIN" \
   -sample rapid \
   -max 20 \
   -keep 100 \
@@ -63,14 +66,14 @@ PYTHONPATH= "$SCHRODINGER/quick_shape" \
   -best \
   -NJOBS 4 \
   -HOST localhost:4 \
-  -TMPDIR /absolute/numbered/tmp \
+  -TMPDIR "$CAMPAIGN_ROOT/tmp" \
   -JOBNAME target_stage_quick_shape
 ```
 
 The command normally returns `JobId:` before completion. Parse that ID and wait:
 
 ```bash
-PYTHONPATH= "$SCHRODINGER/jobcontrol" -wait -int 300 JOB_ID
+"$JOBCONTROL" -wait -int 300 JOB_ID
 ```
 
 Do not poll at 30- or 60-second intervals for the full job.
@@ -94,8 +97,8 @@ Count only records with numeric `r_phase_Shape_Sim` as hits.
 If Job Control says `finished` but the wrapper reports a missing output:
 
 ```bash
-PYTHONPATH= "$SCHRODINGER/jobcontrol" -show JOB_ID
-PYTHONPATH= "$SCHRODINGER/jobcontrol" -files JOB_ID
+"$JOBCONTROL" -show JOB_ID
+"$JOBCONTROL" -files JOB_ID
 ```
 
 The `Dir`/`output` entries reveal the recovery location. Move only files belonging

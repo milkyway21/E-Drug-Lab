@@ -6,6 +6,7 @@ from masld_agent.platform.catalog import (
     get_entry,
     list_entries,
     load_catalog,
+    resolve_entry,
     summarize_systems,
 )
 
@@ -37,3 +38,24 @@ def test_filter_by_system():
     assert all(e["system"] == "ed" for e in ed)
     assert all(e["system"] == "sz" for e in sz)
     assert get_entry("ed.integrations.stub")["risks"]
+
+
+def test_resolve_entry_uses_runtime_environment(monkeypatch):
+    monkeypatch.setenv("SCHRODINGER", "/runtime/schrodinger")
+    monkeypatch.setenv("MASLD_DIFFDYNAMIC_ROOT", "/runtime/diffdynamic")
+
+    assert resolve_entry("sz.bin.glide") == "/runtime/schrodinger/glide"
+    assert resolve_entry("dd.script.sample") == (
+        "/runtime/diffdynamic/scripts/sample_diffusion.py"
+    )
+
+
+def test_resolve_entry_uses_registered_defaults(monkeypatch):
+    monkeypatch.delenv("SCHRODINGER", raising=False)
+    monkeypatch.delenv("MASLD_SCHRODINGER", raising=False)
+    monkeypatch.delenv("MASLD_DIFFDYNAMIC_ROOT", raising=False)
+    monkeypatch.delenv("MASLD_DIFFDYNAMIC_CONDA", raising=False)
+    monkeypatch.delenv("MASLD_DIFFDYNAMIC_CONDA_NAME", raising=False)
+
+    assert resolve_entry("sz.bin.glide") == "/opt/schrodinger2023-3/glide"
+    assert resolve_entry("dd.script.sample") == "/data/ye/DiffDynamic/scripts/sample_diffusion.py"

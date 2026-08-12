@@ -15,7 +15,6 @@ or use absolute script paths.
 Protocol templates are under `scripts/protocols/`. Reuse them through the
 manifest and change only explicitly authorized parameters.
 
-The archive under `scripts/hsd17b13_reference/` preserves historical,
-target-specific implementation evidence. It is not a portable runner. Do not
-copy its paths, IDs, ASLs, job names, component counts, or host settings into a
-new task.
+Historical target-specific implementation evidence is intentionally excluded from
+this portable skill package. Do not copy prior paths, IDs, ASLs, job names,
+component counts, or host settings into a new task.

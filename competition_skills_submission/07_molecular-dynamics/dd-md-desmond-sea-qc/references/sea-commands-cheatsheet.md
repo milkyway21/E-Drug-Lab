@@ -6,7 +6,7 @@ only for diagnosis or report-only recovery.
 ## Required variables
 
 ```bash
-: "${SCHRODINGER:?SCHRODINGER is required}"
+: "${RUN:=$(masld-agent platform-resolve --id sz.bin.run)}"
 : "${CMS:?validated final CMS is required}"
 : "${TRJ:?validated production trajectory is required}"
 : "${OUT_DIR:?SEA output directory is required}"
@@ -27,16 +27,16 @@ validation record already identifies the final CMS/DTR.
 
 ```bash
 CUDA_VISIBLE_DEVICES="" SCHRODINGER_CUDA_VISIBLE_DEVICES="" \
-  "$SCHRODINGER/run" event_analysis.py analyze \
+  "$RUN" event_analysis.py analyze \
   "$CMS" -prot "$PROTEIN_ASL" -lig "$LIGAND_ASL" -out "$BASE_NAME"
 
 CUDA_VISIBLE_DEVICES="" SCHRODINGER_CUDA_VISIBLE_DEVICES="" \
-  nice -n 10 "$SCHRODINGER/run" analyze_simulation.py \
+  nice -n 10 "$RUN" analyze_simulation.py \
   -LOCAL -WAIT -JOBNAME "SEA_${MOLECULE_ID}" \
   "$CMS" "$TRJ" "${BASE_NAME}-out.eaf" "${BASE_NAME}-in.eaf"
 
 MPLBACKEND=Agg QT_QPA_PLATFORM=offscreen \
-  "$SCHRODINGER/run" event_analysis.py report \
+  "$RUN" event_analysis.py report \
   "${BASE_NAME}-out.eaf" \
   -pdf "data/${BASE_NAME}-out.pdf" -data -plots -data_dir data
 ```
@@ -51,11 +51,11 @@ If `*-out.eaf` is readable but combined report generation fails, preserve the
 EAF and run:
 
 ```bash
-"$SCHRODINGER/run" event_analysis.py report "${BASE_NAME}-out.eaf" \
+"$RUN" event_analysis.py report "${BASE_NAME}-out.eaf" \
   -data -data_dir data
-"$SCHRODINGER/run" event_analysis.py report "${BASE_NAME}-out.eaf" \
+"$RUN" event_analysis.py report "${BASE_NAME}-out.eaf" \
   -plots -data_dir data
-"$SCHRODINGER/run" event_analysis.py report "${BASE_NAME}-out.eaf" \
+"$RUN" event_analysis.py report "${BASE_NAME}-out.eaf" \
   -pdf "data/${BASE_NAME}-out.pdf"
 ```
 

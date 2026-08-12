@@ -9,6 +9,7 @@ from typing import Any, Iterable
 
 from masld_agent.agents.proposal_writer import write_method_md, write_proposal_md
 from masld_agent.models import CompetitionProfile, TargetHypothesis
+from masld_agent.tools.ai4s_brief import normalize_output_language
 
 
 def write_json_report(path: Path, payload: dict[str, Any]) -> None:
@@ -44,18 +45,25 @@ def write_standard_reports(
     hypotheses: list[TargetHypothesis],
     offline: bool,
     extra_warnings: list[str] | None = None,
+    language: str = "zh",
 ) -> dict[str, str]:
     out_dir.mkdir(parents=True, exist_ok=True)
     proposal = out_dir / "proposal.md"
     method = out_dir / "method.md"
-    write_proposal_md(proposal, profile=profile, hypotheses=hypotheses)
-    write_method_md(method, profile=profile, offline=offline)
+    output_language = normalize_output_language(language)
+    write_proposal_md(
+        proposal, profile=profile, hypotheses=hypotheses, language=output_language
+    )
+    write_method_md(
+        method, profile=profile, offline=offline, language=output_language
+    )
 
     report = {
         "competition": profile.model_dump(mode="json"),
         "targets": [h.model_dump(mode="json") for h in hypotheses],
         "nominations": [],
         "competition_scope_warning": profile.competition_scope_warning,
+        "language": output_language,
     }
     write_json_report(out_dir / "machine_readable_report.json", report)
 

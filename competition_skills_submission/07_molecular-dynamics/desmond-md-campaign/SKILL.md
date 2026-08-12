@@ -5,6 +5,23 @@ description: End-to-end Schrödinger Desmond campaign workflow for corrected-pos
 
 # Desmond MD Campaign
 
+## Concrete Operation Procedure
+
+Use registered Desmond tools for supported jobs and registry-resolved scripts for analysis:
+
+```bash
+masld-agent platform-catalog --id sz.desmond --json
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
+MULTISIM="$(masld-agent platform-resolve --id sz.bin.multisim)"
+"$RUN" python3 skills/molecular-dynamics/desmond-md-campaign/scripts/validate_desmond_trajectory.py --help
+"$RUN" python3 skills/molecular-dynamics/desmond-md-campaign/scripts/run_sea.py --help
+```
+
+For each molecule validate corrected-pose lineage, run `dry_prep`, choose the declared
+duration/MSJ, submit one job per approved GPU, record job/attempt IDs, and monitor only
+those IDs. Run validation with explicit duration and interval, then SEA and analysis;
+reuse readable checkpoints and create a new attempt only for a failed unit.
+
 Operate decision-grade Desmond campaigns without treating a submitted job, a 190 ns partial trajectory, or a readable final CMS as completion.
 
 ## Route The Request
@@ -16,7 +33,7 @@ Operate decision-grade Desmond campaigns without treating a submitted job, a 190
 
 ## Hard Gates
 
-- Require a configured, readable `$SCHRODINGER` for Desmond. Do not create or activate a conda environment for MD or hard-code an installation path.
+- Require registry resolution for `sz.bin.run`, `sz.bin.multisim`, and `sz.bin.jobcontrol`. Do not create or activate a conda environment for MD or hard-code an installation path.
 - Require explicit user confirmation before submitting new 50 ns or 200 ns production jobs. Read-only checks, analysis, plotting, and recovery of already authorized queues do not need a new confirmation.
 - Never kill or reassign an existing GPU process unless the user explicitly requests it and the exact process ownership is known.
 - Start long MD from a validated corrected pose or a late-pose medoid, never from a known frame-mismatched CMS.
@@ -33,7 +50,7 @@ Record molecule IDs, source pose/CMS, source trajectory, ligand ASL, protein ASL
 For late-pose starts, prepare an input CSV and run:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/extract_medoid_cms.py \
+"$RUN" python3 scripts/extract_medoid_cms.py \
   --input-csv medoid_inputs.csv \
   --output-root 03_systems/<batch> \
   --ligand-asl '<ligand_asl>' \
@@ -45,7 +62,10 @@ Run it from this skill directory or use absolute script paths. The CSV contract 
 
 ### 2. Submit Or Recover
 
-Prefer the platform tool for supported single jobs. For a multi-GPU campaign, adapt the tested queue/watchdog pair under `scripts/hsd17b13_reference/` to a new project config; replace every target ID, root, ASL, host, GPU, protocol, and completion flag before launch.
+Prefer the platform tool for supported single jobs. For a multi-GPU campaign, use the
+manifest-declared queue/watchdog adapter and replace every task-specific ID, root, ASL,
+host, GPU, protocol, and completion contract before launch. Do not copy a prior target's
+queue script as a scientific default.
 
 Use `prod_2ns_eq_50ns.msj` for screening and `prod_2ns_eq_200ns.msj` for long production. These templates are bundled under `scripts/protocols/`.
 
@@ -56,12 +76,12 @@ Launch persistent campaign workers with a user service or another terminal-indep
 Validate each finished CMS/DTR pair with the Schrödinger Python runtime:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/validate_desmond_trajectory.py \
-  --cms /abs/path/<ID>_202ns-out.cms \
-  --trajectory /abs/path/<ID>_6_trj \
+"$RUN" python3 scripts/validate_desmond_trajectory.py \
+  --cms "$CAMPAIGN_ROOT/04_trajectories/<ID>_202ns-out.cms" \
+  --trajectory "$CAMPAIGN_ROOT/04_trajectories/<ID>_6_trj" \
   --minimum-ns 200 \
   --expected-interval-ps 200 \
-  --output /abs/path/attempt_01/attempt_validation.json
+  --output "$CAMPAIGN_ROOT/05_analysis/attempt_01/attempt_validation.json"
 ```
 
 Summarize a campaign without inferring completion from process names:
@@ -78,7 +98,8 @@ python3 scripts/campaign_status.py \
 Run only on hard-validated attempts:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/run_sea.py \
+"$RUN" python3 scripts/run_sea.py \
+  --run-launcher "$RUN" \
   --trajectory-root 04_trajectories/<batch> \
   --output-root 05_analysis/<batch>/sea \
   --ids <ID1> <ID2> \
@@ -92,7 +113,8 @@ For campaigns whose validated CMS/DTR files do not use `attempt_XX` layout, prov
 portable CSV instead of writing a target-specific SEA script:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/run_sea.py \
+"$RUN" python3 scripts/run_sea.py \
+  --run-launcher "$RUN" \
   --sources-csv sea_sources.csv \
   --output-root 05_analysis/<batch>/sea \
   --protein-asl '<protein_asl>' \
@@ -108,7 +130,7 @@ the CSV directory. This is the preferred adapter for pilot and legacy campaigns.
 Use pocket retention and direct contacts before absolute ligand RMSD:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/analyze_md200.py \
+"$RUN" python3 scripts/analyze_md200.py \
   --ids <ID1> <ID2> \
   --trajectory-root 04_trajectories/<batch> \
   --sea-root 05_analysis/<batch>/sea \
@@ -133,7 +155,7 @@ Do not promote a high numeric score over an unfavorable class. Independent repea
 Generate the portrait-A4 5-row by 4-column plate:
 
 ```bash
-"$SCHRODINGER/run" python3 scripts/plot_md200_plate.py \
+"$RUN" python3 scripts/plot_md200_plate.py \
   --traces 05_analysis/<batch>/final_200ns/md200_traces.csv \
   --decisions 05_analysis/<batch>/final_200ns/md200_decision_table.csv \
   --output 05_analysis/<batch>/figures/md200_plate
@@ -158,3 +180,59 @@ Report the exact completed/total count, validated production time and frame coun
 When this campaign is a funnel stage, hand the validated counts, plots, SEA paths, and
 decision table to the `reporting` umbrella. It appends one MD section to the single
 `AUTOPILOT_REPORT` set; do not create a separate stage DOCX/PDF.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill desmond-md-campaign --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill desmond-md-campaign --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill desmond-md-campaign --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill desmond-md-campaign --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest explicitly supplies the existing medoid/system/validation/SEA/analysis
+commands, duration, ASL selectors, resource allocation, and output contracts. The
+campaign skill never chooses a target-specific protocol, ligand selector, GPU count,
+trajectory name, or completion marker. Use relative paths in reports; executable
+locations come from the platform registry at runtime.
+
+## Standalone Command-Line Procedure
+
+The bundled campaign scripts are portable assets inside this skill. Set `SKILLS_ROOT` to
+the installed shared-skill root and resolve Schrödinger from `SCHRODINGER` or your local
+registry; no project checkout path is assumed.
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+RUN="${RUN:-}"
+MULTISIM="${MULTISIM:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="${SCHRODINGER:-$(masld-agent platform-resolve --id sz.env)}"
+  RUN="${RUN:-$(masld-agent platform-resolve --id sz.bin.run)}"
+  MULTISIM="${MULTISIM:-$(masld-agent platform-resolve --id sz.bin.multisim)}"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+RUN="${RUN:-$SCHRODINGER/run}"
+MULTISIM="${MULTISIM:-$SCHRODINGER/utilities/multisim}"
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+CMS="$(realpath inputs/validated_system.cms)"
+MSJ="$(realpath inputs/prod_2ns_eq_50ns.msj)"
+OUT="$(realpath -m outputs/md/attempt_01)"
+mkdir -p "$OUT"
+JOBNAME="${JOBNAME:-md_campaign}"
+FINAL_CMS="$OUT/${JOBNAME}-out.cms"
+CUDA_VISIBLE_DEVICES="${GPU_ID:?approved GPU}" \
+SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
+  "$MULTISIM" -WAIT -HOST "${HOST_SPEC:-localhost}" -maxjob 1 -JOBNAME "$JOBNAME" \
+  -m "$MSJ" -o "$FINAL_CMS" "$CMS"
+"$RUN" python3 \
+  "$SKILLS_ROOT/molecular-dynamics/desmond-md-campaign/scripts/validate_desmond_trajectory.py" \
+  --cms "$OUT"/*out.cms --trajectory "$OUT"/*trj \
+  --minimum-ns "${MINIMUM_NS:?declared duration}" \
+  --expected-interval-ps "${INTERVAL_PS:?declared recording interval}" \
+  --output "$OUT/validation.json"
+```
+
+Run `run_sea.py`, `analyze_md200.py`, and plotting only after `validation.json` says
+`valid=true`. Preserve corrected-pose lineage, ASLs, attempt ID, active GPU, observed
+frames, and all failed rows.

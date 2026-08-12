@@ -1,0 +1,59 @@
+{
+  "schema_version": "e-drug-lab.skill-manifest/v1",
+  "task_id": "replace-with-task-id",
+  "skill": "funnel-diffdynamic-prudent",
+  "stage": "H1B",
+  "campaign_root": "../..",
+  "inputs": {
+    "receptor_pdb": "inputs/receptor_clean.pdb",
+    "reference_ligand_sdf": "inputs/reference_ligand.sdf",
+    "prudent_pt": "01_h1b_diffdynamic/result_custom.pt"
+  },
+  "outputs": [
+    {
+      "path": "02_h1b_physchem/physchem_summary.json",
+      "required": true,
+      "json": true
+    },
+    {
+      "path": "03_h1b_dedup/unique.csv",
+      "required": true,
+      "min_records": 1
+    }
+  ],
+  "resources": {
+    "cpu": 8,
+    "gpu": "manifest-approved-gpu",
+    "timeout_seconds": 14400
+  },
+  "validation": {
+    "required_outputs": [
+      "02_h1b_physchem/physchem_summary.json",
+      "03_h1b_dedup/unique.csv"
+    ],
+    "vina_modes": "none"
+  },
+  "reporting": {
+    "aggregate_report": "reports/AUTOPILOT_REPORT.md",
+    "section": "H1B DiffDynamic Prudent",
+    "language": "zh"
+  },
+  "stages": {
+    "H1B": {
+      "target_count": "declare-explicitly",
+      "pt_path": "01_h1b_diffdynamic/result_custom.pt",
+      "evaluator": "declare-existing-evaluator",
+      "diffdynamic_python": "declare-existing-python",
+      "physchem_output_dir": "02_h1b_physchem",
+      "dedup_output_dir": "03_h1b_dedup",
+      "vina_modes": "none"
+    }
+  },
+  "command": [
+    "masld-agent",
+    "funnel",
+    "prudent-physchem",
+    "--manifest",
+    "{manifest}"
+  ]
+}

@@ -18,6 +18,7 @@ REQUIRED_IDS = [
     "dd.cfg.prudent",
     "dd.script.sample",
     "dd.script.batch",
+    "dd.script.prudent",
     "dd.script.eval",
     "dd.script.extract",
     "dd.script.pocket_quality",
@@ -45,8 +46,17 @@ REQUIRED_IDS = [
     "sz.bin.qikprop",
     "sz.bin.prime_mmgbsa",
     "sz.bin.ifd",
+    "sz.bin.quick_shape",
+    "sz.bin.shape_screen_gpu",
+    "sz.bin.oned_screen",
+    "sz.bin.phase_screen",
+    "sz.bin.jobcontrol",
+    "sz.bin.multisim",
     "sz.bin.prepwizard",
     "sz.bin.run",
+    "sz.bin.structconvert",
+    "sz.bin.structsubset",
+    "sz.bin.proplister",
     "sz.prepwizard",
     "sz.ligprep",
     "sz.grid",
@@ -138,3 +148,77 @@ def format_entry(entry: dict[str, Any]) -> str:
         lines.append(f"- skill_ref: {entry.get('skill_ref')}")
     lines.append("")
     return "\n".join(lines)
+
+
+def resolve_entry(entry_id: str, *, field: str | None = None) -> str:
+    """Resolve a registry entry against the current machine environment."""
+    entry = get_entry(entry_id)
+    if entry is None:
+        raise KeyError(f"unknown platform catalog id: {entry_id}")
+    env = entry.get("env") or {}
+    system = str(entry.get("system") or "")
+    if system == "sz":
+        registry_env = (get_entry("sz.env") or {}).get("env") or {}
+        home = Path(
+            __import__("os").environ.get("SCHRODINGER")
+            or __import__("os").environ.get("MASLD_SCHRODINGER")
+            or env.get("SCHRODINGER")
+            or registry_env.get("SCHRODINGER")
+            or "."
+        ).expanduser()
+        if entry_id == "sz.env":
+            value = str(home)
+        else:
+            relative = env.get("relative")
+            if not relative:
+                summary = str(entry.get("summary") or "")
+                relative = summary.split("$SCHRODINGER/", 1)[-1]
+            value = str(home / str(relative))
+    elif system == "dd":
+        registry_env = (get_entry("dd.env") or {}).get("env") or {}
+        root = Path(
+            __import__("os").environ.get("MASLD_DIFFDYNAMIC_ROOT")
+            or env.get("root")
+            or registry_env.get("root")
+            or "."
+        ).expanduser()
+        if entry_id == "dd.env":
+            if field == "python":
+                conda = Path(
+                    __import__("os").environ.get("MASLD_DIFFDYNAMIC_CONDA")
+                    or env.get("conda_env")
+                    or registry_env.get("conda_env")
+                    or "."
+                ).expanduser()
+                value = str(conda / "bin" / "python")
+            elif field == "conda_name":
+                value = str(
+                    __import__("os").environ.get("MASLD_DIFFDYNAMIC_CONDA_NAME")
+                    or env.get("conda_name")
+                    or registry_env.get("conda_name")
+                    or "diffdynamic"
+                )
+            else:
+                value = str(root)
+        else:
+            filenames = {
+                "dd.script.sample": "scripts/sample_diffusion.py",
+                "dd.script.batch": "batch_sampleandeval_parallel.py",
+                "dd.script.prudent": "run_prudent_generations.py",
+                "dd.script.eval": "evaluate_pt_with_correct_reconstruct.py",
+                "dd.script.extract": "extract_pt_to_sdf_excel.py",
+                "dd.script.pocket_quality": "evaluate_pocket_quality.py",
+            }
+            relative = filenames.get(entry_id)
+            if relative is None:
+                value = str(root)
+            else:
+                value = str(root / relative)
+    else:
+        if field == "invoke":
+            value = str(entry.get("invoke") or "")
+        else:
+            value = str(env.get(field or "path") or entry.get("invoke") or "")
+    if not value:
+        raise ValueError(f"catalog entry {entry_id} has no resolvable value")
+    return value

@@ -15,10 +15,9 @@ from masld_agent.platform.gates import GateError, require_diffdynamic_inputs
 from masld_agent.platform.paths import DIFFDYNAMIC_CONDA, DIFFDYNAMIC_ROOT
 
 
-DEFAULT_PRUDENT_TEMPLATE = Path(
-    "/home/user/Desktop/Ye/DiffDynamic/hsvpol/pipeline_templates/"
-    "sampling_denovo_prudent_batch50_10pick2.yml"
-)
+def _configured_path(manifest: dict[str, Any], value: str | Path) -> Path:
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else resolve_campaign_path(manifest, path)
 
 
 def prudent_generate(
@@ -29,21 +28,33 @@ def prudent_generate(
 ) -> dict[str, Any]:
     manifest = load_manifest(manifest_path)
     config = stage_config(manifest, "H1B")
-    target_count = int(
-        config.get("target_count")
-        or (manifest.get("pipeline_targets") or {}).get("H1B")
-        or 100
+    target_value = config.get("target_count") or (manifest.get("pipeline_targets") or {}).get("H1B")
+    if target_value is None:
+        return {
+            "status": "blocked",
+            "error": "manifest must declare stages.H1B.target_count or pipeline_targets.H1B",
+        }
+    target_count = int(target_value)
+    template_value = config.get("config_template") or (manifest.get("reused_assets") or {}).get(
+        "prudent_config_template"
     )
-    template = Path(
-        config.get("config_template")
-        or (manifest.get("reused_assets") or {}).get("prudent_config_template")
-        or DEFAULT_PRUDENT_TEMPLATE
-    ).expanduser()
+    if not template_value:
+        return {
+            "status": "blocked",
+            "error": "manifest must declare stages.H1B.config_template or reused_assets.prudent_config_template",
+        }
+    template = _configured_path(manifest, template_value)
     inputs = manifest.get("inputs") or {}
     receptor = resolve_campaign_path(manifest, inputs.get("receptor_pdb") or "")
     ligand = resolve_campaign_path(manifest, inputs.get("reference_ligand_sdf") or "")
-    python = Path(config.get("diffdynamic_python") or DIFFDYNAMIC_CONDA / "bin" / "python")
-    sampler = Path(config.get("sampler") or DIFFDYNAMIC_ROOT / "scripts" / "sample_diffusion.py")
+    python = _configured_path(
+        manifest,
+        config.get("diffdynamic_python") or DIFFDYNAMIC_CONDA / "bin" / "python",
+    )
+    sampler = _configured_path(
+        manifest,
+        config.get("sampler") or DIFFDYNAMIC_ROOT / "scripts" / "sample_diffusion.py",
+    )
     output = resolve_campaign_path(manifest, config.get("generation_output_dir") or "diffdynamic/prudent/run")
     generated_config_dir = resolve_campaign_path(
         manifest, config.get("generated_config_dir") or "configs"
@@ -166,12 +177,16 @@ def select_prudent_pt(manifest: dict[str, Any]) -> Path:
 def build_physchem_command(manifest: dict[str, Any], pt_path: Path) -> tuple[list[str], Path]:
     config = stage_config(manifest, "H1B")
     inputs = manifest.get("inputs") or {}
-    evaluator = Path(
+    evaluator = _configured_path(
+        manifest,
         config.get("evaluator")
         or (manifest.get("reused_assets") or {}).get("analysis_script")
-        or DIFFDYNAMIC_ROOT / "evaluate_pt_with_correct_reconstruct.py"
-    ).expanduser()
-    python = Path(config.get("diffdynamic_python") or DIFFDYNAMIC_CONDA / "bin" / "python")
+        or DIFFDYNAMIC_ROOT / "evaluate_pt_with_correct_reconstruct.py",
+    )
+    python = _configured_path(
+        manifest,
+        config.get("diffdynamic_python") or DIFFDYNAMIC_CONDA / "bin" / "python",
+    )
     receptor = resolve_campaign_path(manifest, inputs.get("receptor_pdb") or "")
     ligand = resolve_campaign_path(manifest, inputs.get("reference_ligand_sdf") or "")
     for label, path in (

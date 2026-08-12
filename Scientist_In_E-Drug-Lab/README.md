@@ -64,6 +64,13 @@ python scripts/import_drug_skills.py   # 导入 canonical skills 到 .hermes/ski
 # 旧名称仅保留兼容入口，不作为重复 skill 发布
 ```
 
+每个 skill 同时支持三种入口：Hermes/Agent 默认使用 manifest；项目用户可以直接使用
+`masld-agent` 的无 manifest 命令；不使用本项目适配器时，打开对应 `SKILL.md` 的
+`Standalone Command-Line Procedure`，按环境变量和原生工具命令执行。原生段落覆盖
+DiffDynamic 的 `python sample_diffusion.py`、Schrödinger 的 PrepWizard/LigPrep/Glide
+SP/XP/QikProp/MMGBSA/Shape/Phase/Desmond，以及结构、证据和报告步骤；安装位置只从
+注册表解析，注册表不可用时才由调用者提供 `DD_ROOT` 或 `SCHRODINGER` 等变量。
+
 ## CLI（科学管线）
 
 ```bash

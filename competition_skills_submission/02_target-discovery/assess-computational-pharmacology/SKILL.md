@@ -44,3 +44,55 @@ Hard gates:
 - If the route is unsupported, report `evidence-only`; do not force docking or QSAR.
 
 Read [`references/route-decision.md`](references/route-decision.md) before selecting the route.
+
+## Universal Manifest Invocation
+
+Declare target evidence files, structure and ligand candidates, route alternatives,
+validation design, and an explicit command or ordered steps. This skill decides
+applicability; it does not silently launch docking or model fitting.
+
+```bash
+bash scripts/run_skill.sh --skill assess-computational-pharmacology --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill assess-computational-pharmacology --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill assess-computational-pharmacology --manifest MANIFEST --execute --confirm
+```
+
+For each route state data domain, leakage controls, positive and negative controls,
+held-out split, uncertainty, and failure threshold. A qualified experimental holo pocket
+can support a structure route; it does not validate ligand-based generalization. If
+evidence is insufficient, write `evidence_only` and stop the structure branch cleanly.
+## Concrete Operation Procedure
+
+Run route assessment before any docking or model fitting:
+
+```bash
+TARGET_ID="TARGET_GENE_OR_PROTEIN"
+TASK_ROOT="tasks/${TARGET_ID}/01_target"
+mkdir -p "$TASK_ROOT"
+masld-agent evidence structures --gene "$TARGET_ID" --limit 25 \
+  > "$TASK_ROOT/structure_candidates.json"
+```
+
+Call `assess-computational-pharmacology` with target evidence, pharmacology evidence, ranked structures, known-ligand table, target/phenotype policy, and validation design. Accept only a declared `structure_based`, `ligand_based`, `hybrid`, or `evidence_only` route. A structure route must hand off to native preparation and pocket qualification; an evidence-only route must stop docking cleanly.
+
+## Standalone Command-Line Procedure
+
+Create an explicit route-decision input bundle before launching any model or docking tool:
+
+```bash
+TARGET_ID="${TARGET_ID:?target identifier}"
+OUT_DIR="${OUT_DIR:-computational_route}"
+mkdir -p "$OUT_DIR"
+for input in target_evidence.json pharmacology_evidence.json structure_candidates.json known_ligands.csv; do
+  test -s "${INPUT_DIR:-.}/$input" || printf '%s\n' "missing:$input" >> "$OUT_DIR/missing_inputs.txt"
+done
+jq -n --arg target "$TARGET_ID" --arg route "${ROUTE:-evidence_only}" \
+  '{target_id:$target,route:$route,leakage_controls:[],controls:[],held_out_split:null,uncertainty:null,failure_threshold:null}' \
+  > "$OUT_DIR/route_decision.json"
+```
+
+Replace the empty fields from the actual evidence and validation design. Accept
+`structure_based`, `ligand_based`, `hybrid`, or `evidence_only` only with a written basis,
+positive/negative controls, leakage policy, held-out design, uncertainty, and failure
+threshold. A missing qualified pocket is a clean gate; it is not permission to start
+docking from a guessed center.

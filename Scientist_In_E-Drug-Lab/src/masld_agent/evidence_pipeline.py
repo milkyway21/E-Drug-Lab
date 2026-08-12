@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
+from masld_agent.config import DEFAULT_COMPETITION, load_competition_config
 from masld_agent.http_cache import CachedHttp
 from masld_agent.models import (
     CompoundEvidenceCard,
@@ -19,6 +20,7 @@ from masld_agent.models import (
 )
 from masld_agent.reporting.markdown import try_export_pdf
 from masld_agent.tools.chembl import fetch_chembl_activities, find_chembl_molecule_by_inchikey
+from masld_agent.tools.ai4s_brief import normalize_output_language
 from masld_agent.tools.compound_evidence import (
     DEFAULT_NOMINATION_WEIGHTS,
     dump_cards_jsonl,
@@ -62,6 +64,48 @@ LIPID_MECHANISM_TERMS = {
     "ABCA1": "lipid efflux",
     "AUTOPHAG": "autophagy / lipophagy",
 }
+
+TOP10_NOMINATION_FIELDS = [
+    "rank",
+    "library_id",
+    "id_or_name",
+    "canonical_smiles",
+    "parent_inchikey",
+    "smiles_or_inchikey",
+    "target_or_pathway",
+    "evidence_level",
+    "lipid_score",
+    "safety_score",
+    "uncertainty_penalty",
+    "ranking_basis",
+    "score_components",
+    "structure_applicability",
+    "lipid_rationale",
+    "tox_rationale",
+    "toxicity_evidence_status",
+    "mechanism_hypothesis",
+    "validation_readouts",
+    "evidence_refs",
+    "library_source",
+    "library_sha256",
+    "nomination_status",
+]
+
+
+def _toxicity_evidence_status(card: CompoundEvidenceCard) -> str:
+    if any(item.observed for item in card.safety_evidence):
+        return "observed"
+    if any(item.prediction for item in card.safety_evidence):
+        return "predicted_only"
+    return "unknown"
+
+
+def _ranking_basis(card: CompoundEvidenceCard) -> str:
+    return (
+        "weighted score: lipid evidence 30%; mechanism/pathway 20%; activity quality 15%; "
+        "safety 20%; structure/developability 10%; diversity 5%; "
+        f"uncertainty penalty {card.score.uncertainty_penalty:g} points"
+    )
 
 
 def _json_write(path: Path, payload: Any) -> None:
@@ -383,7 +427,13 @@ def _mechanism_text(card: CompoundEvidenceCard) -> str:
     )
 
 
-def _write_scorecards(output_dir: Path, cards: list[CompoundEvidenceCard], final_count: int) -> None:
+def _write_scorecards(
+    output_dir: Path,
+    cards: list[CompoundEvidenceCard],
+    final_count: int,
+    *,
+    library_sha256: str,
+) -> None:
     score_fields = [
         "rank",
         "library_id",
@@ -421,30 +471,10 @@ def _write_scorecards(output_dir: Path, cards: list[CompoundEvidenceCard], final
                     "warnings": ";".join(card.warnings),
                 }
             )
-    top_fields = [
-        "rank",
-        "library_id",
-        "id_or_name",
-        "canonical_smiles",
-        "parent_inchikey",
-        "smiles_or_inchikey",
-        "target_or_pathway",
-        "evidence_level",
-        "lipid_score",
-        "safety_score",
-        "uncertainty_penalty",
-        "structure_applicability",
-        "lipid_rationale",
-        "tox_rationale",
-        "mechanism_hypothesis",
-        "validation_readouts",
-        "evidence_refs",
-        "library_source",
-    ]
     with (output_dir / "top10_nomination.csv").open(
         "w", newline="", encoding="utf-8"
     ) as stream:
-        writer = csv.DictWriter(stream, fieldnames=top_fields)
+        writer = csv.DictWriter(stream, fieldnames=TOP10_NOMINATION_FIELDS)
         writer.writeheader()
         for rank, card in enumerate(cards[:final_count], 1):
             evidence_refs = list(card.provenance.get("evidence_refs") or [])
@@ -471,14 +501,27 @@ def _write_scorecards(output_dir: Path, cards: list[CompoundEvidenceCard], final
                     "lipid_score": card.score.lipid_evidence,
                     "safety_score": card.score.safety,
                     "uncertainty_penalty": card.score.uncertainty_penalty,
+                    "ranking_basis": _ranking_basis(card),
+                    "score_components": json.dumps(
+                        card.score.model_dump(mode="json"),
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    ),
                     "structure_applicability": card.structure_applicability,
                     "lipid_rationale": card.lipid_rationale,
                     "tox_rationale": card.toxicity_rationale,
+                    "toxicity_evidence_status": _toxicity_evidence_status(card),
                     "mechanism_hypothesis": _mechanism_text(card),
                     "validation_readouts": ";".join(readouts)
                     or "HepG2-FFA lipid accumulation; cell viability",
                     "evidence_refs": ";".join(dict.fromkeys(evidence_refs)),
                     "library_source": card.library_source,
+                    "library_sha256": library_sha256,
+                    "nomination_status": (
+                        "candidate_for_experimental_testing"
+                        if card.identity_valid
+                        else "rejected_invalid_identity"
+                    ),
                 }
             )
 
@@ -489,36 +532,65 @@ def _write_mechanism_report(
     *,
     disease: str,
     final_count: int,
+    library_sha256: str,
+    language: str = "zh",
 ) -> None:
-    lines = [
-        "# Candidate nomination, mechanism, and validation report",
-        "",
-        f"- Disease/phenotype context: {disease}",
-        f"- Nominated compounds: {min(final_count, len(cards))}",
-        "- Ranking is computational evidence synthesis, not experimental confirmation.",
-        "- Missing toxicity evidence is reported as unknown, never as low toxicity.",
-        "",
-        "## Ranking method",
-        "",
-        "Lipid evidence 30%, mechanism/pathway 20%, activity quality 15%, safety 20%, "
-        "structure/developability 10%, diversity 5%; missing/conflicting evidence incurs up to "
-        "20 points uncertainty penalty.",
-        "",
-        "## Candidates",
-        "",
-    ]
+    english = normalize_output_language(language) == "en"
+    if english:
+        lines = [
+            "# Candidate nomination, mechanism, and validation report",
+            "",
+            f"- Disease/phenotype context: {disease}",
+            f"- Nominated compounds: {min(final_count, len(cards))}",
+            f"- Official library SHA-256: `{library_sha256}`",
+            "- Ranking is computational evidence synthesis, not experimental confirmation.",
+            "- Missing toxicity evidence is reported as unknown, never as low toxicity.",
+            "",
+            "## Ranking method",
+            "",
+            "Lipid evidence 30%, mechanism/pathway 20%, activity quality 15%, safety 20%, "
+            "structure/developability 10%, diversity 5%; missing/conflicting evidence incurs up to "
+            "20 points uncertainty penalty.",
+            "",
+            "## Candidates",
+            "",
+        ]
+    else:
+        lines = [
+            "# 候选分子提名、机制与验证报告",
+            "",
+            f"- 疾病/表型背景：{disease}",
+            f"- 提名分子数：{min(final_count, len(cards))}",
+            f"- 官方化合物库 SHA-256：`{library_sha256}`",
+            "- 排序是计算证据综合，不是实验确认结果。",
+            "- 缺失毒性证据标记为 unknown，不得解释为低毒。",
+            "",
+            "## 排序方法",
+            "",
+            "降脂证据 30%、机制/通路一致性 20%、活性质量 15%、安全性 20%、结构/成药性 10%、化学多样性 5%；缺失或冲突证据最多扣除 20 个不确定性分。",
+            "",
+            "## 候选分子",
+            "",
+        ]
     for rank, card in enumerate(cards[:final_count], 1):
-        lines.extend(
-            [
+        if english:
+            candidate_lines = [
                 f"### {rank}. {card.name or card.library_id}",
                 "",
                 f"- Library ID: `{card.library_id}`",
                 f"- Parent InChIKey: `{card.parent_inchikey or 'missing'}`",
                 f"- Final score: {card.score.final_score:.2f}; uncertainty penalty: "
                 f"{card.score.uncertainty_penalty:.2f}",
+                f"- Score components: lipid={card.score.lipid_evidence:.2f}; "
+                f"mechanism={card.score.mechanism_relevance:.2f}; "
+                f"activity={card.score.activity_quality:.2f}; safety={card.score.safety:.2f}; "
+                f"developability={card.score.structure_developability:.2f}; "
+                f"diversity={card.score.diversity:.2f}",
+                f"- Toxicity evidence status: `{_toxicity_evidence_status(card)}`",
                 f"- Lipid rationale: {card.lipid_rationale or 'No verified rationale supplied.'}",
                 f"- Toxicity: {card.toxicity_rationale}",
                 f"- Mechanism: {_mechanism_text(card)}",
+                f"- Evidence references: {'; '.join(dict.fromkeys(card.provenance.get('evidence_refs') or [])) or 'none'}",
                 f"- Alternatives/falsifiers: "
                 f"{'; '.join(item for mechanism in card.mechanism_hypotheses for item in mechanism.falsifiers) or 'Not yet specified.'}",
                 "- Validation: concentration-response HepG2-FFA lipid readout together with "
@@ -526,19 +598,48 @@ def _write_mechanism_report(
                 "target engagement, expression/phosphorylation, or flux readouts.",
                 "",
             ]
+        else:
+            candidate_lines = [
+                f"### {rank}. {card.name or card.library_id}",
+                "",
+                f"- 库内 ID：`{card.library_id}`",
+                f"- Parent InChIKey：`{card.parent_inchikey or 'missing'}`",
+                f"- 最终得分：{card.score.final_score:.2f}；不确定性扣分：{card.score.uncertainty_penalty:.2f}",
+                f"- 得分构成：降脂={card.score.lipid_evidence:.2f}；机制={card.score.mechanism_relevance:.2f}；活性={card.score.activity_quality:.2f}；安全性={card.score.safety:.2f}；成药性={card.score.structure_developability:.2f}；多样性={card.score.diversity:.2f}",
+                f"- 毒性证据状态：`{_toxicity_evidence_status(card)}`",
+                f"- 降脂依据：{card.lipid_rationale or '未提供可核验依据。'}",
+                f"- 毒性依据：{card.toxicity_rationale}",
+                f"- 机制假说：{_mechanism_text(card)}",
+                f"- 证据引用：{'; '.join(dict.fromkeys(card.provenance.get('evidence_refs') or [])) or '无'}",
+                f"- 替代机制/证伪条件：{'; '.join(item for mechanism in card.mechanism_hypotheses for item in mechanism.falsifiers) or '尚未指定。'}",
+                "- 验证方案：浓度-反应 HepG2-FFA 脂质读出，同时进行匹配的细胞活力和形态对照；再做机制特异性的靶点参与、表达/磷酸化或通量读出。",
+                "",
+            ]
+        lines.extend(candidate_lines)
+    if english:
+        lines.extend(
+            [
+                "## Shared validation controls",
+                "",
+                "- Vehicle and assay-appropriate positive controls.",
+                "- Matched exposure time and concentration series for lipid and viability readouts.",
+                "- Reject apparent lipid lowering caused by loss of viable cells.",
+                "- Test SREBP-1c/ACC/FASN/SCD1, PPARα/AMPK/CPT1, uptake/efflux, or autophagy only when candidate-specific evidence supports that branch.",
+                "",
+            ]
         )
-    lines.extend(
-        [
-            "## Shared validation controls",
-            "",
-            "- Vehicle and assay-appropriate positive controls.",
-            "- Matched exposure time and concentration series for lipid and viability readouts.",
-            "- Reject apparent lipid lowering caused by loss of viable cells.",
-            "- Test SREBP-1c/ACC/FASN/SCD1, PPARα/AMPK/CPT1, uptake/efflux, or autophagy "
-            "only when candidate-specific evidence supports that branch.",
-            "",
-        ]
-    )
+    else:
+        lines.extend(
+            [
+                "## 共用验证对照",
+                "",
+                "- 设置 vehicle 和适用的阳性对照。",
+                "- 脂质与活力读出使用匹配的暴露时间和浓度梯度。",
+                "- 排除由活细胞数量下降造成的表观降脂。",
+                "- 仅在候选证据支持时检测 SREBP-1c/ACC/FASN/SCD1、PPARα/AMPK/CPT1、摄取/外排或自噬通路。",
+                "",
+            ]
+        )
     path.write_text("\n".join(lines), encoding="utf-8")
 
 
@@ -554,6 +655,7 @@ def run_evidence_nomination(
     online_enrichment_limit: int = 50,
     library_source: str = "official_sdf_library",
     mechanism_is_target_based: bool = True,
+    language: str = "zh",
 ) -> Path:
     """Run E0-E6 and write deterministic stage reports and nomination artifacts."""
     library_path = Path(library_path).resolve()
@@ -563,6 +665,7 @@ def run_evidence_nomination(
     if not library_path.is_file():
         raise FileNotFoundError(library_path)
     output_dir.mkdir(parents=True, exist_ok=True)
+    language = normalize_output_language(language)
     evidence_http = CachedHttp(cache_only=offline_replay)
     evidence_enabled = online or offline_replay
     input_sha256 = hashlib.sha256(library_path.read_bytes()).hexdigest()
@@ -578,6 +681,7 @@ def run_evidence_nomination(
         "online": online,
         "offline_replay": offline_replay,
         "structure_policy": "research_then_conditional_docking",
+        "language": language,
     }
     _json_write(output_dir / "evidence_task_plan.json", task_plan)
     _stage_report(
@@ -686,39 +790,74 @@ def run_evidence_nomination(
         artifacts=[output_dir / "toxicity_evidence.csv"],
     )
 
-    _write_scorecards(output_dir, valid_ranked, final_count)
+    _write_scorecards(
+        output_dir,
+        valid_ranked,
+        final_count,
+        library_sha256=input_sha256,
+    )
     _write_mechanism_report(
         output_dir / "mechanism_validation.md",
         valid_ranked,
         disease=disease,
         final_count=final_count,
+        library_sha256=input_sha256,
+        language=language,
     )
     (output_dir / "proposal.md").write_text(
         (output_dir / "mechanism_validation.md").read_text(encoding="utf-8"),
         encoding="utf-8",
     )
-    (output_dir / "method.md").write_text(
-        "\n".join(
-            [
-                "# Reproducible nomination method",
-                "",
-                f"- Input library SHA-256: `{input_sha256}`",
-                f"- Library source: `{library_source}`",
-                f"- Online evidence: `{online}`",
-                f"- Requested final count: `{final_count}`",
-                "- Identity: RDKit parent standardization, parent InChIKey deduplication, "
-                "stable library-ID tie-break.",
-                "- Ranking: lipid 30%, mechanism 20%, activity 15%, safety 20%, "
-                "structure/developability 10%, diversity 5%, with up to 20 uncertainty points.",
-                "- Structure policy: research first; docking only after pocket qualification.",
-                "- Validation: HepG2-FFA lipid accumulation plus matched cell viability; "
-                "cytotoxic lipid-loss signals are rejected.",
-                "- Missing evidence remains unknown and is not converted into favorable evidence.",
-                "",
-            ]
+    if language == "en":
+        method_lines = [
+            "# Reproducible nomination method",
+            "",
+            f"- Input library SHA-256: `{input_sha256}`",
+            f"- Library source: `{library_source}`",
+            f"- Output language: `{language}`",
+            f"- Online evidence: `{online}`",
+            f"- Requested final count: `{final_count}`",
+            "- Identity: RDKit parent standardization, parent InChIKey deduplication, stable library-ID tie-break.",
+            "- Ranking: lipid 30%, mechanism 20%, activity 15%, safety 20%, structure/developability 10%, diversity 5%, with up to 20 uncertainty points.",
+            "- Structure policy: research first; docking only after pocket qualification.",
+            "- Validation: HepG2-FFA lipid accumulation plus matched cell viability; cytotoxic lipid-loss signals are rejected.",
+            "- Missing evidence remains unknown and is not converted into favorable evidence.",
+            "",
+        ]
+    else:
+        method_lines = [
+            "# 可复现的候选提名方法",
+            "",
+            f"- 输入化合物库 SHA-256：`{input_sha256}`",
+            f"- 化合物库来源：`{library_source}`",
+            f"- 输出语言：`{language}`（默认中文；可切换为 en）",
+            f"- 在线证据：`{online}`",
+            f"- 请求最终数量：`{final_count}`",
+            "- 身份标准化：使用 RDKit 做 parent 标准化、parent InChIKey 去重，并用稳定的 library ID 做并列排序。",
+            "- 排序：降脂 30%、机制 20%、活性 15%、安全性 20%、结构/成药性 10%、多样性 5%，最多扣除 20 个不确定性分。",
+            "- 结构策略：先做结构和口袋研究，只有口袋合格后才允许对接。",
+            "- 验证：HepG2-FFA 脂质蓄积与匹配的细胞活力双读出；排除伴随细胞毒性的降脂假阳性。",
+            "- 缺失证据保持 unknown，不转换为有利证据。",
+            "",
+        ]
+    (output_dir / "method.md").write_text("\n".join(method_lines), encoding="utf-8")
+    from masld_agent.submission import write_hepg2_plan
+
+    write_hepg2_plan(output_dir, language=language)
+    competition_config = load_competition_config(DEFAULT_COMPETITION)
+    nomination_contract = {
+        "library_source": library_source,
+        "library_sha256": input_sha256,
+        "weights": DEFAULT_NOMINATION_WEIGHTS,
+        "uncertainty_penalty_max": 20,
+        "selection_rule": "rank valid unique parent identities by final_score descending, then library_id",
+        "effective_hit_rule": (competition_config.get("experimental_readouts") or {}).get(
+            "effective_hit_definition"
         ),
-        encoding="utf-8",
-    )
+        "experimental_validation_plan": competition_config.get("experimental_validation_plan") or {},
+        "language": language,
+    }
+    _json_write(output_dir / "nomination_contract.json", nomination_contract)
     pdf_status = try_export_pdf(
         output_dir / "mechanism_validation.md", output_dir / "mechanism_validation.pdf"
     )
@@ -755,7 +894,9 @@ def run_evidence_nomination(
         "run_type": "evidence_nomination",
         "stages": list(EVIDENCE_STAGES),
         "library_path": str(library_path),
+        "library_source": library_source,
         "library_sha256": input_sha256,
+        "language": language,
         "disease": disease,
         "target_gene": target_gene,
         "final_count": final_count,
@@ -779,6 +920,8 @@ def run_evidence_nomination(
             card.model_dump(mode="json") for card in valid_ranked[:final_count]
         ],
         "evidence_provenance": provenance,
+        "nomination_contract": nomination_contract,
+        "experimental_validation_plan": nomination_contract["experimental_validation_plan"],
     }
     _json_write(output_dir / "machine_readable_report.json", machine_report)
     all_warnings = list(
@@ -808,6 +951,8 @@ def run_evidence_nomination(
             output_dir / "mechanism_validation.md",
             output_dir / "mechanism_validation.pdf",
             output_dir / "evidence_provenance.json",
+            output_dir / "hepg2_validation_plan.md",
+            output_dir / "nomination_contract.json",
             output_dir / "machine_readable_report.json",
             output_dir / "manifest.json",
         ],

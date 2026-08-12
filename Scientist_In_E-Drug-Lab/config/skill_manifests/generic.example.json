@@ -1,0 +1,43 @@
+{
+  "schema_version": "e-drug-lab.skill-manifest/v1",
+  "task_id": "replace-with-task-id",
+  "skill": "replace-with-canonical-skill",
+  "stage": "replace-with-stage",
+  "campaign_root": ".",
+  "inputs": {
+    "input_file": "inputs/input.dat"
+  },
+  "outputs": [
+    {
+      "path": "outputs/result.dat",
+      "required": true
+    },
+    {
+      "path": "reports/stage.json",
+      "required": true,
+      "json": true
+    }
+  ],
+  "resources": {
+    "cpu": 1,
+    "gpu": null,
+    "timeout_seconds": 172800
+  },
+  "validation": {
+    "required_outputs": ["outputs/result.dat", "reports/stage.json"]
+  },
+  "reporting": {
+    "aggregate_report": "reports/AUTOPILOT_REPORT.md",
+    "section": "replace-with-stage",
+    "language": "zh"
+  },
+  "command": [
+    "<existing-tool>",
+    "--input",
+    "{campaign_root}/inputs/input.dat",
+    "--output",
+    "{campaign_root}/outputs/result.dat",
+    "--report",
+    "{campaign_root}/reports/stage.json"
+  ]
+}

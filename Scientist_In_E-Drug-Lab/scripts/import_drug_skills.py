@@ -146,6 +146,8 @@ CATEGORIES: list[tuple[list[str], str]] = [
 ]
 
 SEARCH_ROOTS = [PROJECT_SKILLS]
+EXCLUDED_ASSET_DIRS = {"__pycache__", "hsd17b13_reference"}
+EXCLUDED_ASSET_FILES = {"WORKFLOW.md", "WORKFLOW_8G9V_T001.md"}
 
 
 def _canonical_skill_dirs() -> list[tuple[str, str, Path]]:
@@ -221,21 +223,33 @@ def _link_skill(src: Path, dest: Path, *, mode: str) -> str:
     if dest.exists() or dest.is_symlink():
         _remove_path(dest)
     if mode == "copy":
+        def ignore_assets(current: str, names: list[str]) -> set[str]:
+            ignored = {
+                name
+                for name in names
+                if name in EXCLUDED_ASSET_DIRS
+                or name in EXCLUDED_ASSET_FILES
+                or name.endswith(".pyc")
+            }
+            if Path(current).resolve() == source:
+                ignored.update(set(names) - publishable)
+            return ignored
+
         shutil.copytree(
             source,
             dest,
             symlinks=True,
-            ignore=lambda current, names: (
-                set(names) - publishable
-                if nested_children and Path(current).resolve() == source
-                else set()
-            ),
+            ignore=ignore_assets,
         )
         return "copied-filtered" if nested_children else "copied"
     if nested_children:
         dest.mkdir()
         for child in source.iterdir():
-            if child.name not in publishable:
+            if (
+                child.name not in publishable
+                or child.name in EXCLUDED_ASSET_DIRS
+                or child.name in EXCLUDED_ASSET_FILES
+            ):
                 continue
             (dest / child.name).symlink_to(child.resolve(), target_is_directory=child.is_dir())
         return "symlinked-filtered"

@@ -43,6 +43,7 @@ def cmd_run(
     evidence_profile: str = typer.Option("generic", "--evidence-profile"),
     online_enrichment_limit: int = typer.Option(50, "--online-enrichment-limit", min=0),
     library_source: str = typer.Option("official_sdf_library", "--library-source"),
+    language: str = typer.Option("zh", "--language", help="Human report language: zh (default) or en"),
 ) -> None:
     """Run target discovery, or E0-E6 nomination when a library is supplied."""
     out = run_pipeline(
@@ -59,6 +60,7 @@ def cmd_run(
         evidence_profile=evidence_profile,
         online_enrichment_limit=online_enrichment_limit,
         library_source=library_source,
+        language=language,
     )
     rprint(f"[green]OK[/green] wrote run to {out}")
 
@@ -69,6 +71,7 @@ def cmd_evaluate_target(
     uniprot: Optional[str] = typer.Option(None, "--uniprot"),
     output: Path = typer.Option(PKG_ROOT / "runs", "--output"),
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Report language: zh (default) or en"),
 ) -> None:
     out = evaluate_single_target(
         gene=gene,
@@ -87,9 +90,10 @@ def cmd_offline_demo(
     ),
     output: Path = typer.Option(PKG_ROOT / "runs", "--output"),
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Report language: zh (default) or en"),
 ) -> None:
     """Fully offline reproducible demo (no network required)."""
-    out = run_offline_demo(fixture, output, competition_config=competition)
+    out = run_offline_demo(fixture, output, competition_config=competition, language=language)
     rprint(f"[green]OK[/green] offline demo -> {out}")
 
 
@@ -108,11 +112,12 @@ def cmd_chat() -> None:
 @app.command("competition-brief")
 def cmd_competition_brief(
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Brief language: zh (default) or en"),
 ) -> None:
     """Print AI4S life-science brief (dual readout, scoring, resources). Offline."""
     from masld_agent.tools.ai4s_brief import format_competition_brief, load_ai4s_config
 
-    print(format_competition_brief(load_ai4s_config(competition)))
+    print(format_competition_brief(load_ai4s_config(competition), language=language))
 
 
 @app.command("dual-readout-lint")
@@ -159,6 +164,7 @@ def cmd_validate_submission(
     run_dir: Path = typer.Option(..., "--run-dir"),
     top10_csv: Optional[Path] = typer.Option(None, "--top10-csv"),
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Report language: zh (default) or en"),
 ) -> None:
     """Validate run artifacts against AI4S submission checklist."""
     import json
@@ -168,7 +174,7 @@ def cmd_validate_submission(
     result = validate_submission(
         run_dir, top10_csv=top10_csv, competition_config=competition
     )
-    md = write_validation_report(run_dir, result)
+    md = write_validation_report(run_dir, result, language=language)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     rprint(f"[cyan]report[/cyan] {md}")
     raise SystemExit(0 if result["ok"] else 1)
@@ -178,11 +184,12 @@ def cmd_validate_submission(
 def cmd_hepg2_plan(
     run_dir: Path = typer.Option(..., "--run-dir"),
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Plan language: zh (default) or en"),
 ) -> None:
     """Write HepG2-FFA dual-readout validation plan skeleton for a run."""
     from masld_agent.submission import write_hepg2_plan
 
-    path = write_hepg2_plan(run_dir, competition_config=competition)
+    path = write_hepg2_plan(run_dir, competition_config=competition, language=language)
     rprint(f"[green]OK[/green] {path}")
 
 
@@ -192,6 +199,7 @@ def cmd_pack_submission(
     output: Path = typer.Option(..., "--output"),
     top10_csv: Optional[Path] = typer.Option(None, "--top10-csv"),
     competition: Path = typer.Option(DEFAULT_COMPETITION, "--competition"),
+    language: str = typer.Option("zh", "--language", help="Bundle language: zh (default) or en"),
 ) -> None:
     """Pack run + AI4S checklist/template into a submission zip."""
     from masld_agent.submission import pack_submission
@@ -201,6 +209,7 @@ def cmd_pack_submission(
         output,
         top10_csv=top10_csv,
         competition_config=competition,
+        language=language,
     )
     rprint(f"[green]OK[/green] bundle -> {path}")
 
@@ -309,6 +318,7 @@ def cmd_evidence_nominate(
     offline_replay: bool = typer.Option(False, "--offline-replay"),
     online_enrichment_limit: int = typer.Option(50, "--online-enrichment-limit", min=0),
     library_source: str = typer.Option("official_sdf_library", "--library-source"),
+    language: str = typer.Option("zh", "--language", help="Report language: zh (default) or en"),
 ) -> None:
     """Run the complete E0-E6 evidence envelope and nominate compounds."""
     from masld_agent.evidence_pipeline import run_evidence_nomination
@@ -323,6 +333,7 @@ def cmd_evidence_nominate(
         offline_replay=offline_replay,
         online_enrichment_limit=online_enrichment_limit,
         library_source=library_source,
+        language=language,
     )
     _json_print({"status": "completed", "output_dir": str(result)})
 
@@ -550,6 +561,7 @@ def cmd_platform_catalog(
     system: Optional[str] = typer.Option(None, "--system", help="dd|ed|sz"),
     entry_id: Optional[str] = typer.Option(None, "--id"),
     stage: Optional[str] = typer.Option(None, "--stage"),
+    as_json: bool = typer.Option(False, "--json", help="Emit machine-readable JSON for shell adapters."),
 ) -> None:
     """Query DiffDynamic / e-drug-lab / Schrödinger capability catalog."""
     from masld_agent.platform.catalog import format_entry, get_entry, list_entries, summarize_systems
@@ -559,6 +571,9 @@ def cmd_platform_catalog(
         if not e:
             rprint(f"[red]unknown id[/red] {entry_id}")
             raise SystemExit(1)
+        if as_json:
+            _json_print({"status": "ok", "entry": e})
+            return
         print(format_entry(e))
         return
     summary = summarize_systems()
@@ -571,6 +586,27 @@ def cmd_platform_catalog(
             "entries": entries,
         }
     )
+
+
+@app.command("platform-resolve")
+def cmd_platform_resolve(
+    entry_id: str = typer.Option(..., "--id"),
+    field: Optional[str] = typer.Option(None, "--field"),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Resolve one registered capability against the current environment."""
+    from masld_agent.platform.catalog import get_entry, resolve_entry
+
+    try:
+        value = resolve_entry(entry_id, field=field)
+        entry = get_entry(entry_id)
+    except (KeyError, ValueError) as exc:
+        rprint(f"[red]{exc}[/red]")
+        raise SystemExit(1) from exc
+    if as_json:
+        _json_print({"status": "ok", "id": entry_id, "field": field, "value": value, "entry": entry})
+    else:
+        print(value)
 
 
 @app.command("platform-health")

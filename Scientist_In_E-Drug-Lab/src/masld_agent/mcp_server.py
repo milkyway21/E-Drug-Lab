@@ -23,7 +23,9 @@ def main() -> None:
     mcp = FastMCP("scientist-in-e-drug-lab")
 
     @mcp.tool()
-    def masld_offline_demo(fixture: str = "", output: str = "") -> str:
+    def masld_offline_demo(
+        fixture: str = "", output: str = "", language: str = "zh"
+    ) -> str:
         try:
             fix = resolve_under(
                 PKG_ROOT,
@@ -37,11 +39,16 @@ def main() -> None:
             )
         except UnsafePathError as exc:
             return json.dumps({"status": "error", "error": str(exc)})
-        path = run_offline_demo(fix, out)
+        path = run_offline_demo(fix, out, language=language)
         return json.dumps({"status": "ok", "output_dir": str(path)})
 
     @mcp.tool()
-    def masld_run(disease: str = "MASLD", top_targets: int = 10, online: bool = False) -> str:
+    def masld_run(
+        disease: str = "MASLD",
+        top_targets: int = 10,
+        online: bool = False,
+        language: str = "zh",
+    ) -> str:
         try:
             out_root = resolve_under(
                 PKG_ROOT,
@@ -53,17 +60,20 @@ def main() -> None:
                 disease=DiseaseScope(disease),
                 top_targets=top_targets,
                 online=online,
+                language=language,
             )
         except (UnsafePathError, ValueError) as exc:
             return json.dumps({"status": "error", "error": str(exc)})
         return json.dumps({"status": "ok", "output_dir": str(path)})
 
     @mcp.tool()
-    def masld_competition_brief() -> str:
-        return format_competition_brief(load_ai4s_config())
+    def masld_competition_brief(language: str = "zh") -> str:
+        return format_competition_brief(load_ai4s_config(), language=language)
 
     @mcp.tool()
-    def masld_validate_submission(run_dir: str = "", top10_csv: str = "") -> str:
+    def masld_validate_submission(
+        run_dir: str = "", top10_csv: str = "", language: str = "zh"
+    ) -> str:
         try:
             rd = resolve_under(
                 PKG_ROOT,
@@ -76,11 +86,13 @@ def main() -> None:
         except UnsafePathError as exc:
             return json.dumps({"status": "error", "error": str(exc)})
         result = validate_submission(rd, top10_csv=t10)
-        write_validation_report(rd, result)
+        write_validation_report(rd, result, language=language)
         return json.dumps({"status": "ok", **result}, default=str)
 
     @mcp.tool()
-    def masld_pack_submission(run_dir: str = "", output: str = "") -> str:
+    def masld_pack_submission(
+        run_dir: str = "", output: str = "", language: str = "zh"
+    ) -> str:
         try:
             rd = resolve_under(
                 PKG_ROOT,
@@ -94,7 +106,7 @@ def main() -> None:
             )
         except UnsafePathError as exc:
             return json.dumps({"status": "error", "error": str(exc)})
-        path = pack_submission(rd, out)
+        path = pack_submission(rd, out, language=language)
         return json.dumps({"status": "ok", "zip": str(path)})
 
     @mcp.tool()

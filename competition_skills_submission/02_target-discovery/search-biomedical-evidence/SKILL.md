@@ -54,3 +54,61 @@ Hard gates:
 
 Read [`references/source-routing.md`](references/source-routing.md) before selecting databases
 or constructing the evidence table.
+
+## Universal Manifest Invocation
+
+The manifest supplies normalized identity, query plan, source allowlist, cache policy, and
+output paths. Use one ordered step per source family or query phase so a partial search can
+resume without repeating successful requests.
+
+```bash
+bash scripts/run_skill.sh --skill search-biomedical-evidence --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill search-biomedical-evidence --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill search-biomedical-evidence --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill search-biomedical-evidence --manifest MANIFEST --resume --execute --confirm
+```
+
+Persist normalized query text, source, filters, access timestamp, result count, included
+IDs, excluded IDs, and failure reason. Retry only the failed query or source; do not rerun
+the complete search because a later report step failed. Deduplicate by stable identifiers
+before synthesis and keep animal, cell, human, computational, and clinical evidence apart.
+## Concrete Operation Procedure
+
+Create the seed card once, then run one registered search step per source family:
+
+```bash
+TARGET_ID="TARGET_GENE_OR_PROTEIN"
+DISEASE="DISEASE_OR_PHENOTYPE"
+TASK_ROOT="tasks/${TARGET_ID}/01_target"
+mkdir -p "$TASK_ROOT"
+masld-agent evidence target --gene "$TARGET_ID" --disease "$DISEASE" --online \
+  --output "$TASK_ROOT/target_evidence.json"
+```
+
+Call the search skill with target identifiers, synonyms, organism, tissue/cell context, intervention question, source allowlist, and output directory. Save normalized query, source, access date, result count, included IDs, excluded IDs, and failure reason. A zero-result query is retained as an evidence gap; retry only the failed source step.
+
+## Standalone Command-Line Procedure
+
+The generic evidence route uses official HTTP APIs and writes raw responses before
+interpretation. Use a URL-encoded query and preserve the returned identifiers.
+
+```bash
+TARGET_ID="TARGET_GENE_OR_PROTEIN"
+DISEASE="DISEASE_OR_PHENOTYPE"
+OUT="$(realpath -m outputs/01_evidence)"
+mkdir -p "$OUT/raw"
+QUERY="${TARGET_ID} AND ${DISEASE}"
+curl --fail --silent --show-error --location \
+  --get 'https://www.ebi.ac.uk/europepmc/webservices/rest/search' \
+  --data-urlencode "query=${QUERY}" --data 'format=json' --data 'pageSize=100' \
+  -o "$OUT/raw/europepmc.json"
+curl --fail --silent --show-error --location \
+  --get 'https://api.crossref.org/works' \
+  --data-urlencode "query=${QUERY}" --data 'rows=20' \
+  -o "$OUT/raw/crossref.json"
+```
+
+For NCBI, use E-utilities with the approved API key/rate policy. Normalize each claim
+with source ID, model system, intervention direction, endpoint, effect direction, and
+access time; keep contradictory and zero-result responses rather than filling them from
+memory. Raw JSON is evidence provenance, not a final biological conclusion.

@@ -5,54 +5,94 @@ description: "Run the project capability harness for platform APIs, registered a
 
 # E-Drug Capability Check
 
-验证 Web API / Agent 插件 / UI 总线是否按契约工作。
+## Concrete Operation Procedure
 
-## 运行
+Run the capability harness before a new task or backend change:
 
 ```bash
-# Run from the Scientist_In_E-Drug-Lab project root.
-.venv/bin/python scripts/capability_harness.py \
-  --api-base http://127.0.0.1:8001 \
-  --cases scripts/capability_cases/core.yaml \
-         scripts/capability_cases/tool_matrix_templates.yaml
+masld-agent platform-health
+masld-agent platform-catalog --system dd
+masld-agent platform-catalog --system ed
+masld-agent platform-catalog --system sz
+PROJECT_ROOT="${PROJECT_ROOT:?checkout root containing scripts/}"
+PYTHON="${PYTHON:-python3}"
+"$PYTHON" "$PROJECT_ROOT/scripts/capability_harness.py" \
+  --api-base "${EDRUG_API_BASE:-http://127.0.0.1:8001}" \
+  --cases "$PROJECT_ROOT/scripts/capability_cases/core.yaml" "$PROJECT_ROOT/scripts/capability_cases/tool_matrix_templates.yaml"
 ```
 
-## 产出
+Save the report and classify each capability PASS/PARTIAL/GATE/FAIL. Resolve only the
+registered executable IDs named by a failed stage. A GATE means missing path, license,
+input, GPU, or confirmation; it is not permission to invent a result.
 
-- `memory/TOOL_CAPABILITY.md`
-- `reports/capability_harness_<ts>.md`
-- 可选：软追加 `memory/GLOBAL_HISTORY.md`
+Verify the Web API, agent plugin, and UI bus against their declared contracts.
 
-## 评分
+## Outputs and evaluation
 
-`PASS | PARTIAL | GATE | FAIL`
+Write `memory/TOOL_CAPABILITY.md` and `reports/capability_harness_<timestamp>.md`; optionally
+append a non-destructive entry to `memory/GLOBAL_HISTORY.md`. Classify each case as
+`PASS`, `PARTIAL`, `GATE`, or `FAIL`.
 
-- Desmond：`stub`/`假 completed` → **FAIL**
-- `unavailable` / `gated` / template not-run-yet → **GATE**
-- dry_prep completed（engine=schrodinger_desmond）→ **PASS**（≠ production）
+- A Desmond `stub` or false `completed` response is **FAIL**.
+- `unavailable`, `gated`, or not-yet-run templates are **GATE**.
+- `dry_prep` completed with `engine=schrodinger_desmond` is **PASS** for preparation only,
+  not production execution.
+- A `GATE` means that a path, license, input, GPU, or confirmation is missing; list the
+  human action required and never fabricate a scientific result.
 
-## GATE 对人类含义
+## Harness coverage
 
-**GATE** = 待人类确认/补齐（confirm、路径、GPU/license、输入），**不是** agent「做不到」。
-报表遇 GATE 时须列出人类需提供项，可继续部分（dry_prep、探针）先做。
+| Covered | Not covered |
+|---|---|
+| HTTP `POST/GET /api/v1/affinity/md` dry-prep | A real Hermes chat or LLM session |
+| Python `schrodinger_md_submit` and Hermes handler dry-prep | Production `funnel-desmond-*` or `dd-md-desmond` execution |
+| Hermes `register()` tool registration | Production smoke/short runs requiring confirmation and GPU/license |
+| Skill files plus conda/`SCHRODINGER` probes | `conda activate` or `conda create` for Desmond |
 
+## Environment: Desmond versus conda
 
-## Harness 覆盖边界（必读）
+- Desmond / `schrodinger_md_*`: resolve the registered `sz.bin.run` and
+  `sz.bin.multisim` entries first. Do not create a conda environment for MD or hard-code
+  an installation path.
+- conda **`diffdynamic`** is for DiffDynamic only and is unrelated to Desmond multisim.
 
-| 已测 | 未测 |
-|------|------|
-| HTTP `POST/GET /api/v1/affinity/md` dry_prep | 真实 Hermes chat / LLM 会话 |
-| Python `schrodinger_md_submit` / Hermes handler dry_prep | 执行 `funnel-desmond-*` / `dd-md-desmond` SKILL.md 正文 |
-| Hermes `register()` 是否注册 MD tools | 生产 smoke/short（需 confirm + GPU/license） |
-| skill 文件存在 + conda/`SCHRODINGER` 文档探针 | `conda activate` / `conda create`（Desmond **不需要**） |
+## Related interfaces
 
-## 环境：Desmond vs conda
-
-- Desmond / `schrodinger_md_*`：使用已配置且可读的 **`$SCHRODINGER`**，**不要**为 MD 建 conda env，也不要硬编码安装路径。
-- conda **`diffdynamic`**：仅 DiffDynamic；与 Desmond multisim 无关。
-
-## 相关
-
-- Agent tools: `schrodinger_md_submit`, `schrodinger_md_status`（`hermes_plugin`）
-- Playbook: `memory/MAIN_PLAYBOOK.md` § capability check
+- Agent tools: `schrodinger_md_submit`, `schrodinger_md_status` in `hermes_plugin`
+- Playbook: `memory/MAIN_PLAYBOOK.md`, capability-check section
 - Skills: `funnel-desmond-short-md`, `funnel-desmond-long-md`, `dd-md-desmond`, `funnel-campaign-memory`
+
+## Universal Manifest Invocation
+
+Use this preflight skill for any target and local environment. Declare capability
+inputs, probe/status outputs, resource policy, validation, reporting, and an
+explicit argv `command` or ordered `steps`; no machine or target is assumed.
+
+```bash
+bash scripts/run_skill.sh --skill edrug-capability-check --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill edrug-capability-check --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill edrug-capability-check --manifest MANIFEST --status
+bash scripts/run_skill.sh --skill edrug-capability-check --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill edrug-capability-check --manifest MANIFEST --resume --execute --confirm
+```
+
+Treat unavailable tools as a capability gate, preserve probe logs, and do not
+report planned resources as completed computation.
+
+## Standalone Command-Line Procedure
+
+Run the capability harness directly from the project root, with no manifest. Set the
+project root and API endpoint explicitly so the command is portable:
+
+```bash
+PROJECT_ROOT="${PROJECT_ROOT:?checkout root containing scripts/}"
+PYTHON="${PYTHON:-python3}"
+API_BASE="${EDRUG_API_BASE:-http://127.0.0.1:8001}"
+"$PYTHON" "$PROJECT_ROOT/scripts/capability_harness.py" \
+  --api-base "$API_BASE" --report-dir "${REPORT_DIR:-$PROJECT_ROOT/reports}"
+```
+
+Record the selected case file, backend versions, environment probes, exact API responses,
+and `PASS/PARTIAL/GATE/FAIL` result. A disabled or unavailable case is a capability gate,
+not evidence that a scientific stage completed. Re-run only the failed or gated case
+after the external capability changes.

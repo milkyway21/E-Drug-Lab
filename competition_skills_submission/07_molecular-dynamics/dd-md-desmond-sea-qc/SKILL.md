@@ -5,6 +5,25 @@ description: Run or resume official Schrödinger Simulation Event Analysis on a 
 
 # Desmond SEA QC
 
+## Concrete Operation Procedure
+
+Validate production before SEA and resolve the Schrödinger Python launcher:
+
+```bash
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
+test -s "$CMS" && test -d "$TRAJECTORY_ROOT"
+test "$(jq -r '.valid' "$VALIDATION_JSON")" = true
+"$RUN" python3 skills/molecular-dynamics/desmond-md-campaign/scripts/run_sea.py \
+  --run-launcher "$RUN" \
+  --trajectory-root "$TRAJECTORY_ROOT" --output-root "$CAMPAIGN_ROOT/sea" \
+  --ids "$MOLECULE_ID" --jobs "$CPU_JOBS" --protein-asl "$PROTEIN_ASL" \
+  --ligand-asl "$LIGAND_ASL" --official-report
+```
+
+For another layout use `--sources-csv` with `molecule_id,cms,trajectory`. Parse numeric
+`PL_RMSD.dat`, derive the late window from observed frames, calculate contact occupancy
+by unique frame, and write per-molecule PASS/FAIL. SEA cannot rescue an invalid trajectory.
+
 Use the bundled `desmond-md-campaign/scripts/run_sea.py` adapter. It preserves
 the official `event_analysis.py` → `analyze_simulation.py` → report sequence,
 supports resumption, and avoids target-specific scripts.
@@ -27,7 +46,9 @@ that residue type. It is not a universal ligand selector.
 For the standard `attempt_XX` layout:
 
 ```bash
-"$SCHRODINGER/run" python3 skills/desmond-md-campaign/scripts/run_sea.py \
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
+"$RUN" python3 skills/desmond-md-campaign/scripts/run_sea.py \
+  --run-launcher "$RUN" \
   --trajectory-root <trajectory_root> \
   --output-root <analysis_root>/sea \
   --ids <ID1> <ID2> \
@@ -93,3 +114,47 @@ that leaves the intended pocket.
 
 Report after the stage: validated inputs, exact commands/backend, frame counts,
 generated artifacts, failures/retries, and a per-molecule PASS/FAIL decision.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill dd-md-desmond-sea-qc --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill dd-md-desmond-sea-qc --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill dd-md-desmond-sea-qc --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill dd-md-desmond-sea-qc --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest supplies validated CMS/DTR sources, explicit protein/ligand ASL, SEA command,
+output directory, CPU resources, and report artifacts. The launcher does not infer a
+residue selector, frame count, trajectory interval, or target label.
+
+## Standalone Command-Line Procedure
+
+Run the official SEA sequence only on a hard-validated CMS/DTR pair. Use the bundled
+adapter with an installed Schrödinger `run` launcher:
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+RUN="${RUN:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="${SCHRODINGER:-$(masld-agent platform-resolve --id sz.env)}"
+  RUN="${RUN:-$(masld-agent platform-resolve --id sz.bin.run)}"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+RUN="${RUN:-$SCHRODINGER/run}"
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+CMS="$(realpath inputs/validated_final.cms)"
+TRJ="$(realpath inputs/validated_trj)"
+OUT="$(realpath -m outputs/sea/MOLECULE_ID)"
+mkdir -p "$OUT"
+CUDA_VISIBLE_DEVICES="" SCHRODINGER_CUDA_VISIBLE_DEVICES="" \
+  "$RUN" python3 \
+  "$SKILLS_ROOT/molecular-dynamics/desmond-md-campaign/scripts/run_sea.py" \
+  --run-launcher "$RUN" --sources-csv "$OUT/sea_sources.csv" \
+  --output-root "$OUT" --protein-asl "${PROTEIN_ASL:?explicit protein ASL}" \
+  --ligand-asl "${LIGAND_ASL:?explicit ligand ASL}" --official-report
+```
+
+The CSV must contain `molecule_id,cms,trajectory`. Check numeric RMSD rows, actual frame
+counts, contact occupancy denominator, and report artifacts; SEA cannot rescue invalid
+trajectory topology or an incorrect ligand selector.

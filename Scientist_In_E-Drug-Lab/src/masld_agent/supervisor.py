@@ -26,6 +26,7 @@ from masld_agent.reporting import write_standard_reports
 from masld_agent.scoring import load_weights, novelty_score_from_class, score_target
 from masld_agent.submission import write_ai4s_readme
 from masld_agent.tools.competition import parse_competition
+from masld_agent.tools.ai4s_brief import normalize_output_language
 from masld_agent.tools.docking import run_docking
 from masld_agent.tools.pdb import pocket_from_fixture, rank_structures, structure_from_fixture
 from masld_agent.tools.pubchem import ligand_from_fixture
@@ -163,6 +164,7 @@ def run_offline_demo(
     *,
     competition_config: Optional[Path] = None,
     disease: DiseaseScope = DiseaseScope.MASLD,
+    language: str = "zh",
 ) -> Path:
     run_id = _now_id()
     out = output_dir / run_id
@@ -272,8 +274,15 @@ def run_offline_demo(
                     }
                 )
 
-    write_standard_reports(out, profile=profile, hypotheses=hypotheses, offline=True)
-    write_ai4s_readme(out)
+    language = normalize_output_language(language)
+    write_standard_reports(
+        out,
+        profile=profile,
+        hypotheses=hypotheses,
+        offline=True,
+        language=language,
+    )
+    write_ai4s_readme(out, language=language)
     _append_event(events, {"event": "completed", "output": str(out)})
     return out
 
@@ -293,6 +302,7 @@ def run_pipeline(
     evidence_profile: str = "generic",
     online_enrichment_limit: int = 50,
     library_source: str = "official_sdf_library",
+    language: str = "zh",
 ) -> Path:
     """Run target discovery or route a supplied compound library through E0-E6."""
     if library_path is not None:
@@ -310,6 +320,7 @@ def run_pipeline(
             offline_replay=offline_replay,
             online_enrichment_limit=online_enrichment_limit,
             library_source=library_source,
+            language=language,
         )
     run_id = _now_id()
     out = output_dir / run_id
@@ -474,8 +485,9 @@ def run_pipeline(
         hypotheses=hypotheses,
         offline=not online,
         extra_warnings=[] if online else ["run_used_fixtures_or_partial_online"],
+        language=language,
     )
-    write_ai4s_readme(out)
+    write_ai4s_readme(out, language=language)
     _append_event(events, {"event": "completed", "output": str(out)})
     return out
 

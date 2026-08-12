@@ -21,9 +21,10 @@ the task manifest.
 ## Run
 
 ```bash
-: "${SCHRODINGER:?SCHRODINGER is required}"
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
 
-"$SCHRODINGER/run" python3 skills/desmond-md-campaign/scripts/run_sea.py \
+"$RUN" python3 skills/desmond-md-campaign/scripts/run_sea.py \
+  --run-launcher "$RUN" \
   --sources-csv <stage_dir>/sea_sources.csv \
   --output-root <stage_dir>/sea \
   --jobs <cpu_jobs> \

@@ -5,6 +5,30 @@ description: Run reproducible pose-seeded library screening with Morgan, Schröd
 
 # Pose-Seeded Library Screening
 
+## Concrete Operation Procedure
+
+Freeze queries and library identity before choosing a screening arm:
+
+```bash
+masld-agent funnel validate --manifest "$MANIFEST" --stage H2
+SHAPE="$(masld-agent platform-resolve --id sz.bin.quick_shape)"
+SHAPE_GPU="$(masld-agent platform-resolve --id sz.bin.shape_screen_gpu)"
+ONED="$(masld-agent platform-resolve --id sz.bin.oned_screen)"
+JOBCONTROL="$(masld-agent platform-resolve --id sz.bin.jobcontrol)"
+"$SHAPE" -h; "$SHAPE_GPU" -h; "$ONED" -h; "$JOBCONTROL" -h
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+PYTHON="${PYTHON:-python3}"
+"$PYTHON" "$SKILLS_ROOT/featurehit-finding/rdkit/scripts/similarity_search.py" \
+  "$QUERY_POSE_SDF" "$LIBRARY_SDF" --method morgan --radius 2 --bits 2048 \
+  --metric tanimoto --output "$CAMPAIGN_ROOT/03_h3/morgan_hits.csv"
+```
+
+Use QuickShape for `.1dbin`, the registered GPU tool for `.bin`, and keep the two ranked
+arms separate until fusion. Treat Job Control submission as incomplete until the exact
+job finishes and Shape scores parse. Deduplicate by official library ID and canonical
+structure, then write exactly the planned H3 rows and SDF records. Preserve query parent,
+pose, source-library index, backend parameters, and rejection counts for ADMET.
+
 Use this skill when real docked poses seed a fixed compound-library search and the
 result must be frozen to an auditable exact-N set. It covers 2D Morgan/FeatureHit,
 Schrödinger Shape routes, parent/state lineage, asynchronous JobDJ handling, and
@@ -74,7 +98,7 @@ small `keep/reduce` caps. Require numeric `r_phase_Shape_Sim` in the returned hi
 A launcher exit code of zero or a printed `JobId:` means submitted, not completed.
 Parse the exact job ID and wait with the official interface:
 
-`$SCHRODINGER/jobcontrol -wait -int 300 <job_id>`
+`"$JOBCONTROL" -wait -int 300 <job_id>` after resolving `sz.bin.jobcontrol`.
 
 Completion requires all of:
 
@@ -162,3 +186,81 @@ without using raw SMILES as the only key.
   non-interactive Glide, output-CWD recovery, and resume rules.
 - `references/dual-arm-exact-freeze.md` — Morgan/QuickShape parsing and exact-N fusion
   schema/checklist.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest explicitly names frozen query poses, source library, backend arm(s), output
+schema, exact-N policy, CPU/GPU resources, and report path. It must declare whether the
+3D arm is `shape_screen_gpu`, `quick_shape`, or another installed Phase-compatible tool;
+the skill never infers that choice from a file extension alone.
+
+## Standalone Command-Line Procedure
+
+First extract ligand-only queries from the Glide pose viewer. A PV file contains receptor
+and ligand atoms, so `structconvert` alone is not a sufficient extraction step. Use
+`structsubset` to select records when needed, then the bundled generic Schrödinger Python
+script to select ligand atoms by an explicit ASL and preserve pose properties.
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+if [ -z "${SCHRODINGER}" ] && command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="$(masld-agent platform-resolve --id sz.env)"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+RUN="${RUN:-}"
+STRUCTSUBSET="${STRUCTSUBSET:-}"
+STRUCTCONVERT="${STRUCTCONVERT:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  RUN="${RUN:-$(masld-agent platform-resolve --id sz.bin.run)}"
+  STRUCTSUBSET="${STRUCTSUBSET:-$(masld-agent platform-resolve --id sz.bin.structsubset)}"
+  STRUCTCONVERT="${STRUCTCONVERT:-$(masld-agent platform-resolve --id sz.bin.structconvert)}"
+fi
+RUN="${RUN:-$SCHRODINGER/run}"
+STRUCTSUBSET="${STRUCTSUBSET:-$SCHRODINGER/utilities/structsubset}"
+STRUCTCONVERT="${STRUCTCONVERT:-$SCHRODINGER/utilities/structconvert}"
+SKILLS_ROOT="${SKILLS_ROOT:?root of the installed shared skills}"
+POSE_VIEWER="$(realpath inputs/glide_pv.maegz)"
+OUT="$(realpath -m outputs/03_h3/queries)"
+mkdir -p "$OUT"
+SELECTED="$POSE_VIEWER"
+if [ -n "${POSE_RECORDS:-}" ]; then
+  SELECTED="$OUT/selected_records.maegz"
+  "$STRUCTSUBSET" "$POSE_VIEWER" "$SELECTED" -n "$POSE_RECORDS"
+fi
+"$RUN" python3 \
+  "$SKILLS_ROOT/featurehit-finding/pose-library-screening/scripts/extract_ligand_records.py" \
+  --input "$SELECTED" \
+  --output "$OUT/query_ligands.sdf" \
+  --ligand-asl "${LIGAND_ASL:?explicit ligand ASL, for example a residue or property selector}" \
+  --summary "$OUT/query_ligands.summary.json"
+```
+
+If no record subset is required, pass the PV directly to the extractor and omit the
+`structsubset`/`structconvert` probe. The output summary must show the number of records
+seen, written, and rejected. Verify ligand atom count, non-empty 3D coordinates, parent
+ID/pose ID properties, and one query per frozen parent before Morgan, Phase, or Shape.
+
+For a topology arm use the shared RDKit utility; for a `.1dbin` use QuickShape or
+`oned_screen`; for a `.bin` use `shape_screen_gpu run`. Keep each ranked table separate
+until exact-N fusion and retrieve final structures from the original frozen library.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest explicitly names frozen query poses, source library, backend arm(s), output
+schema, exact-N policy, CPU/GPU resources, and report path. It must declare whether the
+3D arm is `shape_screen_gpu`, `quick_shape`, or another installed Phase-compatible tool;
+the skill never infers that choice from a file extension alone.

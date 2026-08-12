@@ -9,12 +9,15 @@ It does **not** change agent identity (see `config/SOUL.md`: cross-disease drug 
 |--------|------|-------------------|
 | **DiffDynamic** | Pocket-conditioned molecule generation | e-drug-lab `DiffDynamicRunner` → conda `diffdynamic` |
 | **e-drug-lab backend** | Service wrappers + Affinity APIs | Library import (HTTP optional / often down) |
-| **Schrödinger** | PrepWizard / LigPrep / Grid / Glide / QikProp / MMGBSA / IFD / Desmond | `schrodinger_service` → `/opt/schrodinger2023-3` |
+| **Schrödinger** | PrepWizard / LigPrep / Grid / Glide / QikProp / MMGBSA / IFD / Desmond | registry-resolved IDs such as `sz.bin.glide` |
 
-Authoritative machine catalog: [`catalog.yaml`](catalog.yaml). Query with:
+Authoritative machine catalog: [`catalog.yaml`](catalog.yaml). Query the registry before
+each execution with:
 
 ```bash
 masld-agent platform-catalog
+masld-agent platform-resolve --id sz.bin.glide
+masld-agent platform-resolve --id dd.script.sample
 masld-agent platform-health
 ```
 
@@ -47,8 +50,8 @@ masld-agent funnel autopilot-status --target-id HSD17B13
 
 ## Track H（HSD17B13 整体流程图）→ **master/child** skills
 
-规格：`/data/ye/整体流程图_三轮理解.md`  
-映射：`hsvpol/.trae/skills/FUNNEL_SKILL_MAP.md`  
+规格：task manifest and its declared flow definition
+映射：platform registry plus the master/child skill catalog
 默认入口：`drug-discovery-orchestrator`；执行子技能：`funnel-orchestrator`
 
 | Step | skill_ref | 计划规模 |
@@ -72,23 +75,19 @@ masld-agent funnel autopilot-status --target-id HSD17B13
 4. **Do not** use `backend/app/api/integrations/*` remote stubs as production.
 5. DDFast classic order (Track A): gate → denovo/scaffold → extract → dedup → QikProp → SP → XP → MMGBSA/IFD → rank.
 6. Track **H** inserts FeatureHit/Shape expand + HepG2 before refine docking; MD after MMGBSA; ends at `all-analysis` (not a legacy ddfast ranker).
-7. Schrödinger: absolute paths; LigPrep `-nt` ≠ threads; IFD **1:1 only** (no N×N).
+7. Schrödinger executables come from the registry; task inputs/outputs use manifest paths. LigPrep `-nt` ≠ threads; IFD **1:1 only** (no N×N).
 8. GPU policy for DDFast sampling: prefer GPUs **1–5**, split seeds to avoid OOM; smoke on **GPU0**.
 
 ## Quick env
 
 ```bash
-# DiffDynamic
-conda activate diffdynamic
-export PYTHONPATH=/data/ye/DiffDynamic:$PYTHONPATH
-cd /data/ye/DiffDynamic
-
-# Schrödinger
-export SCHRODINGER=/opt/schrodinger2023-3
-# optional large temp:
-# export SCHRODINGER_TEMPDIR=/data/.../schrodinger_tmp
+# DiffDynamic and Schrödinger executables are resolved from catalog IDs at runtime.
+DD_PYTHON="$(masld-agent platform-resolve --id dd.env --field python)"
+GLIDE="$(masld-agent platform-resolve --id sz.bin.glide)"
+DD_SAMPLE="$(masld-agent platform-resolve --id dd.script.sample)"
 ```
 
 ## When unsure
 
-Call `platform-catalog --id <id>` or `--system dd|ed|sz` before proposing commands.
+Call `platform-catalog --id <id>` or `--system dd|ed|sz` before proposing commands,
+then call `platform-resolve --id <id>` immediately before executing them.

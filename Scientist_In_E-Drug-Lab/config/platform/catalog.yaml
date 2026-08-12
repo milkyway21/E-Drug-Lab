@@ -79,6 +79,16 @@ entries:
     risks: [oom_if_huge_batch, prefer_gpus_1_to_5]
     skill_ref: [ddfast-02-fast-denovo]
 
+  - id: dd.script.prudent
+    system: dd
+    stage: generate
+    summary: run_prudent_generations.py native Prudent cumulative runner
+    inputs: [protein_path, ligand_path, config yml, gpu, output_dir]
+    outputs: [prudent PT and summary tables]
+    invoke: "python run_prudent_generations.py --protein_path R.pdb --ligand_path L.sdf --config CFG.yml --gpu N --output_dir OUT"
+    risks: [native runner retains its own Prudent policy; inspect help before launch]
+    skill_ref: [funnel-diffdynamic-prudent]
+
   - id: dd.script.eval
     system: dd
     stage: evaluate
@@ -294,37 +304,94 @@ entries:
     system: sz
     stage: binary
     summary: $SCHRODINGER/glide
-    env: {path: /opt/schrodinger2023-3/glide}
+    env: {relative: glide}
   - id: sz.bin.ligprep
     system: sz
     stage: binary
     summary: $SCHRODINGER/ligprep
-    env: {path: /opt/schrodinger2023-3/ligprep}
+    env: {relative: ligprep}
   - id: sz.bin.qikprop
     system: sz
     stage: binary
     summary: $SCHRODINGER/qikprop
-    env: {path: /opt/schrodinger2023-3/qikprop}
+    env: {relative: qikprop}
   - id: sz.bin.prime_mmgbsa
     system: sz
     stage: binary
     summary: $SCHRODINGER/prime_mmgbsa
-    env: {path: /opt/schrodinger2023-3/prime_mmgbsa}
+    env: {relative: prime_mmgbsa}
   - id: sz.bin.ifd
     system: sz
     stage: binary
     summary: $SCHRODINGER/ifd
-    env: {path: /opt/schrodinger2023-3/ifd}
+    env: {relative: ifd}
+  - id: sz.bin.quick_shape
+    system: sz
+    stage: binary
+    summary: Phase QuickShape query and 3D shape screening executable
+    env: {relative: quick_shape}
+    invoke: "$SCHRODINGER/quick_shape"
+  - id: sz.bin.shape_screen_gpu
+    system: sz
+    stage: binary
+    summary: Phase GPU Shape database generation and screening executable
+    env: {relative: shape_screen_gpu}
+    invoke: "$SCHRODINGER/shape_screen_gpu"
+  - id: sz.bin.oned_screen
+    system: sz
+    stage: binary
+    summary: Phase 1D database screening executable
+    env: {relative: oned_screen}
+    invoke: "$SCHRODINGER/oned_screen"
+  - id: sz.bin.phase_screen
+    system: sz
+    stage: binary
+    summary: Phase pharmacophore hypothesis screening executable
+    env: {relative: phase_screen}
+    invoke: "$SCHRODINGER/phase_screen"
+  - id: sz.bin.jobcontrol
+    system: sz
+    stage: binary
+    summary: Schrödinger Job Control executable for asynchronous jobs
+    env: {relative: jobcontrol}
+    invoke: "$SCHRODINGER/jobcontrol"
+  - id: sz.bin.multisim
+    system: sz
+    stage: binary
+    summary: Desmond multisim launcher
+    env: {relative: utilities/multisim}
+    invoke: "$SCHRODINGER/utilities/multisim"
   - id: sz.bin.prepwizard
     system: sz
     stage: binary
     summary: $SCHRODINGER/utilities/prepwizard
-    env: {path: /opt/schrodinger2023-3/utilities/prepwizard}
+    env: {relative: utilities/prepwizard}
   - id: sz.bin.run
     system: sz
     stage: binary
     summary: $SCHRODINGER/run python launcher
-    env: {path: /opt/schrodinger2023-3/run}
+    env: {relative: run}
+
+  - id: sz.bin.structconvert
+    system: sz
+    stage: binary
+    summary: Schrödinger structure format converter
+    env: {relative: utilities/structconvert}
+    invoke: "$SCHRODINGER/utilities/structconvert"
+
+  - id: sz.bin.structsubset
+    system: sz
+    stage: binary
+    summary: Schrödinger structure title or index subset extractor
+    env: {relative: utilities/structsubset}
+    invoke: "$SCHRODINGER/utilities/structsubset"
+
+  - id: sz.bin.proplister
+    system: sz
+    stage: binary
+    summary: Schrödinger structure-property CSV exporter
+    env: {relative: utilities/proplister}
+    invoke: "$SCHRODINGER/utilities/proplister"
 
   - id: sz.prepwizard
     system: sz

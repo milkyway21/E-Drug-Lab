@@ -5,6 +5,22 @@ description: Build, validate, launch, resume, and monitor Schrödinger Desmond m
 
 # Desmond Membrane MD Operations
 
+## Concrete Operation Procedure
+
+Resolve launchers, then inspect GPU availability and the current CMS:
+
+```bash
+MULTISIM="$(masld-agent platform-resolve --id sz.bin.multisim)"
+RUN="$(masld-agent platform-resolve --id sz.bin.run)"
+"$MULTISIM" -h; "$RUN" -h
+nvidia-smi --query-gpu=index,memory.used,memory.total,utilization.gpu --format=csv
+```
+
+Run project-owned system QC, compare component counts with this task's ranges, set both
+CUDA variables for one approved GPU, and launch a new `attempt_XX` using the declared MSJ.
+Inspect job/log/GPU ownership after submission and validate CMS/DTR duration/interval
+before SEA. Membrane type, ligand selector, and counts come from the current system.
+
 Use with `desmond-md-campaign` and the funnel short/long MD skills. This skill
 covers membrane-specific system QC and multi-GPU operations, not candidate
 selection policy.
@@ -31,8 +47,8 @@ the manifest-approved production duration. Do not rewrite equilibration blocks,
 thermostat/barostat settings, restraints, or recording interval ad hoc.
 
 Before launch, compare the rendered protocol with the selected template and
-record the diff. Require `$SCHRODINGER` to be set and readable; never replace it
-with a hard-coded installation path.
+record the diff. Resolve `sz.bin.run` and `sz.bin.multisim` from the platform
+registry; never replace them with a hard-coded installation path.
 
 ## Post-build system QC
 
@@ -88,3 +104,51 @@ interval, and the attempt validation JSON before SEA.
 
 Report after each phase: allocated resources, exact command/backend, job IDs,
 build QC, progress, retries, validation status, and output paths.
+
+## Universal Manifest Invocation
+
+```bash
+bash scripts/run_skill.sh --skill desmond-membrane-md-ops --manifest MANIFEST --dry-run
+bash scripts/run_skill.sh --skill desmond-membrane-md-ops --manifest MANIFEST --validate
+bash scripts/run_skill.sh --skill desmond-membrane-md-ops --manifest MANIFEST --execute --confirm
+bash scripts/run_skill.sh --skill desmond-membrane-md-ops --manifest MANIFEST --resume --execute --confirm
+```
+
+The manifest supplies membrane/system inputs, expected component ranges, explicit build
+or launch command, approved GPUs, timeout, and QC outputs. Counts and lipid types are
+task inputs, not universal thresholds; no target, membrane, ASL, or GPU is guessed.
+
+## Standalone Command-Line Procedure
+
+For a shared installation without a manifest, prepare a valid Desmond CMS/MSJ pair and
+launch the native `multisim` command. Membrane composition and force-field choices are
+task-specific and must be recorded before launch:
+
+```bash
+SCHRODINGER="${SCHRODINGER:-}"
+MULTISIM="${MULTISIM:-}"
+if command -v masld-agent >/dev/null 2>&1; then
+  SCHRODINGER="${SCHRODINGER:-$(masld-agent platform-resolve --id sz.env)}"
+  MULTISIM="${MULTISIM:-$(masld-agent platform-resolve --id sz.bin.multisim)}"
+fi
+SCHRODINGER="${SCHRODINGER:?set SCHRODINGER or make sz.env resolvable}"
+MULTISIM="${MULTISIM:-$SCHRODINGER/utilities/multisim}"
+CMS="${CMS:?prepared membrane complex CMS}"
+MSJ="${MSJ:?validated Desmond MSJ}"
+OUT_DIR="${OUT_DIR:-desmond_membrane}"
+mkdir -p "$OUT_DIR"
+test -s "$CMS" && test -s "$MSJ"
+JOBNAME="${JOBNAME:-membrane_md}"
+FINAL_CMS="$OUT_DIR/${JOBNAME}-out.cms"
+if [ -n "${GPU_ID:-}" ]; then
+  export CUDA_VISIBLE_DEVICES="$GPU_ID" SCHRODINGER_CUDA_VISIBLE_DEVICES="$GPU_ID"
+fi
+"$MULTISIM" -WAIT -HOST "${HOST_SPEC:-localhost}" -maxjob 1 -JOBNAME "$JOBNAME" \
+  -m "$MSJ" -o "$FINAL_CMS" "$CMS"
+```
+
+Use native `multisim -h` for version-specific flags, allocate GPUs through the scheduler
+or environment rather than embedding host paths, and wait on the returned job ID. Validate
+CMS plus trajectory duration, frame interval, monotonicity, component continuity, and
+required membrane/protein/ligand selections before SEA or interpretation. A failed build
+is a gate, not an MD result.

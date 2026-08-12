@@ -29,6 +29,14 @@ FRONTMATTER_KEYS = {"name", "description"}
 LINK_PATTERN = re.compile(r"\[[^]]*\]\(([^)]+)\)")
 HOST_PATH_PATTERN = re.compile(r"/(?:data|home)/[^\s`'\"<>]+")
 URL_PATTERN = re.compile(r"https?://[^\s`'\"<>]+")
+UNIVERSAL_MARKER = "## Universal Manifest Invocation"
+CONCRETE_MARKER = "## Concrete Operation Procedure"
+STANDALONE_MARKER = "## Standalone Command-Line Procedure"
+NONPORTABLE_EXECUTION_PATTERNS = (
+    "/abs/path",
+    "/absolute/",
+)
+CJK_PATTERN = re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]")
 
 
 def _frontmatter(path: Path) -> dict:
@@ -128,6 +136,18 @@ def audit_skills(*, check_scripts: bool = False) -> list[str]:
         skill_path = skill_dir / "SKILL.md"
         text = skill_path.read_text(encoding="utf-8")
         relative = skill_path.relative_to(ROOT)
+        if CJK_PATTERN.search(text):
+            errors.append(f"{relative}: SKILL.md must be written in English")
+        if UNIVERSAL_MARKER not in text:
+            errors.append(f"{relative}: missing universal manifest invocation")
+        if CONCRETE_MARKER not in text:
+            errors.append(f"{relative}: missing concrete operation procedure")
+        standalone_count = text.count(STANDALONE_MARKER)
+        if standalone_count != 1:
+            errors.append(
+                f"{relative}: expected exactly one standalone command-line procedure, "
+                f"found {standalone_count}"
+            )
         try:
             metadata = _frontmatter(skill_path)
         except (ValueError, yaml.YAMLError) as exc:
@@ -156,6 +176,9 @@ def audit_skills(*, check_scripts: bool = False) -> list[str]:
                 errors.append(f"{asset_relative}: host-specific path {match.group(0)!r}")
             if "/opt/schrodinger" in asset_text.lower():
                 errors.append(f"{asset_relative}: hard-coded Schrödinger installation path")
+            for pattern in NONPORTABLE_EXECUTION_PATTERNS:
+                if pattern in asset_text:
+                    errors.append(f"{asset_relative}: non-registry execution placeholder {pattern!r}")
             if "hsv-" in asset_text.lower():
                 errors.append(f"{asset_relative}: excluded nested workflow reference")
             if re.search(r'[=:]\s*["\']res\.ptype UNK["\']', asset_text):
