@@ -58,18 +58,24 @@ python scripts/sync_providers_from_ccswitch.py
 
 ## 本地技能包（药物设计 / 论文 / 自写）
 
-启动时 `scripts/import_drug_skills.py` 会把本地 skills **symlink 进** `$HERMES_HOME/skills/`，供 Hermes Skill Manager 发现与调用：
+启动时 `scripts/import_drug_skills.py` 会把本地 canonical skills **symlink 进**
+`$HERMES_HOME/skills/<master>/<child>/`，供 Hermes Skill Manager 发现与调用；旧直属
+名称只在项目源码中作为兼容别名，不会重复发布：
 
 | 分类 | 数量 | 内容 |
 |------|------|------|
-| `ddfast/` | 11 | DiffDynamic-Fast 漏斗 00–10 全套 |
-| `drug-design/` | 20 | DiffDynamic / 对接 / RDKit / PubChem 等专项 |
-| `writing/` | 10 | Nature 写作 / 润色 / 图表 / 文献 |
-| `masld-ai4s/` | 10 | s00–s08 + `scientist-in-e-drug-lab` 自写 |
+| `drug-discovery-orchestrator/` | 7 | 默认入口、记忆、调度、报告和能力门控 |
+| `target-discovery/` | 8 | 靶点、生物学、结构、配体和口袋证据 |
+| `dd-generation/` | 2 | DiffDynamic de novo / Prudent |
+| `virtual-docking/` | 4 | Glide SP / XP / MMGBSA |
+| `featurehit-finding/` | 4 | FeatureHit / Shape / RDKit / 库筛选 |
+| `admet/` | 4 | ADMET、证据和毒性分层 |
+| `molecular-dynamics/` | 6 | Desmond MD 和 QC |
+| `all-analysis/` | 3 | H10/E6 分析与机制报告 |
 
 ```bash
 python scripts/import_drug_skills.py
-HERMES_HOME=$PWD/.hermes hermes skills list | rg 'ddfast|drug-design|writing|masld'
+HERMES_HOME=$PWD/.hermes hermes skills list | rg 'drug-discovery-orchestrator|target-discovery|dd-generation|virtual-docking|featurehit-finding|admet|molecular-dynamics|all-analysis'
 ```
 
 清单：[`skills_pack/MANIFEST.json`](../skills_pack/MANIFEST.json)。

@@ -1,148 +1,138 @@
 # E-Drug-Lab
 
-靶点导向的药物发现实验平台：**Web 工作流** + **Scientist Agent** + **本地计算工具链**（DiffDynamic / Schrödinger / DrugCLIP / TAME-VS 等）。
+面向药物发现任务的端到端科研平台，包含三部分：
 
-面向「从靶点与口袋 → 分子生成 / 筛选 → ADMET → 对接打分 → 排序与湿实验交接」的一体化原型；**禁止编造**对接分数、生成结构或 ADMET 数值。
+- `backend/`：FastAPI 后端，提供靶点、蛋白/配体、化合物库、筛选、ADMET、对接和任务接口。
+- `frontend/`：Next.js 工作流界面，用于查看靶点、分子库、虚拟筛选、ADMET、亲和力和任务状态。
+- `Scientist_In_E-Drug-Lab/`：基于 Hermes Agent 的科研助手，通过 skills、插件和本地 CLI 编排药物发现流程。
 
-| 组件 | 作用 | 入口 |
-|------|------|------|
-| **Backend** | FastAPI：靶点/分子库/筛选任务、工具封装、SDF 同步与排序 | `backend/` |
-| **Frontend** | Next.js：工作流页面（靶点准备、建库、VS、ADMET、亲和力、排序等） | `frontend/` |
-| **Scientist_In_E-Drug-Lab** | 科研助手（CLI / Hermes Skill / MCP）：靶点假说、证据、平台能力目录与门控 | `Scientist_In_E-Drug-Lab/` |
-
-可选：AI4S 生命科学赛道为竞赛预设（见 Agent 内 `config/competition_*.yaml`）；**库内化合物 Top10 提名**与 Agent 靶点假说职责分离。
-
----
+项目遵循证据优先原则：没有实际计算结果时，不编造生成结构、对接分数、ADMET 数值或分子动力学结论。
 
 ## 仓库结构
 
 ```text
-backend/                      FastAPI + services + integrations
-frontend/                     Next.js 工作流 UI
-Scientist_In_E-Drug-Lab/      Scientist Agent（masld-agent）与平台 catalog
-database/                     SQL 初始化
-docs/                         平台/集成说明
-molecules/、outputs/          本地数据与产物（默认不入库）
+backend/                         FastAPI 后端与本地服务封装
+frontend/                        Next.js 前端
+Scientist_In_E-Drug-Lab/         Scientist Agent、插件、CLI、配置与 skills
+Scientist_In_E-Drug-Lab/vendor/
+  hermes-agent/                  Hermes Agent 源码快照，已纳入本仓库
+competition_skills_submission/  按比赛流程图整理的实体 skills 提交目录
+docs/                            平台与集成文档
 ```
 
-Git 默认只跟踪**代码与 Markdown**（见根目录 `.gitignore`）。大文件、conda/node 依赖、运行产物、以及 `skills_pack` 内完整 skill 正文一般不随仓库全量发布。
+`vendor/hermes-agent` 是普通源码目录，不是 Git 子模块；其嵌套 Git 历史、运行时缓存、虚拟环境、构建产物和凭据不会上传。
 
----
+## 安装与启动
 
-## 平台能力（三系统）
+以下命令在 Linux/WSL2 中执行。真实 API key 不要写入 Git；只复制 `.env.example` 为本地 `.env`。
 
-权威说明：[`Scientist_In_E-Drug-Lab/config/platform/PLATFORM.md`](Scientist_In_E-Drug-Lab/config/platform/PLATFORM.md)  
-机器可读目录：[`catalog.yaml`](Scientist_In_E-Drug-Lab/config/platform/catalog.yaml)
-
-| 系统 | 角色 | 生产调用方式 |
-|------|------|----------------|
-| **DiffDynamic** | 口袋条件分子生成（Fast / Prudent 等） | `DiffDynamicRunner` → conda `diffdynamic`，代码根常为 `/data/ye/DiffDynamic` |
-| **e-drug-lab** | HTTP/库封装、任务与分子库 | Backend services；Agent 优先库导入而非未启动的 FastAPI |
-| **Schrödinger** | PrepWizard / LigPrep / Grid / Glide / QikProp / MMGBSA / IFD | `schrodinger_service` → `/opt/schrodinger2023-3` |
-
-硬约束摘要：
-
-1. DiffDynamic 采样受体用**原始 PDB**；PrepWizard 结果只给 Glide。
-2. 大批量 / 全漏斗 Glide 须显式确认（`confirm=true`）。
-3. `backend/app/api/integrations/*` 的**远程 stub 不是生产路径**。
-4. 不把 DiffDynamic 生成分子直接写入 AI4S 官方库 Top10 CSV。
-
-Backend 中与平台相关的实现包括（部分分支已入库）：
-
-- `backend/app/services/diffdynamic_runner.py`、`schrodinger_service.py`、`admet_service.py`
-- `backend/app/api/routes/diffdynamic.py`、`admet.py`、`affinity.py`
-- 配置示例：`backend/.env.example`
-
-> 新路由模块若尚未在 `main.py` 中 `include_router`，需在本机接线后再对外提供 HTTP。
-
----
-
-## 快速开始（克隆后冷启动）
-
-**不要**提交真实 API Key。只复制 `*.example` → 本地文件并自行填写。DiffDynamic / Schrödinger / GPU 为可选外部依赖；缺省时 HTTP 与 Agent 对话仍可起，漏斗计算步骤会门控失败。
-
-### 1. Backend
+### 1. 后端
 
 ```bash
 cd backend
-cp .env.example .env   # 至少设置 database__url=sqlite:///./edrug_lab_dev.db
+cp .env.example .env
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-- Health：`GET http://localhost:8000/health`
-- Ready：`GET http://localhost:8000/ready`
+健康检查：`http://localhost:8000/health` 和 `http://localhost:8000/ready`。
 
-### 2. Frontend
+### 2. 前端
+
+另开终端：
 
 ```bash
 cd frontend
 npm install
-npm run dev            # 默认 http://0.0.0.0:3001（见 package.json）
+npm run dev
 ```
 
-可选：复制注释模板到 `.env.local`（勿提交）以覆盖 `NEXT_PUBLIC_API_BASE_URL`。
+默认地址：`http://localhost:3001/`。前端默认把浏览器请求发送到同一主机的后端 `8000` 端口；需要覆盖时，在 `frontend/.env.local` 设置 `NEXT_PUBLIC_API_BASE_URL`，该文件不要提交。
 
-### 3. Scientist Agent
-
-详见 [`Scientist_In_E-Drug-Lab/README.md`](Scientist_In_E-Drug-Lab/README.md)。
+### 3. Scientist Agent 与 Hermes
 
 ```bash
 cd Scientist_In_E-Drug-Lab
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -e ".[dev]"
-
-# Hermes（不入库；见 vendor/README.md）
-mkdir -p vendor
-git clone --depth 1 https://github.com/NousResearch/hermes-agent.git vendor/hermes-agent
 pip install -e ./vendor/hermes-agent
 
-cp .env.example .env                                    # 填 OPENAI_API_KEY / OPENAI_BASE_URL 等
-cp config/providers.example.yaml config/providers.yaml  # 本地用，默认不入库
-# 如需改中继地址：编辑 config/hermes.config.yaml 中的 placeholder，或 export OPENAI_BASE_URL=...
-
-python scripts/import_drug_skills.py   # 从 skills/ 链接到 .hermes/skills
-bash scripts/start_agent.sh            # 或 start_agent.sh shell → masld-agent …
-
-masld-agent platform-health
-masld-agent platform-catalog --system dd
+cp .env.example .env
+cp config/providers.example.yaml config/providers.yaml
+python scripts/import_drug_skills.py
+bash scripts/start_agent.sh chat
 ```
 
-人设：[`config/SOUL.md`](Scientist_In_E-Drug-Lab/config/SOUL.md)  
-Skills：仓库内 [`Scientist_In_E-Drug-Lab/skills/`](Scientist_In_E-Drug-Lab/skills/)（funnel 全量 + 精简 ddfast/drug-design/campaign）；[`skills_pack/MANIFEST.json`](Scientist_In_E-Drug-Lab/skills_pack/MANIFEST.json) 为导入清单。
+`scripts/start_agent.sh` 会准备 `HERMES_HOME`、加载本地 provider 配置、同步 Agent 人设和 skills，并启动 Hermes 对话界面。API key 只放在本地 `.env`、`.hermes/.env` 或系统密钥管理器中；仓库不提供任何真实密钥。
 
----
+科学管线 CLI：
 
-## 环境变量
+```bash
+bash scripts/start_agent.sh shell
+masld-agent platform-health
+masld-agent platform-catalog
+masld-agent funnel autopilot --final-count 10 --profile test --target-id TARGET
+```
 
-| 文件 | 用途 |
-|------|------|
-| [`backend/.env.example`](backend/.env.example) | 数据库、DiffDynamic、Schrödinger、DrugCLIP、TAME-VS、Celery、CORS 等 |
-| [`Scientist_In_E-Drug-Lab/.env.example`](Scientist_In_E-Drug-Lab/.env.example) | Agent / Hermes Provider |
-| [`Scientist_In_E-Drug-Lab/config/providers.example.yaml`](Scientist_In_E-Drug-Lab/config/providers.example.yaml) | 多模型 Provider 模板 |
+Hermes 负责对话、工具调用和 skill 编排；科研计算由 `masld-agent`、后端服务以及本地 DiffDynamic/Schrödinger 等工具执行。Hermes 核心源码位于 `Scientist_In_E-Drug-Lab/vendor/hermes-agent/`，项目适配通过插件与 skills 完成。
 
-**不要**提交 `.env`、`providers.yaml` 或任何 API Key。
+## 八类 Skills
 
----
+技能主类按整体流程图组织。每个主类下保留现有子 skill 名称；Agent 运行时使用 `Scientist_In_E-Drug-Lab/skills/`，Hermes 导入后使用 `.hermes/skills/`。
 
-## 文档索引
+| 顺序 | 主类 | 作用 | 主要子 skill 示例 |
+|---:|---|---|---|
+| 01 | `drug-discovery-orchestrator` | 任务拆解、流程编排、持续监测、时间调度和汇总报告 | `funnel-orchestrator`、`time-scheduler`、`reporting` |
+| 02 | `target-discovery` | 生物学证据、靶点结构、PDB、口袋和蛋白/配体准备 | `research-target-biology`、`rank-protein-structures`、`prepare-native-protein-ligand` |
+| 03 | `dd-generation` | DiffDynamic de novo 与 Prudent 分子生成 | `funnel-diffdynamic-denovo`、`funnel-diffdynamic-prudent` |
+| 04 | `virtual-docking` | Schrödinger Glide SP/XP、网格、对接和 MMGBSA | `funnel-glide-sp`、`funnel-glide-xp`、`funnel-mmgbsa` |
+| 05 | `featurehit-finding` | 姿势提取、药效团/形状筛选、RDKit 特征和库中 hit 搜索 | `pose-library-screening`、`funnel-featurehit`、`rdkit` |
+| 06 | `admet` | ADMET、QikProp、毒性分层和化合物证据补充 | `ddfast-06-qikprop-admet`、`funnel-drugflow-hepg2`、`triage-compound-toxicity` |
+| 07 | `molecular-dynamics` | Desmond 短程/长程分子动力学、监测和轨迹分析 | `funnel-desmond-short-md`、`funnel-desmond-long-md`、`dd-md-desmond-sea-qc` |
+| 08 | `all-analysis` | 候选提名、机制假说、证据整合和最终报告 | `nominate-lipid-modulators`、`write-mechanism-validation-report` |
 
-| 文档 | 内容 |
-|------|------|
-| [`Scientist_In_E-Drug-Lab/docs/DELIVERY.md`](Scientist_In_E-Drug-Lab/docs/DELIVERY.md) | Agent 交付范围与验收命令 |
-| [`Scientist_In_E-Drug-Lab/docs/architecture.md`](Scientist_In_E-Drug-Lab/docs/architecture.md) | Agent 架构 |
-| [`Scientist_In_E-Drug-Lab/docs/LINUX.md`](Scientist_In_E-Drug-Lab/docs/LINUX.md) / [`WINDOWS.md`](Scientist_In_E-Drug-Lab/docs/WINDOWS.md) | 安装 |
-| [`docs/TAME_VS_INTEGRATION.md`](docs/TAME_VS_INTEGRATION.md) | TAME-VS 集成（若存在） |
-| [`WORK.md`](WORK.md) | 历史说明备份 |
+同步 skills 到 Hermes：
 
----
+```bash
+cd Scientist_In-E-Drug-Lab
+python scripts/import_drug_skills.py --hermes-home .hermes --check
+```
 
-## 开发状态
+比赛提交用的全实体目录位于：
+`competition_skills_submission/`。其中包含 `01_` 到 `08_` 八个实体主目录，不使用符号链接，适合单独打包提交。
 
-活跃原型。部分 frontend 工作流与本地工具路径依赖机房环境（conda、GPU、Schrödinger 许可证）。远程 API stub 仅作占位，生产请走本地 runner / service。
+## 外部计算依赖
 
----
+后端和 Agent 的基础代码可以单独启动；完整药物发现漏斗还依赖使用者本地安装的计算环境：
+
+- DiffDynamic 及其 conda 环境、模型和 GPU；
+- Schrödinger Suite、许可证和 Glide/Desmond/QikProp/MMGBSA；
+- 可选的 DrugCLIP、TAME-VS 或其他本地服务；
+- 访问 PubMed、RCSB PDB、PubChem 等公开数据库的网络环境。
+
+这些依赖的路径和开关放在各自的 `.env.example`、平台 catalog 和 skills 中，不上传密钥、模型权重、实验产物或本地数据库。
+
+## 常用文档
+
+- [Agent README](Scientist_In-E-Drug-Lab/README.md)
+- [Hermes 集成说明](Scientist_In-E-Drug-Lab/docs/hermes_integration.md)
+- [Agent 架构](Scientist_In-E-Drug-Lab/docs/architecture.md)
+- [平台能力目录](Scientist_In-E-Drug-Lab/config/platform/PLATFORM.md)
+- [比赛实体 skills 目录](competition_skills_submission/README.md)
+
+## 安全与提交
+
+不要提交以下内容：`.env`、`.env.local`、`.hermes/`、`providers.yaml`、`auth.json`、API key、私钥、GPU 运行产物、模型权重和本地数据库。提交前可检查：
+
+```bash
+git status --short
+git diff --check
+git grep -nE 'sk-[A-Za-z0-9]{20,}|ark-[A-Za-z0-9-]{20,}' -- ':!*.md'
+```
 
 ## License
 
-见 [`Scientist_In_E-Drug-Lab/LICENSE`](Scientist_In_E-Drug-Lab/LICENSE)（Agent 子树）；仓库其余部分以项目声明为准。
+项目代码与 Agent 子树的许可证见各自目录中的 `LICENSE` / `NOTICE` 文件。Hermes 源码保留其上游许可证与版权声明。

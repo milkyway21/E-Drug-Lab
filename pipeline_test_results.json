@@ -1,0 +1,66 @@
+{
+  "passed": 12,
+  "failed": 0,
+  "steps": [
+    {
+      "name": "Backend Health",
+      "ok": true,
+      "detail": "{'status': 'healthy'}"
+    },
+    {
+      "name": "Target List",
+      "ok": true,
+      "detail": "14 targets"
+    },
+    {
+      "name": "TAME-VS 50K Screening",
+      "ok": true,
+      "detail": "1004 top compounds from 50,240 Enamine"
+    },
+    {
+      "name": "Top1 SMILES valid",
+      "ok": true,
+      "detail": "Top1: Z245796024 score=0.9825513263288129"
+    },
+    {
+      "name": "ADMET Prediction",
+      "ok": true,
+      "detail": "104 properties"
+    },
+    {
+      "name": "ADMET hERG",
+      "ok": true,
+      "detail": "hERG=0.860"
+    },
+    {
+      "name": "ADMET DILI",
+      "ok": true,
+      "detail": "DILI=0.840"
+    },
+    {
+      "name": "ADMET AMES",
+      "ok": true,
+      "detail": "AMES=0.223"
+    },
+    {
+      "name": "Vina Docking",
+      "ok": true,
+      "detail": "affinity=-7.31 kcal/mol [property-estimate]"
+    },
+    {
+      "name": "Candidate Ranking",
+      "ok": true,
+      "detail": "2 candidates ranked"
+    },
+    {
+      "name": "  #1: Z245796024",
+      "ok": true,
+      "detail": "docking=-7.5 composite=75.0"
+    },
+    {
+      "name": "  #2: Z1198960600",
+      "ok": true,
+      "detail": "docking=-6.8 composite=25.0"
+    }
+  ]
+}

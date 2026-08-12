@@ -140,6 +140,17 @@ def test_prepare_native_structure_keeps_ligand_in_receptor_frame(tmp_path: Path)
     assert manifest["coordinate_validation"]["translation_or_rotation_applied"] is False
     assert manifest["coordinate_validation"]["sdf_max_abs_coordinate_delta_A"] == 0.0
     assert manifest["pocket_center"]["center_xyz_A"] == [1.0667, 1.0, 1.0]
+    assert manifest["diffdynamic_input"] == {
+        "compatible": True,
+        "protein_pdb": "receptor/1ABC_receptor_clean.pdb",
+        "ligand_sdf": "ligand/1ABC_LIG_A_500_native.sdf",
+        "requirements": ["protein=.pdb", "ligand=.sdf"],
+        "forbidden_inputs": [
+            "source_or_untouched_complex",
+            "receptor_mmcif",
+            "prepwizard_mae_or_maegz",
+        ],
+    }
 
     receptor = (output / "receptor/1ABC_receptor_clean.pdb").read_text(encoding="utf-8")
     assert " A   1" in receptor
@@ -208,6 +219,9 @@ def test_prepare_native_structure_supports_mmcif_and_long_ccd_ids(tmp_path: Path
     assert manifest["source_coordinate_format"] == "mmcif"
     assert manifest["selected_ligand_instance"]["chain"] == "A"
     assert manifest["coordinate_validation"]["sdf_max_abs_coordinate_delta_A"] == 0.0
+    assert manifest["diffdynamic_input"]["compatible"] is True
+    assert manifest["diffdynamic_input"]["protein_pdb"].endswith("_receptor_clean.pdb")
+    assert manifest["diffdynamic_input"]["ligand_sdf"].endswith("_native.sdf")
     assert (output / "receptor/1ABC_receptor_clean.pdb").is_file()
     ligand_cif = next((output / "ligand").glob("*_native.cif"))
     ligand_atoms = parse_mmcif_atoms(ligand_cif.read_text(encoding="utf-8"))

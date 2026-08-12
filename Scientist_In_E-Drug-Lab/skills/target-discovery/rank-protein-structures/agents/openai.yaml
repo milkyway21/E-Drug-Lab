@@ -1,0 +1,4 @@
+interface:
+  display_name: Rank Protein Structures
+  short_description: Search and qualify target structures
+  default_prompt: Search RCSB by resolved target identity, rank experimental structures, and explain the selected or rejected candidate.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Search Biomedical Evidence"
+  short_description: "Find auditable biological and disease evidence"
+  default_prompt: "Build a reproducible, contradiction-aware biomedical evidence dossier for this target and disease."

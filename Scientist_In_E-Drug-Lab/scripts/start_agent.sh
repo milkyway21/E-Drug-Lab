@@ -68,9 +68,9 @@ cat <<BANNER
 ============================================================
   对话:
     bash scripts/start_agent.sh
-  Skills（funnel + 精简 ddfast/drug-design/campaign）:
+  Skills（8个主类 + canonical 子skills；旧名保留兼容）:
     python scripts/import_drug_skills.py
-    hermes skills list | rg 'funnel|ddfast|drug-design|campaign'
+    hermes skills list | rg 'drug-discovery-orchestrator|target-discovery|dd-generation|virtual-docking|featurehit-finding|admet|molecular-dynamics|all-analysis'
   科学管线 CLI:
     bash scripts/start_agent.sh shell
     masld-agent funnel autopilot --final-count N --profile full --target-id TARGET

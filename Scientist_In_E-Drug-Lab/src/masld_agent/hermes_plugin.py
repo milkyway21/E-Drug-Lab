@@ -550,6 +550,55 @@ def _funnel_autopilot_status(args: dict, **kwargs) -> str:
     return json.dumps(result, ensure_ascii=False, default=str)
 
 
+def _funnel_monitor_plan(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.funnel.time_scheduler import build_monitor_plan, monitor_prompt
+
+    manifest_path = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    from masld_agent.funnel.manifest import load_manifest
+
+    manifest = load_manifest(manifest_path)
+    plan = build_monitor_plan(manifest, stage=args.get("stage") or None)
+    plan["manifest"] = str(manifest_path)
+    plan["prompt"] = monitor_prompt(manifest, plan)
+    return json.dumps(plan, ensure_ascii=False, default=str)
+
+
+def _funnel_report_update(args: dict, **kwargs) -> str:
+    from masld_agent.funnel.manifest import load_manifest
+    from masld_agent.funnel.planner import resolve_manifest
+    from masld_agent.reporting.funnel_report import update_funnel_report
+
+    manifest_path = resolve_manifest(args.get("manifest") or None, target_id=args.get("target_id"))
+    manifest = load_manifest(manifest_path)
+    stage = str(args.get("stage") or "").upper()
+    profile = str(args.get("profile") or (manifest.get("funnel_profile") or {}).get("id") or "full")
+    report_directories = manifest.get("stage_output_directories") or {}
+    report_root = Path(report_directories.get("reports") or "reports")
+    if not report_root.is_absolute():
+        report_root = Path(manifest["_campaign_root"]) / report_root
+    stage_report = report_root / "funnel" / profile / f"{stage}.json"
+    result: dict = {}
+    target_count = int((manifest.get("pipeline_targets") or {}).get(stage) or 0)
+    if stage_report.is_file():
+        try:
+            payload = json.loads(stage_report.read_text(encoding="utf-8"))
+            if isinstance(payload, dict):
+                result = payload
+                target_count = int(payload.get("target_count") or target_count)
+        except json.JSONDecodeError:
+            pass
+    report = update_funnel_report(
+        manifest_path,
+        stage=stage,
+        target_count=target_count,
+        profile=profile,
+        result=result,
+        analysis=str(args.get("analysis") or "").strip() or None,
+    )
+    return json.dumps(report, ensure_ascii=False, default=str)
+
+
 OFFLINE_SCHEMA = {
     "name": "masld_offline_demo",
     "description": (
@@ -636,7 +685,8 @@ TARGET_BIOLOGY_SCHEMA = {
     "description": (
         "E1 mandatory biology reconnaissance for target-based discovery. Resolve the human gene, "
         "retrieve target-disease literature, Open Targets associations, and Reactome pathways. "
-        "Call before structure or pocket selection; preserve missing and opposing evidence."
+        "This is a seed card: next use search-biomedical-evidence and assess-target-pharmacology "
+        "before structure ranking; preserve missing and opposing evidence."
     ),
     "parameters": {
         "type": "object",
@@ -674,8 +724,9 @@ STRUCTURE_PREPARE_SCHEMA = {
         "E2b download the selected RCSB coordinate model and CCD topology, remove water and "
         "unselected heterogens, extract one native ligand instance without moving it, and write "
         "a clean receptor, native ligand mmCIF/SDF, optional lossless PDB derivatives, pocket "
-        "center, instance table, hashes, and "
-        "coordinate-validation manifest. Call after structure_search_rank and before pocket_qualify."
+        "center, instance table, hashes, and coordinate-validation manifest. The manifest declares "
+        "whether the strict DiffDynamic handoff (clean receptor .pdb plus native ligand .sdf) is "
+        "available. Call after structure_search_rank and before pocket_qualify."
     ),
     "parameters": {
         "type": "object",
@@ -817,16 +868,18 @@ DD_GEN_SCHEMA = {
     "name": "diffdynamic_generate",
     "description": (
         "Gated DiffDynamic generate via e-drug-lab DiffDynamicRunner. "
-        "Requires protein_path+ligand_path; sample_only default true; "
+        "Requires a coordinate-cleaned protein_path ending in .pdb and a native ligand_path ending "
+        "in .sdf; scaffold mode also requires molecule_path ending in .sdf. Never pass mmCIF, MAE, "
+        "MAEGZ, MOL2, or an untouched complex. sample_only default true; "
         "batch_size>=100 needs confirm=true. Prefer dry_run=true first."
     ),
     "parameters": {
         "type": "object",
         "properties": {
-            "protein_path": {"type": "string"},
-            "ligand_path": {"type": "string"},
+            "protein_path": {"type": "string", "description": "Coordinate-cleaned receptor .pdb"},
+            "ligand_path": {"type": "string", "description": "Native/reference ligand .sdf"},
             "mode": {"type": "string"},
-            "molecule_path": {"type": "string"},
+            "molecule_path": {"type": "string", "description": "Scaffold .sdf; scaffold mode only"},
             "batch_size": {"type": "integer"},
             "sample_only": {"type": "boolean"},
             "confirm": {"type": "boolean"},
@@ -999,8 +1052,42 @@ FUNNEL_STAGE_SCHEMA = {
 
 FUNNEL_AUTOPILOT_STATUS_SCHEMA = {
     "name": "funnel_autopilot_status",
-    "description": "Read persistent worker state and latest per-stage report. Poll this after background autopilot launch.",
+    "description": "Read persistent worker, watchdog heartbeat, latest stage report, and cumulative report state after background autopilot launch.",
     "parameters": {"type": "object", "properties": FUNNEL_CONTEXT_PROPERTIES, "required": []},
+}
+
+FUNNEL_MONITOR_PLAN_SCHEMA = {
+    "name": "funnel_monitor_plan",
+    "description": (
+        "Compute the adaptive next wake time for the current funnel stage. Use it to create one "
+        "short Hermes cron monitor tick; local watchdog liveness checks remain API-free."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "stage": {"type": "string", "description": "Optional current stage override"},
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": [],
+    },
+}
+
+FUNNEL_REPORT_UPDATE_SCHEMA = {
+    "name": "funnel_report_update",
+    "description": (
+        "Update the single consolidated H0-H10 report after a stage result. Preserve existing "
+        "sections, add grounded agent analysis, copy real figures, and refresh Markdown/DOCX/PDF."
+    ),
+    "parameters": {
+        "type": "object",
+        "properties": {
+            "stage": {"type": "string", "description": "Completed stage such as H2 or H9"},
+            "profile": {"type": "string", "enum": ["test", "full"]},
+            "analysis": {"type": "string", "description": "Evidence-grounded stage interpretation"},
+            **FUNNEL_CONTEXT_PROPERTIES,
+        },
+        "required": ["stage"],
+    },
 }
 
 FUNNEL_VALIDATE_SCHEMA = {
@@ -1029,6 +1116,8 @@ FUNNEL_AUTOPILOT_SCHEMA = {
         "resources, reuse valid artifacts, execute H0-H10 in order, stop on failed validation, and "
         "write JSON+Markdown report after every stage. Before any compute, all enabled stages are checked "
         "for a valid artifact or available argv adapter; missing readiness returns gated_preflight. "
+        "A terminal-session watchdog supports recovery up to 48 hours, and one consolidated Markdown/DOCX/PDF "
+        "report is updated with one section per stage. "
         "Full is the default profile; test must be explicit. "
         "Preview/report mode is default. Set execute=true "
         "and confirm=true only after user authorizes production compute."
@@ -1306,6 +1395,8 @@ def register(ctx):
         ("funnel_status", FUNNEL_STATUS_SCHEMA, _funnel_status),
         ("funnel_autopilot", FUNNEL_AUTOPILOT_SCHEMA, _funnel_autopilot),
         ("funnel_autopilot_status", FUNNEL_AUTOPILOT_STATUS_SCHEMA, _funnel_autopilot_status),
+        ("funnel_monitor_plan", FUNNEL_MONITOR_PLAN_SCHEMA, _funnel_monitor_plan),
+        ("funnel_report_update", FUNNEL_REPORT_UPDATE_SCHEMA, _funnel_report_update),
         ("campaign_memory_read", MEMORY_READ_SCHEMA, _memory_read),
         ("campaign_memory_write", MEMORY_WRITE_SCHEMA, _memory_write),
         ("global_history_append", GLOBAL_HISTORY_SCHEMA, _global_history_append),
@@ -1356,9 +1447,19 @@ def register(ctx):
     try:
         skills_root = PKG_ROOT / "skills"
         if hasattr(ctx, "register_skill") and skills_root.exists():
-            for skill_root in sorted(skills_root.iterdir()):
-                if skill_root.is_dir() and (skill_root / "SKILL.md").is_file():
-                    ctx.register_skill(str(skill_root))
+            # Publish canonical masters and children only.  Flat compatibility
+            # symlinks remain available to project resolvers but must not create
+            # duplicate Hermes skill names.
+            for master_root in sorted(skills_root.iterdir()):
+                if not master_root.is_dir() or master_root.is_symlink():
+                    continue
+                if (master_root / "SKILL.md").is_file():
+                    ctx.register_skill(str(master_root))
+                for child_root in sorted(master_root.iterdir()):
+                    if child_root.is_dir() and not child_root.is_symlink() and (
+                        child_root / "SKILL.md"
+                    ).is_file():
+                        ctx.register_skill(str(child_root))
     except Exception as exc:  # noqa: BLE001
         logger.debug("register_skill skipped: %s", exc)
 

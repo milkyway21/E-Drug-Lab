@@ -3,6 +3,10 @@
 `full` 是用户只给最终分子数时的默认正式配置；`test` 只能由用户或测试命令显式选择。
 所有数字是计划目标，不是已完成结果。
 
+每个阶段同时声明 `master_skill` 和兼容的 `skill`：前者用于 agent 主类路由，后者保留
+现有 stage adapter、旧 manifest 和工具调用的子技能名称。新任务先加载
+`drug-discovery-orchestrator`，再按 `master_skill` 读取对应主类和 `skill` 子技能。
+
 ## 测试配置（`test.yaml`，参考最终 2 个）
 
 | 阶段 | H1A | H1B | H2 | H3 | H4 | H5 | H6–H7 | H8 | H9–H10 |

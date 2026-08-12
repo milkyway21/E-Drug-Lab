@@ -1,15 +1,17 @@
 # Skills pack (Scientist_In_E-Drug-Lab)
 
-Imported into Hermes `$HERMES_HOME/skills/<category>/`.
-Skill bodies live under `../skills/` (tracked); this pack holds symlinks + MANIFEST.
+Imported into Hermes `$HERMES_HOME/skills/<master>/<child>/`.
+Canonical skill bodies live under `../skills/<master>/<child>/`;
+the old flat names remain repository compatibility symlinks only.
 
-- **funnel**: 14 (整体流程图)
-- **ddfast**: 4 (QikProp / Glide SP / Desmond MD helpers)
-- **drug-design**: 3 (rdkit / pose / membrane MD ops)
-- **campaign**: 3 (campaign + scientist aliases)
-- **evidence**: 8 (biology / structure / nomination / reporting)
-- **project**: 0 (auto-discovered top-level skills)
+- **drug-discovery-orchestrator**: 7 child skills
+- **target-discovery**: 8 child skills
+- **dd-generation**: 2 child skills
+- **virtual-docking**: 4 child skills
+- **featurehit-finding**: 4 child skills
+- **admet**: 4 child skills
+- **molecular-dynamics**: 6 child skills
+- **all-analysis**: 3 child skills
 
-Only direct children of project `skills/` are imported; nested target-specific skills are excluded.
-
+Only canonical master and child skills are published to Hermes to avoid duplicate names.
 Re-run: `python scripts/import_drug_skills.py`

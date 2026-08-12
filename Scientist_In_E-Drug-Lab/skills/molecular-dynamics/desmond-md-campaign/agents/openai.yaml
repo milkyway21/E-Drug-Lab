@@ -1,0 +1,4 @@
+interface:
+  display_name: "Desmond MD Campaign"
+  short_description: "Run and analyze resilient Desmond MD campaigns"
+  default_prompt: "Use $desmond-md-campaign to prepare, run, validate, analyze, and plot a Desmond MD campaign."

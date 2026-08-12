@@ -222,7 +222,36 @@ entries:
     inputs: [final_count, optional_profile_default_full, optional_manifest_or_target_memory]
     outputs: [inputs/funnel_plan_PROFILE.json, reports/funnel/PROFILE/H_stage_json_md, reports/funnel/AUTOPILOT_STATE.json]
     risks: [preview_default, test_requires_explicit_selection, production_requires_confirm, stop_on_failed_validation]
-    skill_ref: [funnel-orchestrator, e-drug-lab-scientist]
+    skill_ref: [drug-discovery-orchestrator, funnel-orchestrator, e-drug-lab-scientist]
+
+  - id: ed.funnel.monitor
+    system: ed
+    stage: monitor
+    summary: Adaptive agent wake schedule, local 60-second watchdog, and resume-first recovery up to 48 hours
+    invoke: "funnel_monitor_plan(); funnel_autopilot_status() | masld-agent funnel monitor-plan --manifest MANIFEST"
+    inputs: [manifest, optional_stage]
+    outputs: [reports/funnel/AUTOPILOT_HEARTBEAT.json, reports/funnel/AUTOPILOT_STATE.json]
+    risks: [terminal_hermes_process_must_remain_open, never_restart_live_backend_job]
+    skill_ref: [drug-discovery-orchestrator, time-scheduler, funnel-campaign-memory, molecular-dynamics, featurehit-finding]
+
+  - id: ed.funnel.reporting
+    system: ed
+    stage: report
+    summary: One cumulative H0-H10 report with grounded analysis, reused figures, DOCX, and PDF
+    invoke: "funnel_report_update(stage=Hn, analysis=TEXT) | masld-agent funnel report-update --manifest MANIFEST --stage Hn"
+    inputs: [manifest, stage, optional_agent_analysis]
+    outputs: [reports/funnel/PROFILE/AUTOPILOT_REPORT.md, reports/funnel/PROFILE/AUTOPILOT_REPORT.docx, reports/funnel/PROFILE/AUTOPILOT_REPORT.pdf]
+    risks: [computational_evidence_is_not_experimental_confirmation, only_current_task_figures]
+    skill_ref: [drug-discovery-orchestrator, reporting, all-analysis, funnel-comprehensive-analysis, write-mechanism-validation-report]
+
+  - id: ed.skill-tree
+    system: ed
+    stage: routing
+    summary: Flowchart-aligned master skills route to existing named child skills without duplicate skill loading
+    inputs: [task_intent, current_stage, manifest, validated_previous_artifacts]
+    outputs: [master_skill, child_skill, stage_handoff]
+    risks: [load_master_before_child, compatibility_aliases_are_not_second_copies]
+    skill_ref: [drug-discovery-orchestrator, target-discovery, dd-generation, virtual-docking, featurehit-finding, admet, molecular-dynamics, all-analysis]
 
   - id: ed.integrations.stub
     system: ed
@@ -400,25 +429,20 @@ entries:
     stage: funnel
     summary: Track H flowchart — SP1000→FeatureHit/Shape~3000→HepG2→SP500→XP130→MMGBSA40→MD→Top10
     skill_ref:
-      - dd-orchestrator
-      - featurehit-shape-expand
-      - drugflow-hepg2-admet
-      - ddfast-07-glide-sp
-      - ddfast-08-glide-xp
-      - ddfast-09-mmgbsa-ifd
-      - dd-md-desmond
-      - funnel-desmond-short-md
-      - funnel-desmond-long-md
-      - funnel-final-curation
-      - hsd17b13-funnel-scientist
-      - edrug-capability-check
-      - funnel-campaign-memory
+      - drug-discovery-orchestrator
+      - target-discovery
+      - dd-generation
+      - virtual-docking
+      - featurehit-finding
+      - admet
+      - molecular-dynamics
+      - all-analysis
 
   - id: ed.admet.hepg2
     system: ed
     stage: filter
     summary: HepG2 phenotype-priority ADMET (DrugFlow if available; else hepg2_equiv_admet_ai)
-    skill_ref: [drugflow-hepg2-admet, admet-filter]
+    skill_ref: [admet, funnel-drugflow-hepg2, ddfast-06-qikprop-admet]
     risks: [do_not_rename_qikprop_as_drugflow]
 
   - id: sz.pitfalls

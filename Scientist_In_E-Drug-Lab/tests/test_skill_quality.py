@@ -20,9 +20,58 @@ def test_top_level_skills_pass_quality_gate():
     assert AUDIT.audit_skills() == []
 
 
-def test_catalog_sources_are_direct_children():
-    for name in AUDIT._catalog_names():
-        assert (AUDIT.PROJECT_SKILLS / name / "SKILL.md").is_file()
+def test_catalog_sources_are_canonical_master_children():
+    for master, name, path in AUDIT.CANONICAL_SKILLS:
+        assert master in AUDIT.MASTER_CATEGORIES
+        assert (path / "SKILL.md").is_file()
+
+
+def test_compatibility_aliases_resolve_to_canonical_children():
+    aliases = AUDIT._compatibility_aliases()
+    assert len(aliases) == 38
+    assert all((AUDIT.PROJECT_SKILLS / name).resolve() == target.resolve() for name, target in aliases.items())
+
+
+def test_canonical_import_groups_are_complete_and_idempotent(tmp_path):
+    installed_once = []
+    installed_twice = []
+    for master, children in AUDIT.MASTER_CATEGORIES.items():
+        first, missing = AUDIT.IMPORTER._install_canonical_group(
+            master, children, tmp_path / "hermes", mode="symlink"
+        )
+        second, second_missing = AUDIT.IMPORTER._install_canonical_group(
+            master, children, tmp_path / "hermes", mode="symlink"
+        )
+        assert missing == []
+        assert second_missing == []
+        installed_once.extend(first)
+        installed_twice.extend(second)
+
+    assert len(installed_once) == 46
+    assert len(installed_twice) == 46
+    assert all(Path(item["dest"]).resolve().is_dir() for item in installed_twice)
+
+
+def test_target_research_skills_follow_evidence_order():
+    evidence = AUDIT.IMPORTER.EVIDENCE
+    expected = [
+        "research-target-biology",
+        "search-biomedical-evidence",
+        "assess-target-pharmacology",
+        "rank-protein-structures",
+        "assess-computational-pharmacology",
+        "prepare-native-protein-ligand",
+        "qualify-binding-pocket",
+    ]
+    assert [name for name in evidence if name in expected] == expected
+
+
+def test_portability_audit_ignores_paths_inside_urls():
+    text = "https://example.org/home/develop/api/ /data/private/result.json"
+    portable_path_text = AUDIT.URL_PATTERN.sub("", text)
+    assert [match.group(0) for match in AUDIT.HOST_PATH_PATTERN.finditer(portable_path_text)] == [
+        "/data/private/result.json"
+    ]
 
 
 def test_skill_link_excludes_nested_skill_trees(tmp_path):

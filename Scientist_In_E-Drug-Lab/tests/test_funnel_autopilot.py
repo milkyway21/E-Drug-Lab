@@ -92,6 +92,13 @@ def test_full_profile_is_default_and_matches_three_round_flowchart():
     }
     assert plan["rules"]["prudent_analysis_vina_modes"] == "none"
     assert plan["stage_plan"]["H4"]["backend_policy"] == "schrodinger_qikprop_required"
+    assert plan["stage_plan"]["H0"]["master_skill"] == "drug-discovery-orchestrator"
+    assert plan["stage_plan"]["H1B"]["master_skill"] == "dd-generation"
+    assert plan["stage_plan"]["H2"]["master_skill"] == "virtual-docking"
+    assert plan["stage_plan"]["H3"]["master_skill"] == "featurehit-finding"
+    assert plan["stage_plan"]["H4"]["master_skill"] == "admet"
+    assert plan["stage_plan"]["H8"]["master_skill"] == "molecular-dynamics"
+    assert plan["stage_plan"]["H10"]["master_skill"] == "all-analysis"
 
 
 def test_resource_allocation_avoids_busy_or_missing_gpu():
@@ -100,6 +107,24 @@ def test_resource_allocation_avoids_busy_or_missing_gpu():
     assert allocations["H1B"]["gpu_ids"] == [1, 4]
     assert allocations["H8"]["gpu_ids"] == [1, 4]
     assert allocations["H2"]["cpu_jobs"] == 12
+
+
+def test_h0_rejects_non_diffdynamic_input_formats(tmp_path: Path):
+    manifest = campaign_manifest(tmp_path)
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    receptor = manifest.parent / "receptor.cif"
+    ligand = manifest.parent / "ligand.mol2"
+    receptor.write_text("nonempty\n", encoding="utf-8")
+    ligand.write_text("nonempty\n", encoding="utf-8")
+    payload["inputs"]["receptor_pdb"] = str(receptor)
+    payload["inputs"]["reference_ligand_sdf"] = str(ligand)
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+    result = validate_stage(manifest, "H0")
+
+    assert result["validation"]["valid"] is False
+    assert "receptor_pdb:expected_.pdb" in result["validation"]["missing"]
+    assert "reference_ligand_sdf:expected_.sdf" in result["validation"]["missing"]
 
 
 def test_plan_honors_manifest_gpu_allowlist(tmp_path: Path, monkeypatch):
