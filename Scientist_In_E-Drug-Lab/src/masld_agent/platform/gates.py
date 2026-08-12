@@ -27,6 +27,44 @@ def require_files(*paths: Optional[str | Path], label: str = "input") -> list[Pa
     return out
 
 
+def require_suffix(path: str | Path, expected: str, *, label: str) -> Path:
+    resolved = Path(path)
+    normalized_expected = expected.lower()
+    if resolved.suffix.lower() != normalized_expected:
+        raise GateError(f"{label} must be a {normalized_expected} file, got: {resolved}")
+    return resolved.resolve()
+
+
+def require_diffdynamic_inputs(
+    *,
+    protein_path: str | Path,
+    ligand_path: str | Path,
+    molecule_path: Optional[str | Path] = None,
+) -> dict[str, Path]:
+    """Require DiffDynamic's exact coordinate and molecule file formats."""
+    require_files(protein_path, ligand_path, label="diffdynamic")
+    validated = {
+        "protein_path": require_suffix(
+            protein_path,
+            ".pdb",
+            label="DiffDynamic protein",
+        ),
+        "ligand_path": require_suffix(
+            ligand_path,
+            ".sdf",
+            label="DiffDynamic ligand",
+        ),
+    }
+    if molecule_path is not None:
+        require_files(molecule_path, label="DiffDynamic scaffold")
+        validated["molecule_path"] = require_suffix(
+            molecule_path,
+            ".sdf",
+            label="DiffDynamic scaffold",
+        )
+    return validated
+
+
 def require_confirm(confirm: bool, *, reason: str) -> None:
     if not confirm:
         raise GateError(
@@ -50,13 +88,16 @@ def gate_diffdynamic_generate(
 
     if not protein_path or not ligand_path:
         raise GateError("protein_path and ligand_path are required for DiffDynamic generate")
-    require_files(protein_path, ligand_path, label="diffdynamic")
+    require_diffdynamic_inputs(
+        protein_path=protein_path,
+        ligand_path=ligand_path,
+        molecule_path=molecule_path,
+    )
 
     if mode_l in {"scaffold", "scaffold_fast", "dd.mode.scaffold_fast"}:
         catalog_ids.append("dd.mode.scaffold_fast")
         if not molecule_path:
             raise GateError("scaffold mode requires molecule_path (scaffold SDF)")
-        require_files(molecule_path, label="scaffold")
     elif mode_l in {"prudent", "dd.mode.prudent"}:
         catalog_ids.append("dd.mode.prudent")
         warnings.append("prudent embeds Vina selection — expect longer runtime")

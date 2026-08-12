@@ -976,6 +976,9 @@ def prepare_native_structure(
             "pocket_center_json": pocket_path,
         }
     )
+    diffdynamic_compatible = (
+        "receptor_clean_pdb" in files and "ligand_native_sdf" in files
+    )
     manifest = {
         "status": "ok",
         "pdb_id": normalized_pdb,
@@ -1024,6 +1027,25 @@ def prepare_native_structure(
                 "sha256": _sha256(path),
             }
             for name, path in files.items()
+        },
+        "diffdynamic_input": {
+            "compatible": diffdynamic_compatible,
+            "protein_pdb": (
+                files["receptor_clean_pdb"].relative_to(output_dir).as_posix()
+                if "receptor_clean_pdb" in files
+                else None
+            ),
+            "ligand_sdf": (
+                files["ligand_native_sdf"].relative_to(output_dir).as_posix()
+                if "ligand_native_sdf" in files
+                else None
+            ),
+            "requirements": ["protein=.pdb", "ligand=.sdf"],
+            "forbidden_inputs": [
+                "source_or_untouched_complex",
+                "receptor_mmcif",
+                "prepwizard_mae_or_maegz",
+            ],
         },
         "docking_ready_coordinates": True,
         "requires_protein_preparation": True,

@@ -12,13 +12,15 @@ from __future__ import annotations
 import json
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 import pandas as pd
 
 from . import rdkit_utils, admet_rules
+from .target_profile import TargetProfile, load_or_infer_profile
+from .target_generation import run_target_generator
 
 try:
     from . import schrodinger_local as sch
@@ -47,10 +49,20 @@ W_GLARE = 0.80
 
 
 def _now() -> str:
-    return datetime.utcnow().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
-class VAV1RLOrchestrator:
+def _read_table(path: Path | str) -> pd.DataFrame:
+    """Read the small tabular inputs used by the orchestrator."""
+    source = Path(path).expanduser()
+    if not source.is_file():
+        raise FileNotFoundError(f"input table not found: {source}")
+    if source.suffix.lower() in {".csv", ".tsv"}:
+        return pd.read_csv(source, sep="\t" if source.suffix.lower() == ".tsv" else ",")
+    return pd.read_excel(source)
+
+
+class TargetRLOrchestrator:
     def __init__(
         self,
         project_root: str = PROJECT_ROOT_DEFAULT,
@@ -60,6 +72,8 @@ class VAV1RLOrchestrator:
         schrodinger_install: str | None = None,
         ph: float | None = None,
         log_to_stdout: bool = True,
+        target_profile: TargetProfile | str | dict[str, Any] | None = None,
+        target_id: str = "vav1",
     ):
         # 从 pydantic Settings 取默认值（参数未显式传入时）
         try:
@@ -74,12 +88,46 @@ class VAV1RLOrchestrator:
         self.num_mols = num_mols
         self.reuse_sdf_dir = reuse_sdf_dir
         self.log_to_stdout = log_to_stdout
+        self.target_profile = load_or_infer_profile(
+            target_profile,
+            target_id=target_id if target_profile is None else None,
+        )
+        profile_path = target_profile if isinstance(target_profile, str) else None
+        if self.target_profile is None:
+            # Backward-compatible VAV1 default; all new target runs should
+            # provide a generated profile.
+            self.target_profile = TargetProfile(
+                target_id=target_id,
+                receptor_pdb=Path(VAV1_POCKET_PDB) if target_id == "vav1" else None,
+            )
+        self.target_id = self.target_profile.target_id
+        self.activity_table = self.target_profile.activity_table or (
+            Path(KNOWN_439_XLSX) if self.target_id == "vav1" else None
+        )
+        self.generation_source = self.target_profile.generation_source or (
+            Path(ROUND200_MERGED) if self.target_id == "vav1" else None
+        )
+        self.reference_library = self.target_profile.reference_library or (
+            Path(LARGE_LIBRARY_SMI) if self.target_id == "vav1" else None
+        )
+        self.prepared_receptor = self.target_profile.prepared_receptor
+        self.grid_file = self.target_profile.grid_file
+        self.pocket_file = self.target_profile.receptor_pdb or (
+            Path(VAV1_POCKET_PDB) if self.target_id == "vav1" else None
+        )
+        if profile_path:
+            self.target_profile_path = str(Path(profile_path).expanduser().resolve())
+        elif target_profile is not None:
+            path = self.project_root / "target" / f"{self.target_id}.json"
+            self.target_profile_path = str(self.target_profile.save(path))
+        else:
+            self.target_profile_path = None
 
         self.ensure_dirs()
         self.funnel: dict[int, dict[str, int]] = {}
         self.status: dict[str, Any] = {"current_step": None, "mode": mode, "started_at": _now(), "steps_done": []}
         # 口袋由当前研究靶标决定（内部仍可复用项目 pocket PDB）
-        self.pocket_type = "target_pocket"
+        self.pocket_type = f"{self.target_id}_pocket"
 
     # ------------------------------------------------------------------
     # 基础设施
@@ -110,63 +158,198 @@ class VAV1RLOrchestrator:
             self.log(f"xlsx 写入失败 {xlsx_p}: {e}")
         return str(csv_p), str(xlsx_p)
 
+    def _load_activity_records(self) -> list[dict[str, Any]]:
+        """Load target activity data through a small, explicit column contract."""
+        if self.activity_table is None:
+            raise ValueError(
+                f"target '{self.target_id}' requires profile.activity_table for pretraining"
+            )
+        frame = _read_table(self.activity_table)
+        frame.columns = [str(column).strip() for column in frame.columns]
+        lower = {str(column).lower(): str(column) for column in frame.columns}
+
+        def find(*names: str, contains: str | None = None) -> str | None:
+            for name in names:
+                if name in lower:
+                    return lower[name]
+            if contains:
+                return next((column for column in frame.columns if contains in column.lower()), None)
+            return None
+
+        id_column = find("molecule_id", "mol_id", "id", "compound_id") or str(frame.columns[0])
+        smiles_column = find("smiles", "canonical_smiles", contains="smiles")
+        label_column = find(
+            "label_active", "activity_label", "label", "active", "is_active"
+        )
+        configured_metric = self.target_profile.activity_metric
+        value_names = [
+            name.lower()
+            for name in (
+                configured_metric,
+                "pdc50",
+                "pic50",
+                "ic50",
+                "kd",
+                "ki",
+                "activity",
+                "affinity",
+                "activity_value",
+            )
+            if name
+        ]
+        value_column = find(*value_names)
+        if smiles_column is None:
+            raise ValueError(f"activity table for target '{self.target_id}' requires a SMILES column")
+        if label_column is None and value_column is None:
+            raise ValueError(
+                f"activity table for target '{self.target_id}' requires label_active/label "
+                "or an activity value column"
+            )
+
+        thresholds = (
+            self.target_profile.active_threshold,
+            self.target_profile.weak_threshold,
+            self.target_profile.strong_threshold,
+        )
+        thresholds_configured = all(value is not None for value in thresholds)
+        if label_column is None and any(value is None for value in thresholds):
+            raise ValueError(
+                "activity-value inputs require active_threshold, weak_threshold and "
+                "strong_threshold in the target profile"
+            )
+        direction = self.target_profile.activity_direction
+        if label_column is None and self.target_id != "vav1" and not self.target_profile.activity_metric:
+            raise ValueError(
+                f"target '{self.target_id}' activity values require profile.activity_metric"
+            )
+        active_threshold, weak_threshold, strong_threshold = thresholds
+        active_threshold = 7.0 if active_threshold is None else float(active_threshold)
+        weak_threshold = 6.0 if weak_threshold is None else float(weak_threshold)
+        strong_threshold = 8.0 if strong_threshold is None else float(strong_threshold)
+        if direction == "greater_is_active":
+            valid_threshold_order = weak_threshold < active_threshold <= strong_threshold
+        else:
+            valid_threshold_order = strong_threshold <= active_threshold < weak_threshold
+        if label_column is None and not valid_threshold_order:
+            raise ValueError(
+                f"activity thresholds are inconsistent with {direction}: "
+                f"weak={weak_threshold}, active={active_threshold}, strong={strong_threshold}"
+            )
+
+        records: list[dict[str, Any]] = []
+        for _, row in frame.iterrows():
+            raw_smiles = str(row.get(smiles_column, "") or "").strip()
+            if not raw_smiles or raw_smiles.lower() == "nan":
+                continue
+            raw_id = row.get(id_column, "")
+            molecule_id = "" if raw_id is None or pd.isna(raw_id) else str(raw_id).strip()
+            if self.target_id == "vav1" and label_column is None and not molecule_id.startswith("PAT"):
+                continue
+            raw_value = row.get(value_column) if value_column else None
+            try:
+                activity_value = float(raw_value) if raw_value is not None and not pd.isna(raw_value) else None
+            except (TypeError, ValueError):
+                activity_value = None
+
+            label: int | None = None
+            if label_column is not None:
+                raw_label = row.get(label_column)
+                try:
+                    parsed = float(raw_label)
+                    label = int(parsed) if parsed in (-1, 0, 1) else None
+                except (TypeError, ValueError):
+                    label_text = str(raw_label).strip().lower()
+                    label = 1 if label_text in {"active", "true", "yes", "positive"} else (
+                        0 if label_text in {"inactive", "false", "no", "negative"} else None
+                    )
+            elif activity_value is not None:
+                if direction == "greater_is_active":
+                    label = 1 if activity_value >= active_threshold else (
+                        0 if activity_value < weak_threshold else -1
+                    )
+                else:
+                    label = 1 if activity_value <= active_threshold else (
+                        0 if activity_value > weak_threshold else -1
+                    )
+            if label not in (-1, 0, 1):
+                continue
+            if activity_value is not None and (label_column is None or thresholds_configured):
+                if direction == "greater_is_active":
+                    strong = int(activity_value >= strong_threshold)
+                    activity_norm = (
+                        activity_value - weak_threshold
+                    ) / max(strong_threshold - weak_threshold, 1e-8)
+                else:
+                    strong = int(activity_value <= strong_threshold)
+                    activity_norm = (
+                        weak_threshold - activity_value
+                    ) / max(weak_threshold - strong_threshold, 1e-8)
+                activity_norm = max(0.0, min(1.0, activity_norm))
+            else:
+                strong = int(label == 1)
+                activity_norm = float(label == 1)
+            records.append(
+                {
+                    "molecule_id": molecule_id,
+                    "smiles": raw_smiles,
+                    "activity_raw": activity_value,
+                    "activity_norm": activity_norm,
+                    "activity_metric": self.target_profile.activity_metric,
+                    "activity_direction": direction,
+                    "label_active": label,
+                    "strong_active": strong,
+                    "sample_weight": 1.2 if strong else (0.5 if label == -1 else 1.0),
+                    "source": "activity",
+                }
+            )
+        return records
+
     # ------------------------------------------------------------------
     # 步骤1 — patent 预处理 + 4 轮 GLARE 预训练
     # ------------------------------------------------------------------
     def step1_pretrain(self) -> dict:
         from . import glare_gnn_adapter
         self.log("=== Step1: patent 预处理 + 4 轮 GLARE 预训练 ===")
-        df = pd.read_excel(KNOWN_439_XLSX)
-        df.columns = [c.strip() for c in df.columns]
-        cpd = df.iloc[:, 0].astype(str)
-        patent = df[cpd.str.startswith("PAT")].copy()
-        patent.columns = ["molecule_id", "smiles", "pdc50"]
-
-        # 标准化
         records = []
         invalid = []
-        for _, row in patent.iterrows():
+        for row in self._load_activity_records():
             s = rdkit_utils.standardize(str(row["smiles"]))
             if not s["mol_valid"]:
                 invalid.append({"molecule_id": row["molecule_id"], "smiles": row["smiles"], "reason": "invalid"})
                 continue
-            pdc = float(row["pdc50"])
             rec = {
                 "molecule_id": row["molecule_id"],
                 "smiles": str(row["smiles"]),
                 "canonical_smiles": s["canonical_smiles"],
                 "neutralized_smiles": s["neutralized_smiles"],
                 "inchikey": s["inchikey"],
-                "pdc50_raw": pdc,
-                "pdc50_norm": max(0.0, min(1.0, (pdc - 5.0) / 4.0)),
-                "label_active": 1 if pdc >= 7.0 else (0 if pdc < 6.0 else -1),  # -1 = weak
-                "strong_active": 1 if pdc >= 8.0 else 0,
-                "sample_weight": 1.2 if pdc >= 8.0 else (1.0 if pdc >= 7.0 else (0.5 if pdc >= 6.0 else 1.0)),
-                "source": "patent",
+                "pdc50_raw": row["activity_raw"],
+                "pdc50_norm": row["activity_norm"],
+                "label_active": row["label_active"],
+                "strong_active": row["strong_active"],
+                "sample_weight": row["sample_weight"],
+                "source": row["source"],
             }
             records.append(rec)
 
         valid = [r for r in records if r["label_active"] in (0, 1)]
         weak = [r for r in records if r["label_active"] == -1]
         self.log(f"patent 有效={len(records)} 强分类={len(valid)} weak={len(weak)} 无效={len(invalid)}")
-        if len(records) < 400:
-            return {"ok": False, "error": f"有效分子 {len(records)} < 400，数据不足"}
+        if len(records) < 10:
+            return {"ok": False, "error": f"有效分子 {len(records)} < 10，数据不足"}
 
-        self._save_csv_xlsx(pd.DataFrame(records), "data/processed/patent_403_cleaned")
-        self._save_csv_xlsx(pd.DataFrame(invalid), "data/processed/patent_invalid_records")
+        prefix = "patent" if self.target_id == "vav1" else self.target_id
+        self._save_csv_xlsx(pd.DataFrame(records), f"data/processed/{prefix}_activity_cleaned")
+        self._save_csv_xlsx(pd.DataFrame(invalid), f"data/processed/{prefix}_invalid_records")
 
-        # 100 四分子组（前 400），剩 3 holdout
-        first400 = records[:400]
-        remainder = records[400:]
+        # 四分子组，最多四轮；小型新靶点数据集也能完成可验证的首轮训练。
         groups = []
-        for gi in range(100):
-            grp = first400[gi * 4:(gi + 1) * 4]
+        for gi in range((len(records) + 3) // 4):
+            grp = records[gi * 4:(gi + 1) * 4]
             for m in grp:
                 m["group_id"] = f"patent_group_{gi + 1:03d}"
             groups.extend(grp)
-        self._save_csv_xlsx(pd.DataFrame(groups), "data/processed/patent_groups_100")
-        if remainder:
-            self._save_csv_xlsx(pd.DataFrame(remainder), "data/processed/patent_remainder_3")
+        self._save_csv_xlsx(pd.DataFrame(groups), f"data/processed/{prefix}_groups")
 
         # 4 轮预训练（累积 + 续训）
         training_log = []
@@ -177,18 +360,27 @@ class VAV1RLOrchestrator:
             group_ids = {f"patent_group_{i:03d}" for i in range(lo, hi + 1)}
             round_data = [m for m in groups if m["group_id"] in group_ids]
             # weak_active 低权重纳入（label 取 0，weight 已 0.5）
-            smiles = [m["neutralized_smiles"] for m in round_data]
-            labels = [m["label_active"] if m["label_active"] in (0, 1) else 0 for m in round_data]
-            weights = [m["sample_weight"] for m in round_data]
+            train_records = [
+                {
+                    "smiles": m["neutralized_smiles"],
+                    "label": m["label_active"] if m["label_active"] in (0, 1) else 0,
+                    "weight": m["sample_weight"],
+                    "molecule_id": m["molecule_id"],
+                }
+                for m in round_data
+            ]
+            smiles = [m["smiles"] for m in train_records]
             ckpt = str(self.project_root / "glare" / f"pretrain_round_{rnd}_checkpoint.pt")
             self.log(f"pretrain round {rnd}: groups {lo:03d}-{hi:03d}, n={len(smiles)}")
-            _ep = int(os.environ.get("VAV1_GLARE_EPOCHS", "50"))
-            _ens = int(os.environ.get("VAV1_GLARE_ENSEMBLE", "3"))
+            _ep = int(os.environ.get("GLARE_EPOCHS", os.environ.get("VAV1_GLARE_EPOCHS", "50")))
+            _ens = int(os.environ.get("GLARE_ENSEMBLE", os.environ.get("VAV1_GLARE_ENSEMBLE", "3")))
             res = glare_gnn_adapter.train(
-                ckpt, smiles, labels, weights,
+                ckpt,
+                records=train_records,
                 prev_checkpoint=ckpt_prev,
                 epochs=_ep,
                 ensemble_size=_ens,
+                target_profile=self.target_profile_path,
             )
             training_log.append({"round": rnd, "n": len(smiles), "ok": res.get("ok"), "loss": res.get("final_loss"), "checkpoint": ckpt})
             if res.get("ok"):
@@ -204,34 +396,97 @@ class VAV1RLOrchestrator:
     # ------------------------------------------------------------------
     def step2_generate(self) -> dict:
         self.log("=== Step2: DiffGui 生成 ===")
-        if self.mode == "test" and (self.reuse_sdf_dir or ROUND200_MERGED):
-            # 测试模式：复用 round_200 的 922 denovo 评估表作为生成池
-            src = pd.read_excel(ROUND200_MERGED)
-            smi_col = next(c for c in src.columns if c.upper() == "SMILES")
-            gen = src[[smi_col]].rename(columns={smi_col: "generated_smiles"}).head(self.num_mols)
-            gen["generation_id"] = [f"GEN_R200_{i:05d}" for i in range(len(gen))]
+        source_path = (
+            Path(self.reuse_sdf_dir)
+            if self.reuse_sdf_dir and Path(self.reuse_sdf_dir).is_file()
+            else self.generation_source
+        )
+        if self.mode == "test" and source_path is not None and source_path.is_file():
+            # 测试模式：复用 target profile 指定的生成池。
+            src = _read_table(source_path)
+            smi_col = next((c for c in src.columns if "smiles" in str(c).lower()), None)
+            if smi_col is None:
+                raise ValueError(f"generation source has no SMILES column: {source_path}")
+            id_col = next(
+                (
+                    column for column in src.columns
+                    if str(column).strip().lower() in {"molecule_id", "generated_id", "mol_id", "id"}
+                ),
+                None,
+            )
+            source_columns = [smi_col] + ([id_col] if id_col else [])
+            gen = src[source_columns].rename(columns={smi_col: "generated_smiles"}).head(self.num_mols)
+            gen["generation_id"] = [
+                f"GEN_{self.target_id}_{i:05d}" for i in range(len(gen))
+            ]
+            if id_col:
+                gen["molecule_id"] = gen[id_col].astype(str)
+            else:
+                gen["molecule_id"] = gen["generation_id"]
             gen["generation_mode"] = "denovo"
             gen["source_scaffold_id"] = None
             gen["source_fragment_smiles"] = None
-            gen["pocket_file"] = VAV1_POCKET_PDB
-            gen["requested_affinity_condition"] = "<= -6 kcal/mol (生成后 Vina 过滤)"
-            gen["mapping_rule"] = "DiffGui aff=-log10(Kd) 与 kcal/mol 不兼容；生成后用 Vina dock 过滤 <=-6"
-            self.log(f"测试模式：复用 round_200 {len(gen)} 分子作为 denovo 生成池")
+            gen["pocket_file"] = str(self.pocket_file) if self.pocket_file else None
+            gen["requested_affinity_condition"] = "profile-defined; affinity filtering follows generation"
+            gen["mapping_rule"] = "test generation source contract"
+            self.log(f"测试模式：复用 profile generation source 的 {len(gen)} 个分子")
         else:
             # full 模式：调 diffgui_runner 拆 60% frag_cond + 40% denovo（实际跑需 GPU）
             return self._step2_generate_full()
         csv_p, _ = self._save_csv_xlsx(gen, "diffgui_generation/generated_10000_raw")
-        manifest = {"mode": self.mode, "num_mols": len(gen), "pocket_type": self.pocket_type, "pocket_file": VAV1_POCKET_PDB, "mapping_rule": gen["mapping_rule"].iloc[0]}
+        manifest = {
+            "mode": self.mode,
+            "target_id": self.target_id,
+            "num_mols": len(gen),
+            "pocket_type": self.pocket_type,
+            "pocket_file": str(self.pocket_file) if self.pocket_file else None,
+            "mapping_rule": gen["mapping_rule"].iloc[0] if len(gen) else None,
+        }
         (self.project_root / "diffgui_generation" / "generation_manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2))
         self._record_funnel(2, len(gen), len(gen), 0)
         return {"ok": True, "generated_csv": csv_p, "num_mols": len(gen)}
 
     def _step2_generate_full(self) -> dict:
-        num_frag = round(self.num_mols * 0.6)
-        num_denovo = self.num_mols - num_frag
-        # TODO: full 模式需调 diffgui_runner 拆 frag_cond(60%)+denovo(40%) 子运行 + GPU + 临时 sample.yml override
-        self.log(f"full 模式 frag_cond={num_frag} denovo={num_denovo}（需 GPU 实跑）")
-        return {"ok": False, "error": "full 生成需 GPU 实跑，本次测试模式未执行", "num_frag": num_frag, "num_denovo": num_denovo}
+        result = run_target_generator(
+            self.target_profile,
+            output_dir=self.project_root / "diffgui_generation",
+            project_root=self.project_root,
+            pocket_file=self.pocket_file,
+            num_mols=self.num_mols,
+        )
+        gen = result["frame"]
+        gen["requested_affinity_condition"] = "profile-defined; affinity filtering follows generation"
+        gen["mapping_rule"] = "target generator profile contract"
+        csv_p, _ = self._save_csv_xlsx(gen, "diffgui_generation/generated_10000_raw")
+        manifest = {
+            "mode": self.mode,
+            "target_id": self.target_id,
+            "num_mols": len(gen),
+            "requested_num_mols": self.num_mols,
+            "num_frag": result["num_frag"],
+            "num_denovo": result["num_denovo"],
+            "pocket_type": self.pocket_type,
+            "pocket_file": str(self.pocket_file) if self.pocket_file else None,
+            "request_json": result["request_json"],
+            "raw_output_csv": result["raw_output_csv"],
+            "command": result["command"],
+            "mapping_rule": "target generator profile contract",
+        }
+        (self.project_root / "diffgui_generation" / "generation_manifest.json").write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2)
+        )
+        self.log(
+            f"full 模式生成完成: frag_cond={result['num_frag']} "
+            f"denovo={result['num_denovo']} output={csv_p}"
+        )
+        self._record_funnel(2, len(gen), len(gen), 0)
+        return {
+            "ok": True,
+            "generated_csv": csv_p,
+            "num_mols": len(gen),
+            "num_frag": result["num_frag"],
+            "num_denovo": result["num_denovo"],
+        }
 
     # ------------------------------------------------------------------
     # 步骤3 — 化学有效性 11 项 + 22 ADMET
@@ -371,6 +626,13 @@ class VAV1RLOrchestrator:
 
     def step5_affinity(self) -> dict:
         self.log("=== Step5: Vina + Glide XP + MM-GBSA 正交对接 ===")
+        if self.mode != "test" and not (
+            self.pocket_file or self.prepared_receptor or self.grid_file
+        ):
+            raise ValueError(
+                f"target '{self.target_id}' requires receptor_pdb, prepared_receptor or "
+                "grid_file for full docking"
+            )
         in_path = self.project_root / "screening/step4_druglikeness_retained.csv"
         if not in_path.is_file():
             in_path = self.project_root / "screening/step4_druglikeness_round1_all.csv"
@@ -403,11 +665,13 @@ class VAV1RLOrchestrator:
 
                 dock_result = sch.end_to_end_dock(
                     ligands_sdf=sdf_path,
-                    receptor_pdb=VAV1_POCKET_PDB,
+                    receptor_pdb=str(self.pocket_file) if self.pocket_file else None,
                     output_dir=str(self.project_root),
                     install_path=self.schrodinger_install,
                     ph=self.ph,
                     box_center=None,  # 自动从 PDB 质心计算
+                    prepared_receptor=str(self.prepared_receptor) if self.prepared_receptor else None,
+                    grid_file=str(self.grid_file) if self.grid_file else None,
                 )
                 self.log(f"  Schrödinger steps: {[(s['step'], s['ok']) for s in dock_result.get('steps_log', [])]}")
                 # 按 title 匹配回 DataFrame
@@ -448,7 +712,15 @@ class VAV1RLOrchestrator:
 
         # ---- 正交门槛 ----
         out["reject_reason"] = out.get("reject_reason", None)
-        retained_mask = pd.Series(True, index=out.index)
+        score_columns = [
+            column for column in ("vina_score", "glide_xp_score", "mmgbsa_dg")
+            if column in out.columns
+        ]
+        out["affinity_observed"] = out[score_columns].notna().any(axis=1)
+        out.loc[~out["affinity_observed"], "reject_reason"] = (
+            out.loc[~out["affinity_observed"], "reject_reason"].fillna("")
+            + "; all_affinity_scores_missing"
+        ).str.strip("; ")
         # 简化：各模型进前 40%，或放宽底线
         for col in ["vina_score_norm", "glide_xp_score_norm", "mmgbsa_dg_norm"]:
             if col in out.columns:
@@ -459,12 +731,12 @@ class VAV1RLOrchestrator:
                     out.loc[below & out[col].notna(), "reject_reason"].fillna("") + f"; {col}_below_40pct"
                 )
 
-        # 按 consensus 排序（仅排序，不硬剔——除非所有模型都缺数据）
+        # 低于单模型分位线只留下标记；完全没有任何亲和力观测值才剔除。
         out = out.sort_values("affinity_consensus_score", ascending=False).reset_index(drop=True)
 
         self._save_csv_xlsx(out, "screening/step5_affinity_orthogonal_all")
-        retained = out[retained_mask].copy()
-        rejected = out[~retained_mask].copy()
+        retained = out[out["affinity_observed"]].copy()
+        rejected = out[~out["affinity_observed"]].copy()
         self._save_csv_xlsx(retained, "screening/step5_affinity_orthogonal_retained")
         self._save_csv_xlsx(rejected, "screening/step5_affinity_orthogonal_rejected")
         self._record_funnel(5, len(df), len(retained), len(rejected))
@@ -475,18 +747,18 @@ class VAV1RLOrchestrator:
     # 步骤6 — 去重
     # ------------------------------------------------------------------
     def step6_dedup(self) -> dict:
-        self.log("=== Step6: 去重 vs large_library + known_439 ===")
+        self.log(f"=== Step6: 去重 vs reference library + {self.target_id} activity set ===")
         df = pd.read_csv(self.project_root / "screening/step5_affinity_orthogonal_retained.csv")
         # 参考库
-        known = pd.read_excel(KNOWN_439_XLSX)
-        known_smi = known.iloc[:, 1].astype(str).tolist()
+        known_records = self._load_activity_records()
+        known_smi = [str(record["smiles"]) for record in known_records]
         known_canon = {rdkit_utils.standardize(s)["canonical_smiles"] for s in known_smi if rdkit_utils.standardize(s)["canonical_smiles"]}
         known_ik = {rdkit_utils.standardize(s)["inchikey"] for s in known_smi if rdkit_utils.standardize(s)["inchikey"]}
         known_ik1 = {rdkit_utils.inchikey_first_block(ik) for ik in known_ik if ik}
         # large_library（2.1M，抽样或全量读；先读前 50万）
         large_smi = []
-        if Path(LARGE_LIBRARY_SMI).is_file():
-            with open(LARGE_LIBRARY_SMI) as f:
+        if self.reference_library and self.reference_library.is_file():
+            with open(self.reference_library) as f:
                 for i, line in enumerate(f):
                     if i >= 500000:
                         break
@@ -538,11 +810,32 @@ class VAV1RLOrchestrator:
             if cands:
                 checkpoint = str(cands[-1])
                 self.log(f"pretrain_round_4 不存在，用最新 {checkpoint}")
-        res = glare_gnn_adapter.query(checkpoint, df["generated_smiles"].tolist())
+        if not Path(checkpoint).is_file():
+            raise FileNotFoundError(f"GLARE checkpoint not found for target '{self.target_id}': {checkpoint}")
+        query_records = []
+        for _, row in df.iterrows():
+            smiles = row.get("generated_smiles", row.get("smiles"))
+            if smiles is None or pd.isna(smiles):
+                continue
+            record = {"smiles": str(smiles)}
+            for key in ("molecule_id", "generated_id", "compound_id", "mol_id", "id"):
+                value = row.get(key)
+                if value is not None and not pd.isna(value) and str(value).strip():
+                    record["molecule_id"] = str(value).strip()
+                    break
+            query_records.append(record)
+        res = glare_gnn_adapter.query(
+            checkpoint,
+            records=query_records,
+            target_profile=self.target_profile_path,
+        )
         ranked = res.get("ranked", [])
         rdf = pd.DataFrame(ranked)
         if not rdf.empty:
-            rdf = rdf.merge(df, left_on="smiles", right_on="generated_smiles", how="left")
+            if "molecule_id" in rdf.columns and "molecule_id" in df.columns:
+                rdf = rdf.merge(df, on="molecule_id", how="left")
+            else:
+                rdf = rdf.merge(df, left_on="smiles", right_on="generated_smiles", how="left")
         self._save_csv_xlsx(rdf, "glare/step7_glare_ranked_all")
         self._save_csv_xlsx(rdf.head(200), "glare/step7_glare_top_candidates")
         self._record_funnel(7, len(df), len(rdf), 0)
@@ -587,10 +880,7 @@ class VAV1RLOrchestrator:
     def step10_rl_train(self) -> dict:
         from . import glare_gnn_adapter
         self.log("=== Step10: 排序集 RL 训练 ===")
-        known = pd.read_excel(KNOWN_439_XLSX)
-        cpd = known.iloc[:, 0].astype(str)
-        patent = known[cpd.str.startswith("PAT")]
-        selfs = known[~cpd.str.startswith("PAT")]
+        activity_records = self._load_activity_records()
 
         final_candidates = [
             self.project_root / "screening/step8_final_top20.csv",
@@ -608,21 +898,19 @@ class VAV1RLOrchestrator:
         top20_pct_threshold = score_ref["final_score"].quantile(0.8)
 
         rows = []
-        # 自合成：真实 pDC50, weight=1.5, label_source=wetlab
-        for _, r in selfs.iterrows():
-            pdc = float(r["pDC50"])
+        # Activity labels are target-profile data, never an implicit VAV1 table.
+        for record in activity_records:
+            canonical = rdkit_utils.standardize(str(record["smiles"]))["canonical_smiles"]
+            if not canonical:
+                continue
             rows.append({
-                "canonical_smiles": rdkit_utils.standardize(str(r.iloc[1]))["canonical_smiles"],
-                "label": 1 if pdc >= 7.0 else 0, "pdc50_raw": pdc, "weight": 1.5,
-                "label_source": "wetlab", "source": "self_synth",
-            })
-        # 专利：真实 pDC50, weight=1.0
-        for _, r in patent.iterrows():
-            pdc = float(r["pDC50"])
-            rows.append({
-                "canonical_smiles": rdkit_utils.standardize(str(r.iloc[1]))["canonical_smiles"],
-                "label": 1 if pdc >= 7.0 else 0, "pdc50_raw": pdc, "weight": 1.0,
-                "label_source": "patent", "source": "patent",
+                "canonical_smiles": canonical,
+                "molecule_id": record.get("molecule_id") or canonical,
+                "label": 1 if record["label_active"] == 1 else 0,
+                "pdc50_raw": record["activity_raw"],
+                "weight": record["sample_weight"],
+                "label_source": "target_activity",
+                "source": "target_activity",
             })
         # step8 最终排序分子（top-N）：pseudo_final_rank, weight=0.3
         smiles_col = "generated_smiles" if "generated_smiles" in final.columns else None
@@ -641,6 +929,7 @@ class VAV1RLOrchestrator:
             fs = float(r["final_score"]) if "final_score" in final.columns and pd.notna(r.get("final_score")) else 0.0
             rows.append({
                 "canonical_smiles": canon,
+                "molecule_id": r.get("molecule_id") or r.get("generation_id") or canon,
                 "label": 1 if fs >= top20_pct_threshold else 0,
                 "pdc50_raw": None,
                 "pseudo_reward": fs,
@@ -651,14 +940,28 @@ class VAV1RLOrchestrator:
         ds = pd.DataFrame(rows)
         self._save_csv_xlsx(ds, "glare/round1_rl_dataset")
 
-        smiles = ds["canonical_smiles"].tolist()
-        labels = ds["label"].astype(int).tolist()
-        weights = ds["weight"].astype(float).tolist()
+        train_records = [
+            {
+                "smiles": row["canonical_smiles"],
+                "label": int(row["label"]),
+                "weight": float(row["weight"]),
+                "molecule_id": str(row["molecule_id"]),
+            }
+            for _, row in ds.iterrows()
+        ]
         ckpt = str(self.project_root / "glare" / "round1_rl_checkpoint.pt")
-        prev = str(self.project_root / "glare" / "pretrain_round_4_checkpoint.pt")
-        _ens = int(os.environ.get("VAV1_GLARE_ENSEMBLE", "3"))
-        _ep = int(os.environ.get("VAV1_GLARE_EPOCHS", "50"))
-        res = glare_gnn_adapter.train(ckpt, smiles, labels, weights, prev_checkpoint=prev, ensemble_size=_ens, epochs=_ep)
+        pretrain_candidates = sorted((self.project_root / "glare").glob("pretrain_round_*_checkpoint.pt"))
+        prev = str(pretrain_candidates[-1]) if pretrain_candidates else None
+        _ens = int(os.environ.get("GLARE_ENSEMBLE", os.environ.get("VAV1_GLARE_ENSEMBLE", "3")))
+        _ep = int(os.environ.get("GLARE_EPOCHS", os.environ.get("VAV1_GLARE_EPOCHS", "50")))
+        res = glare_gnn_adapter.train(
+            ckpt,
+            records=train_records,
+            prev_checkpoint=prev,
+            ensemble_size=_ens,
+            epochs=_ep,
+            target_profile=self.target_profile_path,
+        )
         self._save_csv_xlsx(pd.DataFrame([{"ok": res.get("ok"), "loss": res.get("final_loss"), "n": len(ds)}]), "glare/round1_rl_training_log")
         # 兼容旧路径名（step11 可回退读取）
         legacy_ckpt = self.project_root / "glare" / "round1_similarity_rl_checkpoint.pt"
@@ -704,9 +1007,14 @@ class VAV1RLOrchestrator:
         self.log("=== 写最终报告 ===")
         lines = [FINAL_REPORT_FIRST_LINE, ""]
         lines.append("# RL Pipeline 执行报告")
-        lines.append(f"\n模式: {self.mode} | pocket_type: {self.pocket_type} | 生成时间: {_now()}\n")
+        lines.append(
+            f"\n模式: {self.mode} | target_id: {self.target_id} | "
+            f"pocket_type: {self.pocket_type} | 生成时间: {_now()}\n"
+        )
         lines.append("## 数据概况")
-        lines.append("- 先验 / known 活性集来自 DataSet-GNN-SMILES-pDC50.xlsx")
+        lines.append(f"- target activity table: {self.activity_table}")
+        lines.append(f"- Glide table: {self.target_profile.glide_table}")
+        lines.append(f"- MD features: {self.target_profile.md_dir or 'disabled'}")
         lines.append("## 漏斗")
         for step in sorted(self.funnel):
             f = self.funnel[step]
@@ -743,3 +1051,7 @@ class VAV1RLOrchestrator:
         self.write_final_report()
         self.status["finished_at"] = _now()
         return results
+
+
+# Public compatibility name retained for existing VAV1 callers.
+VAV1RLOrchestrator = TargetRLOrchestrator

@@ -7,4 +7,7 @@
 - schrodinger_local: 薛定谉本地 subprocess（LigPrep/PrepWizard/Glide XP/prime_mmgbsa）
 - glare_gnn_adapter: 原版 GLARE GNN+GRPO 适配器
 """
-from .orchestrator import VAV1RLOrchestrator  # noqa
+from .orchestrator import TargetRLOrchestrator, VAV1RLOrchestrator  # noqa
+from .target_profile import TargetProfile  # noqa
+from .target_md import build_target_md_features  # noqa
+from .target_generation import run_target_generator  # noqa

@@ -7,16 +7,19 @@ final_stage: H8
 default_for_final_count_only: false
 stages:
   H0:
+    master_skill: drug-discovery-orchestrator
     skill: funnel-orchestrator
     target: {mode: fixed, value: 1}
     reference_target: 1
     quantity_role: input_gate
   H1A:
+    master_skill: dd-generation
     skill: funnel-diffdynamic-denovo
     target: {mode: fixed, value: 0}
     reference_target: 0
     quantity_role: disabled
   H1B:
+    master_skill: dd-generation
     skill: funnel-diffdynamic-prudent
     target: {mode: per_final, value: 50}
     reference_target: 100
@@ -24,48 +27,57 @@ stages:
     analysis_vina_modes: none
     next_stage: H2
   H2:
+    master_skill: virtual-docking
     skill: funnel-glide-sp
     target: {mode: per_final, value: 5}
     reference_target: 10
     quantity_role: promoted_molecules
   H3:
+    master_skill: featurehit-finding
     skill: funnel-featurehit+funnel-shape-screen
     target: {mode: per_final, value: 15}
     reference_target: 30
     quantity_role: expanded_unique_hits
   H4:
+    master_skill: admet
     skill: ddfast-06-qikprop-admet
     target: {mode: per_final, value: 2.5, rounding: ceil}
     reference_target: 5
     quantity_role: admet_hits
     backend_policy: schrodinger_qikprop_required
   H5:
+    master_skill: virtual-docking
     skill: funnel-glide-sp
     target: {mode: per_final, value: 1}
     reference_target: 2
     quantity_role: final_test_hits
   H6:
+    master_skill: virtual-docking
     skill: funnel-glide-xp
     target: {mode: fixed, value: 0}
     reference_target: 0
     quantity_role: disabled
   H7:
+    master_skill: virtual-docking
     skill: funnel-mmgbsa
     target: {mode: fixed, value: 0}
     reference_target: 0
     quantity_role: disabled
   H8:
+    master_skill: molecular-dynamics
     skill: funnel-desmond-short-md
     target: {mode: per_final, value: 1}
     reference_target: 2
     quantity_role: md_validation_molecules
     protocol: 10ns_per_molecule
   H9:
+    master_skill: molecular-dynamics
     skill: funnel-desmond-long-md
     target: {mode: fixed, value: 0}
     reference_target: 0
     quantity_role: disabled
   H10:
+    master_skill: all-analysis
     skill: funnel-comprehensive-analysis
     target: {mode: fixed, value: 0}
     reference_target: 0

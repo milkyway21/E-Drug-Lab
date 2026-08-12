@@ -11,9 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Optional
-
-from app.services.conda_runner import conda_run
+from typing import Any, Mapping, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +19,16 @@ GLARE_CONDA_ENV = "diffgui_new"
 CLI_MODULE = "app.pipelines.vav1_rl.glare_gnn_cli"
 
 
+def _conda_run(*args, **kwargs):
+    """Load the backend runner only when a subprocess is actually needed."""
+    from app.services.conda_runner import conda_run
+
+    return conda_run(*args, **kwargs)
+
+
 def _run_cli(args: list[str], timeout: int = 7200) -> dict:
     """调 glare_gnn_cli，返回 stdout 最后一行 JSON 解析结果。"""
-    proc = conda_run(GLARE_CONDA_ENV, ["python", "-m", CLI_MODULE, *args], timeout=timeout)
+    proc = _conda_run(GLARE_CONDA_ENV, ["python", "-m", CLI_MODULE, *args], timeout=timeout)
     if proc.returncode != 0:
         return {"ok": False, "error": (proc.stderr or proc.stdout)[-2000:]}
     # 取最后一行 JSON
@@ -37,12 +42,53 @@ def _run_cli(args: list[str], timeout: int = 7200) -> dict:
     return {"ok": False, "error": "no JSON in stdout", "stdout": proc.stdout[-2000:]}
 
 
+def _normalise_records(
+    records: Optional[list[Mapping[str, Any] | str]],
+    train_smiles: Optional[list[str]],
+    train_labels: Optional[list[int]],
+    sample_weights: Optional[list[float]],
+    molecule_ids: Optional[list[str]],
+) -> list[dict[str, Any]]:
+    if records is not None:
+        result = []
+        for index, value in enumerate(records):
+            row = {"smiles": value} if isinstance(value, str) else dict(value)
+            if "smiles" not in row and "smiles_raw" not in row:
+                raise ValueError(f"record {index} has no smiles field")
+            if "label" not in row and "label_active" in row:
+                row["label"] = row["label_active"]
+            if "weight" not in row:
+                row["weight"] = 1.0
+            result.append(row)
+        return result
+    if train_smiles is None or train_labels is None:
+        raise ValueError("train_smiles and train_labels are required when records is omitted")
+    if len(train_smiles) != len(train_labels):
+        raise ValueError("train_smiles and train_labels must have equal length")
+    weights = sample_weights or [1.0] * len(train_smiles)
+    ids = molecule_ids or [None] * len(train_smiles)
+    if len(weights) != len(train_smiles) or len(ids) != len(train_smiles):
+        raise ValueError("sample_weights and molecule_ids must match train_smiles length")
+    result = []
+    for smi, label, weight, molecule_id in zip(train_smiles, train_labels, weights, ids):
+        row: dict[str, Any] = {
+            "smiles": smi,
+            "label": int(label),
+            "weight": float(weight),
+        }
+        if molecule_id not in (None, ""):
+            row["molecule_id"] = str(molecule_id)
+        result.append(row)
+    return result
+
+
 def train(
     checkpoint_path: str,
-    train_smiles: list[str],
-    train_labels: list[int],
+    train_smiles: Optional[list[str]] = None,
+    train_labels: Optional[list[int]] = None,
     sample_weights: Optional[list[float]] = None,
     *,
+    records: Optional[list[Mapping[str, Any] | str]] = None,
     molecule_ids: Optional[list[str]] = None,
     prev_checkpoint: Optional[str] = None,
     epochs: int = 50,
@@ -61,18 +107,13 @@ def train(
     beta_gl: float = 0.1,
     beta_md: float = 0.1,
     md_adv_eta: float = 0.0,
+    target_profile: Optional[str] = None,
 ) -> dict:
     """GNN+GRPO 训练（子进程 diffgui_new）。数据写临时 JSON。支持自定义超参。"""
     import tempfile
-    ids = molecule_ids or [None] * len(train_smiles)
-    data = []
-    for s, lb, w, mid in zip(
-        train_smiles, train_labels, sample_weights or [1.0] * len(train_smiles), ids
-    ):
-        row = {"smiles": s, "label": int(lb), "weight": float(w)}
-        if mid is not None:
-            row["molecule_id"] = str(mid)
-        data.append(row)
+    data = _normalise_records(
+        records, train_smiles, train_labels, sample_weights, molecule_ids
+    )
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
         json.dump(data, f)
         data_path = f.name
@@ -91,6 +132,8 @@ def train(
         args.extend(["--prev", prev_checkpoint])
     if disable_ig:
         args.append("--disable-ig")
+    if target_profile:
+        args.extend(["--target-profile", target_profile])
     res = _run_cli(args)
     try:
         Path(data_path).unlink()
@@ -101,16 +144,24 @@ def train(
 
 def query(
     checkpoint_path: str,
-    screen_smiles: list[str],
+    screen_smiles: Optional[list[str]] = None,
     *,
     ensemble_size: int = 3,
+    smiles_list: Optional[list[str]] = None,
+    records: Optional[list[Mapping[str, Any] | str]] = None,
+    target_profile: Optional[str] = None,
 ) -> dict:
     """GNN+GRPO 排序（子进程 diffgui_new）。"""
     import tempfile
+    if records is None:
+        screen_smiles = screen_smiles if screen_smiles is not None else (smiles_list or [])
+        records = list(screen_smiles)
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
-        json.dump(screen_smiles, f)
+        json.dump(records, f)
         smi_path = f.name
     args = ["query", "--ckpt", checkpoint_path, "--smiles", smi_path, "--ensemble", str(ensemble_size)]
+    if target_profile:
+        args.extend(["--target-profile", target_profile])
     res = _run_cli(args, timeout=3600)
     try:
         Path(smi_path).unlink()
@@ -126,7 +177,7 @@ def smoke_test() -> dict:
         "from app.pipelines.vav1_rl.glare_gnn_cli import _setup; "
         "print('GLARE_IMPORT_OK')"
     )
-    proc = conda_run(GLARE_CONDA_ENV, ["python", "-c", script], timeout=15)
+    proc = _conda_run(GLARE_CONDA_ENV, ["python", "-c", script], timeout=15)
     if proc.returncode != 0:
         return {"ok": False, "error": (proc.stderr or proc.stdout)[-600:]}
     return {"ok": True, "env": GLARE_CONDA_ENV}

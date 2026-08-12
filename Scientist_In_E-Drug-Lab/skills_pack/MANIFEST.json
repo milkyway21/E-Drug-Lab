@@ -1,240 +1,520 @@
 {
-  "funnel_flowchart": [
-    "funnel-orchestrator",
-    "funnel-campaign-memory",
-    "funnel-diffdynamic-denovo",
-    "funnel-diffdynamic-prudent",
-    "funnel-glide-sp",
-    "funnel-featurehit",
-    "funnel-shape-screen",
-    "funnel-drugflow-hepg2",
-    "funnel-glide-xp",
-    "funnel-mmgbsa",
-    "funnel-desmond-short-md",
-    "funnel-desmond-long-md",
-    "funnel-comprehensive-analysis",
-    "e-drug-lab-scientist"
-  ],
-  "ddfast": [
-    "ddfast-06-qikprop-admet",
-    "ddfast-07-glide-sp",
-    "dd-md-desmond",
-    "dd-md-desmond-sea-qc"
-  ],
-  "drug_design": [
-    "rdkit",
-    "pose-library-screening",
-    "desmond-membrane-md-ops"
-  ],
-  "campaign": [
-    "desmond-md-campaign",
-    "scientist-in-e-drug-lab",
-    "edrug-capability-check"
-  ],
-  "evidence": [
-    "scope-molecular-nomination",
-    "research-target-biology",
-    "rank-protein-structures",
-    "qualify-binding-pocket",
-    "enrich-compound-evidence",
-    "triage-compound-toxicity",
-    "nominate-lipid-modulators",
-    "write-mechanism-validation-report"
-  ],
-  "project": [],
+  "master_categories": {
+    "drug-discovery-orchestrator": [
+      "e-drug-lab-scientist",
+      "funnel-orchestrator",
+      "scientist-in-e-drug-lab",
+      "funnel-campaign-memory",
+      "time-scheduler",
+      "reporting",
+      "edrug-capability-check"
+    ],
+    "target-discovery": [
+      "scope-molecular-nomination",
+      "research-target-biology",
+      "search-biomedical-evidence",
+      "assess-target-pharmacology",
+      "rank-protein-structures",
+      "assess-computational-pharmacology",
+      "prepare-native-protein-ligand",
+      "qualify-binding-pocket"
+    ],
+    "dd-generation": [
+      "funnel-diffdynamic-denovo",
+      "funnel-diffdynamic-prudent"
+    ],
+    "virtual-docking": [
+      "funnel-glide-sp",
+      "ddfast-07-glide-sp",
+      "funnel-glide-xp",
+      "funnel-mmgbsa"
+    ],
+    "featurehit-finding": [
+      "funnel-featurehit",
+      "funnel-shape-screen",
+      "pose-library-screening",
+      "rdkit"
+    ],
+    "admet": [
+      "funnel-drugflow-hepg2",
+      "ddfast-06-qikprop-admet",
+      "enrich-compound-evidence",
+      "triage-compound-toxicity"
+    ],
+    "molecular-dynamics": [
+      "funnel-desmond-short-md",
+      "funnel-desmond-long-md",
+      "dd-md-desmond",
+      "dd-md-desmond-sea-qc",
+      "desmond-md-campaign",
+      "desmond-membrane-md-ops"
+    ],
+    "all-analysis": [
+      "funnel-comprehensive-analysis",
+      "nominate-lipid-modulators",
+      "write-mechanism-validation-report"
+    ]
+  },
+  "legacy_categories": {
+    "funnel": [
+      "funnel-orchestrator",
+      "funnel-campaign-memory",
+      "funnel-diffdynamic-denovo",
+      "funnel-diffdynamic-prudent",
+      "funnel-glide-sp",
+      "funnel-featurehit",
+      "funnel-shape-screen",
+      "funnel-drugflow-hepg2",
+      "funnel-glide-xp",
+      "funnel-mmgbsa",
+      "funnel-desmond-short-md",
+      "funnel-desmond-long-md",
+      "funnel-comprehensive-analysis",
+      "e-drug-lab-scientist"
+    ],
+    "ddfast": [
+      "ddfast-06-qikprop-admet",
+      "ddfast-07-glide-sp",
+      "dd-md-desmond",
+      "dd-md-desmond-sea-qc"
+    ],
+    "drug-design": [
+      "rdkit",
+      "pose-library-screening",
+      "desmond-membrane-md-ops"
+    ],
+    "campaign": [
+      "desmond-md-campaign",
+      "time-scheduler",
+      "reporting",
+      "scientist-in-e-drug-lab",
+      "edrug-capability-check"
+    ],
+    "evidence": [
+      "scope-molecular-nomination",
+      "research-target-biology",
+      "search-biomedical-evidence",
+      "assess-target-pharmacology",
+      "rank-protein-structures",
+      "assess-computational-pharmacology",
+      "prepare-native-protein-ligand",
+      "qualify-binding-pocket",
+      "enrich-compound-evidence",
+      "triage-compound-toxicity",
+      "nominate-lipid-modulators",
+      "write-mechanism-validation-report"
+    ]
+  },
+  "compatibility_aliases": {
+    "e-drug-lab-scientist": "drug-discovery-orchestrator/e-drug-lab-scientist",
+    "funnel-orchestrator": "drug-discovery-orchestrator/funnel-orchestrator",
+    "scientist-in-e-drug-lab": "drug-discovery-orchestrator/scientist-in-e-drug-lab",
+    "funnel-campaign-memory": "drug-discovery-orchestrator/funnel-campaign-memory",
+    "time-scheduler": "drug-discovery-orchestrator/time-scheduler",
+    "reporting": "drug-discovery-orchestrator/reporting",
+    "edrug-capability-check": "drug-discovery-orchestrator/edrug-capability-check",
+    "scope-molecular-nomination": "target-discovery/scope-molecular-nomination",
+    "research-target-biology": "target-discovery/research-target-biology",
+    "search-biomedical-evidence": "target-discovery/search-biomedical-evidence",
+    "assess-target-pharmacology": "target-discovery/assess-target-pharmacology",
+    "rank-protein-structures": "target-discovery/rank-protein-structures",
+    "assess-computational-pharmacology": "target-discovery/assess-computational-pharmacology",
+    "prepare-native-protein-ligand": "target-discovery/prepare-native-protein-ligand",
+    "qualify-binding-pocket": "target-discovery/qualify-binding-pocket",
+    "funnel-diffdynamic-denovo": "dd-generation/funnel-diffdynamic-denovo",
+    "funnel-diffdynamic-prudent": "dd-generation/funnel-diffdynamic-prudent",
+    "funnel-glide-sp": "virtual-docking/funnel-glide-sp",
+    "ddfast-07-glide-sp": "virtual-docking/ddfast-07-glide-sp",
+    "funnel-glide-xp": "virtual-docking/funnel-glide-xp",
+    "funnel-mmgbsa": "virtual-docking/funnel-mmgbsa",
+    "funnel-featurehit": "featurehit-finding/funnel-featurehit",
+    "funnel-shape-screen": "featurehit-finding/funnel-shape-screen",
+    "pose-library-screening": "featurehit-finding/pose-library-screening",
+    "rdkit": "featurehit-finding/rdkit",
+    "funnel-drugflow-hepg2": "admet/funnel-drugflow-hepg2",
+    "ddfast-06-qikprop-admet": "admet/ddfast-06-qikprop-admet",
+    "enrich-compound-evidence": "admet/enrich-compound-evidence",
+    "triage-compound-toxicity": "admet/triage-compound-toxicity",
+    "funnel-desmond-short-md": "molecular-dynamics/funnel-desmond-short-md",
+    "funnel-desmond-long-md": "molecular-dynamics/funnel-desmond-long-md",
+    "dd-md-desmond": "molecular-dynamics/dd-md-desmond",
+    "dd-md-desmond-sea-qc": "molecular-dynamics/dd-md-desmond-sea-qc",
+    "desmond-md-campaign": "molecular-dynamics/desmond-md-campaign",
+    "desmond-membrane-md-ops": "molecular-dynamics/desmond-membrane-md-ops",
+    "funnel-comprehensive-analysis": "all-analysis/funnel-comprehensive-analysis",
+    "nominate-lipid-modulators": "all-analysis/nominate-lipid-modulators",
+    "write-mechanism-validation-report": "all-analysis/write-mechanism-validation-report"
+  },
   "installed": [
     {
-      "name": "funnel-orchestrator",
-      "category": "funnel",
-      "source": "skills/funnel-orchestrator",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-campaign-memory",
-      "category": "funnel",
-      "source": "skills/funnel-campaign-memory",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-diffdynamic-denovo",
-      "category": "funnel",
-      "source": "skills/funnel-diffdynamic-denovo",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-diffdynamic-prudent",
-      "category": "funnel",
-      "source": "skills/funnel-diffdynamic-prudent",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-glide-sp",
-      "category": "funnel",
-      "source": "skills/funnel-glide-sp",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-featurehit",
-      "category": "funnel",
-      "source": "skills/funnel-featurehit",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-shape-screen",
-      "category": "funnel",
-      "source": "skills/funnel-shape-screen",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-drugflow-hepg2",
-      "category": "funnel",
-      "source": "skills/funnel-drugflow-hepg2",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-glide-xp",
-      "category": "funnel",
-      "source": "skills/funnel-glide-xp",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-mmgbsa",
-      "category": "funnel",
-      "source": "skills/funnel-mmgbsa",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-desmond-short-md",
-      "category": "funnel",
-      "source": "skills/funnel-desmond-short-md",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-desmond-long-md",
-      "category": "funnel",
-      "source": "skills/funnel-desmond-long-md",
-      "action": "symlinked"
-    },
-    {
-      "name": "funnel-comprehensive-analysis",
-      "category": "funnel",
-      "source": "skills/funnel-comprehensive-analysis",
-      "action": "symlinked"
-    },
-    {
-      "name": "e-drug-lab-scientist",
-      "category": "funnel",
-      "source": "skills/e-drug-lab-scientist",
-      "action": "symlinked"
-    },
-    {
-      "name": "ddfast-06-qikprop-admet",
-      "category": "ddfast",
-      "source": "skills/ddfast-06-qikprop-admet",
-      "action": "symlinked"
-    },
-    {
-      "name": "ddfast-07-glide-sp",
-      "category": "ddfast",
-      "source": "skills/ddfast-07-glide-sp",
-      "action": "symlinked"
-    },
-    {
-      "name": "dd-md-desmond",
-      "category": "ddfast",
-      "source": "skills/dd-md-desmond",
-      "action": "symlinked"
-    },
-    {
-      "name": "dd-md-desmond-sea-qc",
-      "category": "ddfast",
-      "source": "skills/dd-md-desmond-sea-qc",
-      "action": "symlinked"
-    },
-    {
-      "name": "rdkit",
-      "category": "drug-design",
-      "source": "skills/rdkit",
-      "action": "symlinked"
-    },
-    {
-      "name": "pose-library-screening",
-      "category": "drug-design",
-      "source": "skills/pose-library-screening",
-      "action": "symlinked"
-    },
-    {
-      "name": "desmond-membrane-md-ops",
-      "category": "drug-design",
-      "source": "skills/desmond-membrane-md-ops",
-      "action": "symlinked"
-    },
-    {
-      "name": "desmond-md-campaign",
-      "category": "campaign",
-      "source": "skills/desmond-md-campaign",
-      "action": "symlinked"
-    },
-    {
-      "name": "scientist-in-e-drug-lab",
-      "category": "campaign",
-      "source": "skills/scientist-in-e-drug-lab",
+      "name": "admet",
+      "category": "admet",
+      "kind": "master",
+      "source": "skills/admet",
+      "destination": "admet/admet",
       "action": "symlinked-filtered"
     },
     {
-      "name": "edrug-capability-check",
-      "category": "campaign",
-      "source": "skills/edrug-capability-check",
-      "action": "symlinked"
-    },
-    {
-      "name": "scope-molecular-nomination",
-      "category": "evidence",
-      "source": "skills/scope-molecular-nomination",
-      "action": "symlinked"
-    },
-    {
-      "name": "research-target-biology",
-      "category": "evidence",
-      "source": "skills/research-target-biology",
-      "action": "symlinked"
-    },
-    {
-      "name": "rank-protein-structures",
-      "category": "evidence",
-      "source": "skills/rank-protein-structures",
-      "action": "symlinked"
-    },
-    {
-      "name": "qualify-binding-pocket",
-      "category": "evidence",
-      "source": "skills/qualify-binding-pocket",
+      "name": "ddfast-06-qikprop-admet",
+      "category": "admet",
+      "kind": "child",
+      "source": "skills/admet/ddfast-06-qikprop-admet",
+      "destination": "admet/ddfast-06-qikprop-admet",
       "action": "symlinked"
     },
     {
       "name": "enrich-compound-evidence",
-      "category": "evidence",
-      "source": "skills/enrich-compound-evidence",
+      "category": "admet",
+      "kind": "child",
+      "source": "skills/admet/enrich-compound-evidence",
+      "destination": "admet/enrich-compound-evidence",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-drugflow-hepg2",
+      "category": "admet",
+      "kind": "child",
+      "source": "skills/admet/funnel-drugflow-hepg2",
+      "destination": "admet/funnel-drugflow-hepg2",
       "action": "symlinked"
     },
     {
       "name": "triage-compound-toxicity",
-      "category": "evidence",
-      "source": "skills/triage-compound-toxicity",
+      "category": "admet",
+      "kind": "child",
+      "source": "skills/admet/triage-compound-toxicity",
+      "destination": "admet/triage-compound-toxicity",
+      "action": "symlinked"
+    },
+    {
+      "name": "all-analysis",
+      "category": "all-analysis",
+      "kind": "master",
+      "source": "skills/all-analysis",
+      "destination": "all-analysis/all-analysis",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "funnel-comprehensive-analysis",
+      "category": "all-analysis",
+      "kind": "child",
+      "source": "skills/all-analysis/funnel-comprehensive-analysis",
+      "destination": "all-analysis/funnel-comprehensive-analysis",
       "action": "symlinked"
     },
     {
       "name": "nominate-lipid-modulators",
-      "category": "evidence",
-      "source": "skills/nominate-lipid-modulators",
+      "category": "all-analysis",
+      "kind": "child",
+      "source": "skills/all-analysis/nominate-lipid-modulators",
+      "destination": "all-analysis/nominate-lipid-modulators",
       "action": "symlinked"
     },
     {
       "name": "write-mechanism-validation-report",
-      "category": "evidence",
-      "source": "skills/write-mechanism-validation-report",
+      "category": "all-analysis",
+      "kind": "child",
+      "source": "skills/all-analysis/write-mechanism-validation-report",
+      "destination": "all-analysis/write-mechanism-validation-report",
       "action": "symlinked"
+    },
+    {
+      "name": "dd-generation",
+      "category": "dd-generation",
+      "kind": "master",
+      "source": "skills/dd-generation",
+      "destination": "dd-generation/dd-generation",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "funnel-diffdynamic-denovo",
+      "category": "dd-generation",
+      "kind": "child",
+      "source": "skills/dd-generation/funnel-diffdynamic-denovo",
+      "destination": "dd-generation/funnel-diffdynamic-denovo",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-diffdynamic-prudent",
+      "category": "dd-generation",
+      "kind": "child",
+      "source": "skills/dd-generation/funnel-diffdynamic-prudent",
+      "destination": "dd-generation/funnel-diffdynamic-prudent",
+      "action": "symlinked"
+    },
+    {
+      "name": "drug-discovery-orchestrator",
+      "category": "drug-discovery-orchestrator",
+      "kind": "master",
+      "source": "skills/drug-discovery-orchestrator",
+      "destination": "drug-discovery-orchestrator/drug-discovery-orchestrator",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "e-drug-lab-scientist",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/e-drug-lab-scientist",
+      "destination": "drug-discovery-orchestrator/e-drug-lab-scientist",
+      "action": "symlinked"
+    },
+    {
+      "name": "edrug-capability-check",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/edrug-capability-check",
+      "destination": "drug-discovery-orchestrator/edrug-capability-check",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-campaign-memory",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/funnel-campaign-memory",
+      "destination": "drug-discovery-orchestrator/funnel-campaign-memory",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-orchestrator",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/funnel-orchestrator",
+      "destination": "drug-discovery-orchestrator/funnel-orchestrator",
+      "action": "symlinked"
+    },
+    {
+      "name": "reporting",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/reporting",
+      "destination": "drug-discovery-orchestrator/reporting",
+      "action": "symlinked"
+    },
+    {
+      "name": "scientist-in-e-drug-lab",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/scientist-in-e-drug-lab",
+      "destination": "drug-discovery-orchestrator/scientist-in-e-drug-lab",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "time-scheduler",
+      "category": "drug-discovery-orchestrator",
+      "kind": "child",
+      "source": "skills/drug-discovery-orchestrator/time-scheduler",
+      "destination": "drug-discovery-orchestrator/time-scheduler",
+      "action": "symlinked"
+    },
+    {
+      "name": "featurehit-finding",
+      "category": "featurehit-finding",
+      "kind": "master",
+      "source": "skills/featurehit-finding",
+      "destination": "featurehit-finding/featurehit-finding",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "funnel-featurehit",
+      "category": "featurehit-finding",
+      "kind": "child",
+      "source": "skills/featurehit-finding/funnel-featurehit",
+      "destination": "featurehit-finding/funnel-featurehit",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-shape-screen",
+      "category": "featurehit-finding",
+      "kind": "child",
+      "source": "skills/featurehit-finding/funnel-shape-screen",
+      "destination": "featurehit-finding/funnel-shape-screen",
+      "action": "symlinked"
+    },
+    {
+      "name": "pose-library-screening",
+      "category": "featurehit-finding",
+      "kind": "child",
+      "source": "skills/featurehit-finding/pose-library-screening",
+      "destination": "featurehit-finding/pose-library-screening",
+      "action": "symlinked"
+    },
+    {
+      "name": "rdkit",
+      "category": "featurehit-finding",
+      "kind": "child",
+      "source": "skills/featurehit-finding/rdkit",
+      "destination": "featurehit-finding/rdkit",
+      "action": "symlinked"
+    },
+    {
+      "name": "dd-md-desmond",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/dd-md-desmond",
+      "destination": "molecular-dynamics/dd-md-desmond",
+      "action": "symlinked"
+    },
+    {
+      "name": "dd-md-desmond-sea-qc",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/dd-md-desmond-sea-qc",
+      "destination": "molecular-dynamics/dd-md-desmond-sea-qc",
+      "action": "symlinked"
+    },
+    {
+      "name": "desmond-md-campaign",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/desmond-md-campaign",
+      "destination": "molecular-dynamics/desmond-md-campaign",
+      "action": "symlinked"
+    },
+    {
+      "name": "desmond-membrane-md-ops",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/desmond-membrane-md-ops",
+      "destination": "molecular-dynamics/desmond-membrane-md-ops",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-desmond-long-md",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/funnel-desmond-long-md",
+      "destination": "molecular-dynamics/funnel-desmond-long-md",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-desmond-short-md",
+      "category": "molecular-dynamics",
+      "kind": "child",
+      "source": "skills/molecular-dynamics/funnel-desmond-short-md",
+      "destination": "molecular-dynamics/funnel-desmond-short-md",
+      "action": "symlinked"
+    },
+    {
+      "name": "molecular-dynamics",
+      "category": "molecular-dynamics",
+      "kind": "master",
+      "source": "skills/molecular-dynamics",
+      "destination": "molecular-dynamics/molecular-dynamics",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "assess-computational-pharmacology",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/assess-computational-pharmacology",
+      "destination": "target-discovery/assess-computational-pharmacology",
+      "action": "symlinked"
+    },
+    {
+      "name": "assess-target-pharmacology",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/assess-target-pharmacology",
+      "destination": "target-discovery/assess-target-pharmacology",
+      "action": "symlinked"
+    },
+    {
+      "name": "prepare-native-protein-ligand",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/prepare-native-protein-ligand",
+      "destination": "target-discovery/prepare-native-protein-ligand",
+      "action": "symlinked"
+    },
+    {
+      "name": "qualify-binding-pocket",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/qualify-binding-pocket",
+      "destination": "target-discovery/qualify-binding-pocket",
+      "action": "symlinked"
+    },
+    {
+      "name": "rank-protein-structures",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/rank-protein-structures",
+      "destination": "target-discovery/rank-protein-structures",
+      "action": "symlinked"
+    },
+    {
+      "name": "research-target-biology",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/research-target-biology",
+      "destination": "target-discovery/research-target-biology",
+      "action": "symlinked"
+    },
+    {
+      "name": "scope-molecular-nomination",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/scope-molecular-nomination",
+      "destination": "target-discovery/scope-molecular-nomination",
+      "action": "symlinked"
+    },
+    {
+      "name": "search-biomedical-evidence",
+      "category": "target-discovery",
+      "kind": "child",
+      "source": "skills/target-discovery/search-biomedical-evidence",
+      "destination": "target-discovery/search-biomedical-evidence",
+      "action": "symlinked"
+    },
+    {
+      "name": "target-discovery",
+      "category": "target-discovery",
+      "kind": "master",
+      "source": "skills/target-discovery",
+      "destination": "target-discovery/target-discovery",
+      "action": "symlinked-filtered"
+    },
+    {
+      "name": "ddfast-07-glide-sp",
+      "category": "virtual-docking",
+      "kind": "child",
+      "source": "skills/virtual-docking/ddfast-07-glide-sp",
+      "destination": "virtual-docking/ddfast-07-glide-sp",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-glide-sp",
+      "category": "virtual-docking",
+      "kind": "child",
+      "source": "skills/virtual-docking/funnel-glide-sp",
+      "destination": "virtual-docking/funnel-glide-sp",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-glide-xp",
+      "category": "virtual-docking",
+      "kind": "child",
+      "source": "skills/virtual-docking/funnel-glide-xp",
+      "destination": "virtual-docking/funnel-glide-xp",
+      "action": "symlinked"
+    },
+    {
+      "name": "funnel-mmgbsa",
+      "category": "virtual-docking",
+      "kind": "child",
+      "source": "skills/virtual-docking/funnel-mmgbsa",
+      "destination": "virtual-docking/funnel-mmgbsa",
+      "action": "symlinked"
+    },
+    {
+      "name": "virtual-docking",
+      "category": "virtual-docking",
+      "kind": "master",
+      "source": "skills/virtual-docking",
+      "destination": "virtual-docking/virtual-docking",
+      "action": "symlinked-filtered"
     }
   ],
+  "published_count": 46,
   "missing": []
 }

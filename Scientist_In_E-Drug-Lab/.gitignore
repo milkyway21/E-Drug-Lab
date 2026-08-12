@@ -22,7 +22,26 @@ memory/
 .ruff_cache/
 .mypy_cache/
 *.log
-vendor/hermes-agent/
+# Hermes source is committed as part of this repository. Keep only source
+# metadata and code; never commit its nested history or runtime artifacts.
+vendor/hermes-agent/.git/
+vendor/hermes-agent/.venv/
+vendor/hermes-agent/venv/
+vendor/hermes-agent/node_modules/
+vendor/hermes-agent/**/__pycache__/
+vendor/hermes-agent/**/.pytest_cache/
+vendor/hermes-agent/**/.ruff_cache/
+vendor/hermes-agent/**/.mypy_cache/
+vendor/hermes-agent/**/dist/
+vendor/hermes-agent/**/build/
+vendor/hermes-agent/**/.next/
+vendor/hermes-agent/**/.env
+vendor/hermes-agent/**/.env.*
+vendor/hermes-agent/**/auth.json
+vendor/hermes-agent/**/providers.yaml
+vendor/hermes-agent/**/providers.yml
+vendor/hermes-agent/**/*.pem
+vendor/hermes-agent/**/*.key
 .DS_Store
 # Private relay patches — never publish
 scripts/fuckclau_ua_patch.py

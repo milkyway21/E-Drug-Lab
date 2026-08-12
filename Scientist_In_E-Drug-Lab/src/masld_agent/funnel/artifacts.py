@@ -142,6 +142,15 @@ def _validate_h0(manifest: dict[str, Any]) -> dict[str, Any]:
             continue
         item = inspect_path(resolve_campaign_path(manifest, value))
         item["input"] = key
+        expected_suffix = {
+            "receptor_pdb": ".pdb",
+            "reference_ligand_sdf": ".sdf",
+        }.get(key)
+        if expected_suffix:
+            item["expected_suffix"] = expected_suffix
+            item["format_valid"] = Path(value).suffix.lower() == expected_suffix
+            if not item["format_valid"]:
+                missing.append(f"{key}:expected_{expected_suffix}")
         evidence.append(item)
         if not item["nonempty"]:
             missing.append(key)

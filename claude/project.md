@@ -217,10 +217,11 @@ binding_RL/
 
 ## 9. 待办（下一刀）
 
-1. 写 `MODALITY_AUDIT.md`：实验记录 / 库 CSV / 101D 表 / Glide 覆盖对照。  
-2. 预计算并缓存第 1/2/3 轮库 ALLIN 101D。  
-3. DrugFlow SMILES 命中 + 缺口相似物子集 Glide（≤30 核）→ 并入 `allin_glide_feature_table.csv`。  
-4. 重排到新目录 `$VALIDATION/allin_pc_gl_rerank_v2/`（**不覆盖**现有 progressive）。
+1. **（等 SP）** 库 1/2 Glide 齐套 → 并入 `allin_glide_feature_table` → progressive 实跑 / 覆盖率收紧。  
+2. 写 `MODALITY_AUDIT.md`：实验记录 / 库 CSV / 101D 表 / Glide 覆盖对照。  
+3. 预计算并缓存第 1/2/3 轮库 ALLIN 101D。  
+4. 代码准备已落地：见 [`allin-multimodal-fix-audit.md`](allin-multimodal-fix-audit.md)（anchor / schema / learnable_gate / MD CLI）。  
+5. 重排到新目录 `$VALIDATION/allin_pc_gl_rerank_v2/`（**不覆盖**现有 progressive）— 需 SP 后执行。
 
 ---
 
@@ -240,7 +241,8 @@ binding_RL/
 | [`glare-multimodal-rl-status.md`](glare-multimodal-rl-status.md) | 残差多模态落地 + ALLIN 命名 + E47–E52 |
 | [`project-structure.md`](project-structure.md) | e-drug-lab 平台总览 |
 | `$ALLIN/README.md` · `STRUCTURE.md` | ALLIN 代码仓说明 |
-| `$ALLIN/docs/ALLIN_设计到测试完整报告.md` | 设计到实测长报告 |
+| `$ALLIN/docs/ALLIN_设计到测试完整报告.md` | 设计到实测长报告；**算法/公式见 §4.5** |
+| [`allin-multimodal-fix-audit.md`](allin-multimodal-fix-audit.md) | 修复审计：anchor/schema/gate/MD；**等 SP 前只做代码准备** |
 | `$BINDING_RL/PROJECT.md` | 数据目录旁路入口 |
 | `$VALIDATION/allin_pc_gl_progressive/RANK_SUMMARY.md` | 三轮排名摘要 |
 

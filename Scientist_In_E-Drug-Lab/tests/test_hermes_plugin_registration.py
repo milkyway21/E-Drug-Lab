@@ -36,5 +36,8 @@ def test_one_tool_collision_does_not_block_funnel_registration() -> None:
     assert "target_biology_search" in context.attempted
     assert "structure_prepare_native" in context.attempted
     assert "nominate_compounds" in context.attempted
-    assert len(context.skills) >= 32
-    assert all(Path(path).parent.name == "skills" for path in context.skills)
+    assert len(context.skills) >= 46
+    assert any(Path(path).name == "drug-discovery-orchestrator" for path in context.skills)
+    assert any(Path(path).name == "target-discovery" for path in context.skills)
+    assert any(Path(path).name == "funnel-glide-sp" for path in context.skills)
+    assert all(Path(path).parent.name == "skills" or Path(path).parent.parent.name == "skills" for path in context.skills)

@@ -14,6 +14,11 @@ from masld_agent.funnel.manifest import STAGE_ORDER
 from masld_agent.funnel.manifest import campaign_root, load_manifest
 from masld_agent.funnel.planner import load_funnel_profile, plan_campaign, resolve_manifest
 from masld_agent.funnel.runner import preflight_campaign, run_stage, validate_stage
+from masld_agent.funnel.time_scheduler import (
+    build_monitor_plan,
+    write_heartbeat,
+)
+from masld_agent.reporting.funnel_report import update_funnel_report
 
 
 def _atomic_write(path: Path, text: str) -> None:
@@ -88,9 +93,23 @@ def _manifest_state_path(manifest: dict[str, Any]) -> Path:
 
 
 def _write_state(manifest: dict[str, Any], payload: dict[str, Any]) -> None:
+    payload = dict(payload)
+    if os.environ.get("MASLD_AUTOPILOT_WORKER") == "1":
+        payload.setdefault("worker_pid", os.getpid())
+        payload.setdefault("pid", os.getpid())
+    current_stage = payload.get("current_stage")
+    if current_stage:
+        payload["monitor_plan"] = build_monitor_plan(manifest, stage=str(current_stage))
     _atomic_write(
         _manifest_state_path(manifest),
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+    )
+    write_heartbeat(
+        manifest,
+        task_id=payload.get("task_id"),
+        worker_pid=payload.get("worker_pid") or payload.get("pid"),
+        current_stage=current_stage,
+        status=payload.get("status"),
     )
 
 
@@ -194,7 +213,23 @@ def run_autopilot(
         else:
             result = run_stage(manifest_path, stage, execute=execute, confirm=confirm)
         reports = _write_stage_report(report_root, stage, target_count, plan["profile"], result)
-        row = {"stage": stage, "target_count": target_count, "reports": reports, **result}
+        try:
+            report = update_funnel_report(
+                manifest_path,
+                stage=stage,
+                target_count=target_count,
+                profile=plan["profile"],
+                result=result,
+            )
+        except Exception as exc:  # noqa: BLE001
+            report = {"status": "failed", "error": f"{type(exc).__name__}: {exc}"}
+        row = {
+            "stage": stage,
+            "target_count": target_count,
+            "reports": reports,
+            "consolidated_report": report,
+            **result,
+        }
         rows.append(row)
         _write_state(
             manifest_data,
@@ -353,13 +388,46 @@ def start_autopilot(
         "manifest": str(manifest_path),
         "log": str(log_path),
         "command": command,
+        "worker_pid": None,
+        "watchdog_pid": None,
+        "recovery_count": 0,
+        "monitor_plan": build_monitor_plan(manifest, stage="H0"),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
     _write_state(manifest, queued)
+    worker_environment = os.environ.copy()
+    worker_environment["MASLD_AUTOPILOT_WORKER"] = "1"
     with log_path.open("a", encoding="utf-8") as stream:
         process = subprocess.Popen(  # noqa: S603
             command,
             cwd=Path(__file__).resolve().parents[3],
+            env=worker_environment,
+            stdout=stream,
+            stderr=subprocess.STDOUT,
+            text=True,
+            start_new_session=True,
+        )
+    watchdog_log_path = report_root / f"autopilot_{task_id}.watchdog.log"
+    watchdog_command = [
+        sys.executable,
+        "-m",
+        "masld_agent.funnel.watchdog",
+        "--manifest",
+        str(manifest_path),
+        "--final-count",
+        str(final_count),
+        "--profile",
+        profile,
+        "--task-id",
+        task_id,
+        "--worker-pid",
+        str(process.pid),
+    ]
+    with watchdog_log_path.open("a", encoding="utf-8") as stream:
+        watchdog = subprocess.Popen(  # noqa: S603
+            watchdog_command,
+            cwd=Path(__file__).resolve().parents[3],
+            env=worker_environment,
             stdout=stream,
             stderr=subprocess.STDOUT,
             text=True,
@@ -369,8 +437,13 @@ def start_autopilot(
     if state.get("task_id") != task_id:
         state = queued
     state["pid"] = process.pid
+    state["worker_pid"] = process.pid
+    state["watchdog_pid"] = watchdog.pid
     state["log"] = str(log_path)
+    state["watchdog_log"] = str(watchdog_log_path)
     state["command"] = command
+    state["watchdog_command"] = watchdog_command
+    state["monitor_plan"] = build_monitor_plan(manifest, stage=str(state.get("current_stage") or "H0"))
     state["updated_at"] = datetime.now(timezone.utc).isoformat()
     _write_state(manifest, state)
     return state
