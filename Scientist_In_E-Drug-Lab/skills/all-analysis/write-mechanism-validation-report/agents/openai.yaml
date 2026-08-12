@@ -1,0 +1,4 @@
+interface:
+  display_name: Write Mechanism Validation Report
+  short_description: Explain candidates and design falsifiable validation
+  default_prompt: Build the final evidence-linked mechanism and validation report, then run submission validation and list remaining gaps.

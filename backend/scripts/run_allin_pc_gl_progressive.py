@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""ALLIN = ginl_pc_gl 持续学习：R0(专利352)→R1(+13)→R2(+19)→R3(+6) + 各轮相似物排名。
+"""ALLIN = ginl_pc_gl[_md] 持续学习：R0(专利352)→R1(+13)→R2(+19)→R3(+6) + 各轮相似物排名。
 
-与纯 ginl 的 allin_progressive/ 分离；本脚本产出 allin_pc_gl_progressive/。
+与纯 ginl 的 allin_progressive/ 分离。
+默认产出 allin_pc_gl_progressive/；可用 --architecture / --output-dir 覆盖。
+新库 Glide SP 未齐时勿开 --fail-on-low-coverage。
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
@@ -18,12 +21,9 @@ ROOT = Path("/data/ye/e-drug-lab/backend")
 sys.path.insert(0, str(ROOT))
 
 PY = "/home/user/anaconda3/envs/diffgui_new/bin/python"
-OUTPUT_DIR = ROOT / "outputs/vav1_rl_project/validation/allin_pc_gl_progressive"
+DEFAULT_OUTPUT = ROOT / "outputs/vav1_rl_project/validation/allin_pc_gl_progressive"
 OLD_SIM = ROOT / "outputs/vav1_rl_project/validation/allin_progressive/similarity"
 ALLIN_DATA = Path("/data/ye/ALLIN/data")
-SIM_DIR = OUTPUT_DIR / "similarity"
-RANK_DIR = OUTPUT_DIR / "ranks"
-LOG_DIR = OUTPUT_DIR / "logs"
 
 R2_LABELS = {
     "0185078(1)": 1, "0228300": 1, "0230953": 1, "0228423": 1, "LXC-201": 1,
@@ -38,7 +38,19 @@ R3_LABELS = {
 }
 R3_APPENDIX = ["LXC-306"]
 ENTITY3 = ALLIN_DATA / "第三轮限制范围的分子生成"
+
+# 运行时由 main() 注入
+OUTPUT_DIR = DEFAULT_OUTPUT
+SIM_DIR = OUTPUT_DIR / "similarity"
+RANK_DIR = OUTPUT_DIR / "ranks"
+LOG_DIR = OUTPUT_DIR / "logs"
 ARCH = "ginl_pc_gl"
+FUSION_TYPE = "fixed_residual"
+MD_ADV_ETA = 0.0
+ENABLE_MD = False
+TRAIN_MD_ADAPTER_ONLY = False
+FAIL_ON_LOW_COVERAGE = False
+MIN_GLIDE_COVERAGE = 0.0
 
 
 def _env():
@@ -200,7 +212,17 @@ def train_one(name: str, prev: Path | None = None):
         "--epochs", "50", "--ensemble", "3", "--batch_size", "64",
         "--strategy", "grpo", "--l2_lambda", "3e-4", "--lr", "3e-4",
         "--disable-ig", "--architecture", ARCH,
+        "--fusion_type", FUSION_TYPE,
+        "--training_mode", "grpo_style_classifier_regularization",
+        "--continual-strategy", "replay_anchor",
+        "--min_glide_coverage", str(MIN_GLIDE_COVERAGE),
     ]
+    if ENABLE_MD or ARCH.endswith("_md"):
+        cmd += ["--enable-md", "--md_adv_eta", str(MD_ADV_ETA or 0.5)]
+    if TRAIN_MD_ADAPTER_ONLY:
+        cmd += ["--train-md-adapter-only"]
+    if FAIL_ON_LOW_COVERAGE:
+        cmd += ["--fail_on_low_coverage"]
     if prev and prev.exists():
         cmd += ["--prev", str(prev)]
     print(f"Training {name} arch={ARCH} ...", flush=True)
@@ -374,13 +396,48 @@ def write_summary(rank_paths: dict):
 
 
 def main():
-    import argparse
+    global OUTPUT_DIR, SIM_DIR, RANK_DIR, LOG_DIR, ARCH, FUSION_TYPE
+    global MD_ADV_ETA, ENABLE_MD, TRAIN_MD_ADAPTER_ONLY, FAIL_ON_LOW_COVERAGE, MIN_GLIDE_COVERAGE
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--stage", default="all",
                     choices=["all", "data", "train", "rank", "summary"])
+    ap.add_argument("--architecture", default="ginl_pc_gl",
+                    choices=["ginl_pc_gl", "ginl_pc_gl_md"])
+    ap.add_argument("--fusion-type", default="fixed_residual",
+                    choices=["fixed_residual", "learnable_gate"])
+    ap.add_argument("--output-dir", default=None,
+                    help="默认 validation/allin_pc_gl_progressive；MD 跑建议另目录")
+    ap.add_argument("--enable-md", action="store_true", default=False)
+    ap.add_argument("--md-adv-eta", type=float, default=0.5)
+    ap.add_argument("--train-md-adapter-only", action="store_true", default=False)
+    ap.add_argument("--min-glide-coverage", type=float, default=0.0)
+    ap.add_argument("--fail-on-low-coverage", action="store_true", default=False)
     args = ap.parse_args()
+
+    ARCH = args.architecture
+    if args.enable_md and not ARCH.endswith("_md"):
+        ARCH = "ginl_pc_gl_md"
+    FUSION_TYPE = args.fusion_type
+    ENABLE_MD = bool(args.enable_md or ARCH.endswith("_md"))
+    MD_ADV_ETA = float(args.md_adv_eta)
+    TRAIN_MD_ADAPTER_ONLY = bool(args.train_md_adapter_only)
+    FAIL_ON_LOW_COVERAGE = bool(args.fail_on_low_coverage)
+    MIN_GLIDE_COVERAGE = float(args.min_glide_coverage)
+
+    if args.output_dir:
+        OUTPUT_DIR = Path(args.output_dir)
+    elif ARCH.endswith("_md"):
+        OUTPUT_DIR = ROOT / "outputs/vav1_rl_project/validation/allin_pc_gl_md_progressive"
+    else:
+        OUTPUT_DIR = DEFAULT_OUTPUT
+    SIM_DIR = OUTPUT_DIR / "similarity"
+    RANK_DIR = OUTPUT_DIR / "ranks"
+    LOG_DIR = OUTPUT_DIR / "logs"
+
     for d in (OUTPUT_DIR, SIM_DIR, RANK_DIR, LOG_DIR):
         d.mkdir(parents=True, exist_ok=True)
+    print(f"ARCH={ARCH} fusion={FUSION_TYPE} out={OUTPUT_DIR}", flush=True)
 
     if args.stage in ("all", "data"):
         build_datasets()
@@ -390,11 +447,11 @@ def main():
         c1 = train_one("R1", prev=c0)
         c2 = train_one("R2", prev=c1)
         train_one("R3", prev=c2)
-        # verify arch
         import torch
         ck = torch.load(OUTPUT_DIR / "model_R0.pt", map_location="cpu", weights_only=False)
         print("R0 arch check:", ck.get("args", {}).get("architecture"),
-              "use_glide", ck.get("args", {}).get("use_glide"))
+              "use_glide", ck.get("args", {}).get("use_glide"),
+              "has_schema", "feature_schema" in ck)
     if args.stage in ("all", "rank"):
         pairs = ensure_similarity()
         r1 = rank_round(1, "R0", pairs[1])

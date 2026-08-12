@@ -1,0 +1,4 @@
+interface:
+  display_name: Triage Compound Toxicity
+  short_description: Separate observed, predicted, and unknown toxicity
+  default_prompt: Triage toxicity for these compounds, preserve evidence type and applicability, and never label missing data as safe.

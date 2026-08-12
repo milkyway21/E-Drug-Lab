@@ -7,16 +7,19 @@ final_stage: H10
 default_for_final_count_only: true
 stages:
   H0:
+    master_skill: drug-discovery-orchestrator
     skill: funnel-orchestrator
     target: {mode: fixed, value: 1}
     reference_target: 1
     quantity_role: input_gate
   H1A:
+    master_skill: dd-generation
     skill: funnel-diffdynamic-denovo
     target: {mode: per_final, value: 50000}
     reference_target: 500000
     quantity_role: generated_molecules
   H1B:
+    master_skill: dd-generation
     skill: funnel-diffdynamic-prudent
     target: {mode: per_final, value: 4000}
     reference_target: 40000
@@ -24,49 +27,58 @@ stages:
     analysis_vina_modes: none
     next_stage: H2
   H2:
+    master_skill: virtual-docking
     skill: funnel-glide-sp
     target: {mode: per_final, value: 100}
     reference_target: 1000
     quantity_role: promoted_molecules
   H3:
+    master_skill: featurehit-finding
     skill: funnel-featurehit+funnel-shape-screen
     target: {mode: per_final, value: 300}
     reference_target: 3000
     quantity_role: expanded_unique_hits
   H4:
+    master_skill: admet
     skill: ddfast-06-qikprop-admet
     target: {mode: per_final, value: 300}
     reference_target: 3000
     quantity_role: molecules_evaluated
     backend_policy: schrodinger_qikprop_required
   H5:
+    master_skill: virtual-docking
     skill: funnel-glide-sp
     target: {mode: per_final, value: 50}
     reference_target: 500
     quantity_role: promoted_molecules
   H6:
+    master_skill: virtual-docking
     skill: funnel-glide-xp
     target: {mode: per_final, value: 13}
     reference_target: 130
     quantity_role: promoted_molecules
   H7:
+    master_skill: virtual-docking
     skill: funnel-mmgbsa
     target: {mode: per_final, value: 4}
     reference_target: 40
     quantity_role: promoted_molecules
   H8:
+    master_skill: molecular-dynamics
     skill: funnel-desmond-short-md
     target: {mode: per_final, value: 2}
     reference_target: 20
     quantity_role: promoted_molecules
     protocol: two_independent_50ns_trajectories_per_molecule
   H9:
+    master_skill: molecular-dynamics
     skill: funnel-desmond-long-md
     target: {mode: per_final, value: 1}
     reference_target: 10
     quantity_role: promoted_molecules
     protocol: 200ns_per_molecule
   H10:
+    master_skill: all-analysis
     skill: funnel-comprehensive-analysis
     target: {mode: per_final, value: 1}
     reference_target: 10

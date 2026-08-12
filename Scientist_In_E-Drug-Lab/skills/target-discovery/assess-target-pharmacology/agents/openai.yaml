@@ -1,0 +1,4 @@
+interface:
+  display_name: "Assess Target Pharmacology"
+  short_description: "Evaluate ligands, direction, potency, and safety"
+  default_prompt: "Assess known pharmacology, intervention direction, quantitative activity, clinical precedent, and safety for this target."

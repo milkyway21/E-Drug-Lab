@@ -269,6 +269,7 @@ def plan_campaign(
             config = stages.setdefault(stage, {})
             profile_stage = scale["stage_plan"][stage]
             config["target_count"] = target_count
+            config["master_skill"] = profile_stage.get("master_skill")
             config["skill"] = profile_stage["skill"]
             config["quantity_role"] = profile_stage["quantity_role"]
             if profile_stage.get("backend_policy"):

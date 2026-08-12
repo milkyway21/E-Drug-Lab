@@ -45,22 +45,22 @@ masld-agent funnel autopilot-status --target-id HSD17B13
 `ready_for_one_shot_execution=true` 才会开始 H1。`gated_preflight` 表示没有任何计算
 启动，Agent 必须报告 `blocking_stages`，不得在任务目录临时编写替代脚本。
 
-## Track H（HSD17B13 整体流程图）→ **funnel-*** skills
+## Track H（HSD17B13 整体流程图）→ **master/child** skills
 
 规格：`/data/ye/整体流程图_三轮理解.md`  
 映射：`hsvpol/.trae/skills/FUNNEL_SKILL_MAP.md`  
-总编排：`funnel-orchestrator`；分身：`hsd17b13-funnel-scientist`
+默认入口：`drug-discovery-orchestrator`；执行子技能：`funnel-orchestrator`
 
 | Step | skill_ref | 计划规模 |
 |------|-----------|----------|
-| H0 | funnel-orchestrator | gate |
-| H1a/b | funnel-diffdynamic-denovo / funnel-diffdynamic-prudent | ~50万→~4万 |
-| H2 | funnel-glide-sp (primary) | ~1000 |
-| H3 | funnel-featurehit + funnel-shape-screen | ~3000 |
-| H4 | funnel-drugflow-hepg2 | 显式 DrugFlow / QikProp / 等价后端，禁止冒充 |
-| H5–H7 | funnel-glide-sp refine / funnel-glide-xp / funnel-mmgbsa | ~500/~130/~40 |
-| H8–H9 | funnel-desmond-short-md / funnel-desmond-long-md | ~20/~10 |
-| H10 | funnel-comprehensive-analysis | Top10 |
+| H0 | `drug-discovery-orchestrator` → `target-discovery` | gate |
+| H1a/b | `dd-generation` → `funnel-diffdynamic-denovo` / `funnel-diffdynamic-prudent` | ~50万→~4万 |
+| H2 | `virtual-docking` → `funnel-glide-sp` | ~1000 |
+| H3 | `featurehit-finding` → `funnel-featurehit` / `funnel-shape-screen` | ~3000 |
+| H4 | `admet` → `funnel-drugflow-hepg2` / `ddfast-06-qikprop-admet` | 显式后端，禁止冒充 |
+| H5–H7 | `virtual-docking` → SP / XP / MMGBSA | ~500/~130/~40 |
+| H8–H9 | `molecular-dynamics` → `funnel-desmond-short-md` / `funnel-desmond-long-md` | ~20/~10 |
+| H10 | `all-analysis` → `funnel-comprehensive-analysis` | Top10 |
 
 旧 `ddfast-*` / `featurehit-shape-expand` 等已 superseded，仅兼容别名。
 
@@ -71,7 +71,7 @@ masld-agent funnel autopilot-status --target-id HSD17B13
 3. **Large jobs** (batch≥100, full Glide funnel) require explicit `confirm=true`.
 4. **Do not** use `backend/app/api/integrations/*` remote stubs as production.
 5. DDFast classic order (Track A): gate → denovo/scaffold → extract → dedup → QikProp → SP → XP → MMGBSA/IFD → rank.
-6. Track **H** inserts FeatureHit/Shape expand + HepG2 before refine docking; MD after MMGBSA; ends at `funnel-final-curation` (not ddfast-10 as final).
+6. Track **H** inserts FeatureHit/Shape expand + HepG2 before refine docking; MD after MMGBSA; ends at `all-analysis` (not a legacy ddfast ranker).
 7. Schrödinger: absolute paths; LigPrep `-nt` ≠ threads; IFD **1:1 only** (no N×N).
 8. GPU policy for DDFast sampling: prefer GPUs **1–5**, split seeds to avoid OOM; smoke on **GPU0**.
 

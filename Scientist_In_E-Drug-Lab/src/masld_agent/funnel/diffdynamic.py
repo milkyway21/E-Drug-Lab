@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from masld_agent.funnel.manifest import campaign_root, load_manifest, resolve_campaign_path, stage_config
+from masld_agent.platform.gates import GateError, require_diffdynamic_inputs
 from masld_agent.platform.paths import DIFFDYNAMIC_CONDA, DIFFDYNAMIC_ROOT
 
 
@@ -57,6 +58,10 @@ def prudent_generate(
     ):
         if not path.is_file():
             return {"status": "blocked", "error": f"{label} not found: {path}"}
+    try:
+        require_diffdynamic_inputs(protein_path=receptor, ligand_path=ligand)
+    except GateError as exc:
+        return {"status": "blocked", "error": str(exc)}
     try:
         existing_pt = select_prudent_pt(manifest)
     except FileNotFoundError:
@@ -178,6 +183,7 @@ def build_physchem_command(manifest: dict[str, Any], pt_path: Path) -> tuple[lis
     ):
         if not path.is_file():
             raise FileNotFoundError(f"{label} not found: {path}")
+    require_diffdynamic_inputs(protein_path=receptor, ligand_path=ligand)
     output = resolve_campaign_path(
         manifest,
         config.get("physchem_output_dir") or "diffdynamic/prudent/physchem_no_vina",
@@ -272,7 +278,7 @@ def prudent_physchem(
     try:
         pt_path = select_prudent_pt(manifest)
         command, output = build_physchem_command(manifest, pt_path)
-    except FileNotFoundError as exc:
+    except (FileNotFoundError, GateError) as exc:
         return {"status": "blocked", "error": str(exc)}
     preview = {
         "argv": command,

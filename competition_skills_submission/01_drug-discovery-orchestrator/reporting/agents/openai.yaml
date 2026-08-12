@@ -1,0 +1,4 @@
+interface:
+  display_name: Reporting
+  short_description: One cumulative stage-by-stage report
+  default_prompt: Update the single evidence-linked H0-H10 report with grounded analysis, real workflow figures, DOCX, PDF, and relative-path provenance.

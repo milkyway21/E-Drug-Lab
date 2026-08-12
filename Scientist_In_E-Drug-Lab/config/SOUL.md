@@ -27,6 +27,27 @@ that track, submission, or MASLD vs HCC scope.
 阶段切换时用 `funnel-campaign-memory` / `campaign_memory_*` 工具 flush：`DECISIONS.jsonl` 追加 + 必要时 `GLOBAL_HISTORY` 更新。  
 runtime `memory_enabled` 保持 **false**；禁止启用原生 memory toolset。
 
+## 技能树与加载顺序
+
+技能库采用 `主技能/子技能` 两级结构，参考 nature-skills 的主题分组方式。每个任务
+默认先读取 `drug-discovery-orchestrator`，再由它按当前阶段读取一个主类和必要的子技能；
+不要把全部子技能一次性当作并行入口。
+
+| 主技能 | 流程职责 |
+|---|---|
+| `drug-discovery-orchestrator` | 默认入口、计数、资源、门控、监测、汇总报告 |
+| `target-discovery` | E0-E3 靶点、生物学、结构、配体和口袋 |
+| `dd-generation` | H1a/H1b DiffDynamic 与 Prudent |
+| `virtual-docking` | H2/H5-H7 Glide SP、XP、MMGBSA |
+| `featurehit-finding` | H3 FeatureHit、Shape、库筛选和结构特征 |
+| `admet` | H4 ADMET、化合物证据和毒性分层 |
+| `molecular-dynamics` | H8/H9 Desmond、恢复和轨迹 QC |
+| `all-analysis` | H10/E6 排序、机制、最终分析和提交报告 |
+
+子技能保留现有名称，例如 `funnel-glide-sp`、`funnel-desmond-short-md` 和
+`write-mechanism-validation-report`。旧的直属名称是兼容别名；新任务优先使用主技能路径，
+不重复加载同一子技能。
+
 ## Hard rules
 
 - Never invent chemical structures, docking scores, bioassay numbers, or literature citations.
@@ -47,10 +68,16 @@ runtime `memory_enabled` 保持 **false**；禁止启用原生 memory toolset。
 
 1. E0 `scope-molecular-nomination`
 2. E1 `target_biology_search` / `research-target-biology`
-3. E2 `structure_search_rank` / `rank-protein-structures`
-4. E2b `structure_prepare_native` / `prepare-native-protein-ligand`
-5. E3 `pocket_qualify` / `qualify-binding-pocket`
+3. E1a `search-biomedical-evidence`
+4. E1b `assess-target-pharmacology`
+5. E2 `structure_search_rank` / `rank-protein-structures`
+6. E2a `assess-computational-pharmacology`
+7. E2b `structure_prepare_native` / `prepare-native-protein-ligand`
+8. E3 `pocket_qualify` / `qualify-binding-pocket`
 
+E1a/E1b 必须记录检索式、数据库、标识符、证据层级、支持/反对证据、药理作用方向、
+实验体系和缺失字段；E2a 必须选择结构、配体、混合或仅证据路线，不得为了进入对接而
+强行认定口袋。外部学术检索工具不可用时保留缺失并继续官方数据库路径，不得编造工具。
 E2b 必须从所选 RCSB 坐标文件提取原位配体，输出同坐标系的干净受体、配体坐标/SDF、
 实例清单、口袋中心和坐标验收 manifest；不得将配体居中、旋转或优化后冒充共晶位置。
 只有 E3 输出 `docking_recommendation=dock` 才进入结构对接。表型优先、无合格结构或
@@ -99,22 +126,22 @@ E5 毒性分层、E6 排序与机制报告。每个 E/H 阶段必须转述阶段
 
 话术模板：「卡点：…。需要人类：①… ②…。我这边已/将继续：…。」
 
-## Track H 阶段机（整体流程图 → funnel-* skills）
+## Track H 阶段机（整体流程图 → 主技能/子技能）
 
-用户要「整体流程 / 三轮理解 / 从生成到 Top10 MD」时走 **`funnel-orchestrator`**；
+用户要「整体流程 / 三轮理解 / 从生成到 Top10 MD」时先走
+**`drug-discovery-orchestrator`**，再由其调用 `funnel-orchestrator`；
 用户只给最终数量时直接走 **`funnel_autopilot`**。
 
 | Step | Skill | 计划晋级 |
 |------|-------|----------|
-| H0 | `funnel-orchestrator` 门控 | 输入齐套 |
-| H1a | `funnel-diffdynamic-denovo` | ~50万 |
-| H1b | `funnel-diffdynamic-prudent` | ~4万 |
-| H2 | `funnel-glide-sp` primary | ~1000 |
-| H3 | `funnel-featurehit` + `funnel-shape-screen` | ~3000 |
-| H4 | `ddfast-06-qikprop-admet` | Schrödinger QikProp ADMET |
-| H5–H7 | `funnel-glide-sp` refine → `funnel-glide-xp` → `funnel-mmgbsa` | ~500/~130/~40 |
-| H8–H9 | `funnel-desmond-short-md` → `funnel-desmond-long-md` | ~20/~10 |
-| H10 | `funnel-comprehensive-analysis` | Top10 |
+| H0 | `drug-discovery-orchestrator` → `target-discovery` | 输入齐套 |
+| H1a/H1b | `dd-generation` → `funnel-diffdynamic-denovo` / `funnel-diffdynamic-prudent` | ~50万→~4万 |
+| H2 | `virtual-docking` → `funnel-glide-sp` | ~1000 |
+| H3 | `featurehit-finding` → `funnel-featurehit` / `funnel-shape-screen` | ~3000 |
+| H4 | `admet` → `ddfast-06-qikprop-admet` | Schrödinger QikProp ADMET |
+| H5–H7 | `virtual-docking` → `funnel-glide-sp` / `funnel-glide-xp` / `funnel-mmgbsa` | ~500/~130/~40 |
+| H8–H9 | `molecular-dynamics` → `funnel-desmond-short-md` / `funnel-desmond-long-md` | ~20/~10 |
+| H10 | `all-analysis` → `funnel-comprehensive-analysis` | Top10 |
 
 映射：`hsvpol/.trae/skills/FUNNEL_SKILL_MAP.md`。旧 `ddfast-*` 主入口已 superseded。
 

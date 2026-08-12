@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Audit the directly imported project skills and their bundled scripts."""
+"""Audit canonical grouped project skills and their compatibility aliases."""
 from __future__ import annotations
 
 import argparse
@@ -18,6 +18,9 @@ assert IMPORTER_SPEC is not None and IMPORTER_SPEC.loader is not None
 IMPORTER = importlib.util.module_from_spec(IMPORTER_SPEC)
 IMPORTER_SPEC.loader.exec_module(IMPORTER)
 CATEGORIES = IMPORTER.CATEGORIES
+MASTER_CATEGORIES = IMPORTER.MASTER_CATEGORIES
+CANONICAL_SKILLS = IMPORTER.CANONICAL_SKILLS
+LEGACY_CATEGORIES = IMPORTER.LEGACY_CATEGORIES
 PROJECT_SKILLS = IMPORTER.PROJECT_SKILLS
 
 
@@ -25,6 +28,7 @@ ROOT = PROJECT_SKILLS.parent
 FRONTMATTER_KEYS = {"name", "description"}
 LINK_PATTERN = re.compile(r"\[[^]]*\]\(([^)]+)\)")
 HOST_PATH_PATTERN = re.compile(r"/(?:data|home)/[^\s`'\"<>]+")
+URL_PATTERN = re.compile(r"https?://[^\s`'\"<>]+")
 
 
 def _frontmatter(path: Path) -> dict:
@@ -42,15 +46,21 @@ def _frontmatter(path: Path) -> dict:
 
 
 def _active_skill_dirs() -> list[Path]:
-    return sorted(
-        child
-        for child in PROJECT_SKILLS.iterdir()
-        if child.is_dir() and (child / "SKILL.md").is_file()
-    )
+    return [path for _master, _name, path in CANONICAL_SKILLS if (path / "SKILL.md").is_file()]
 
 
 def _catalog_names() -> list[str]:
-    return [name for names, _category in CATEGORIES for name in names]
+    return [master for master in MASTER_CATEGORIES] + [
+        name for names in MASTER_CATEGORIES.values() for name in names
+    ]
+
+
+def _compatibility_aliases() -> dict[str, Path]:
+    aliases: dict[str, Path] = {}
+    for master, children in MASTER_CATEGORIES.items():
+        for child in children:
+            aliases[child] = PROJECT_SKILLS / master / child
+    return aliases
 
 
 def _portable_text_assets(skill_dir: Path) -> list[Path]:
@@ -87,17 +97,32 @@ def _portable_text_assets(skill_dir: Path) -> list[Path]:
 def audit_skills(*, check_scripts: bool = False) -> list[str]:
     errors: list[str] = []
     skill_dirs = _active_skill_dirs()
-    active_names = {path.name for path in skill_dirs}
+    active_paths = {path.resolve() for path in skill_dirs}
     catalog_names = _catalog_names()
     counts = Counter(catalog_names)
 
     for name, count in sorted(counts.items()):
         if count != 1:
             errors.append(f"catalog: {name!r} occurs {count} times")
-    if set(catalog_names) != active_names:
-        missing = sorted(active_names - set(catalog_names))
-        extra = sorted(set(catalog_names) - active_names)
+    catalog_paths = {
+        path.resolve()
+        for _master, _name, path in CANONICAL_SKILLS
+        if (path / "SKILL.md").is_file()
+    }
+    if catalog_paths != active_paths:
+        missing = sorted(str(path) for path in active_paths - catalog_paths)
+        extra = sorted(str(path) for path in catalog_paths - active_paths)
         errors.append(f"catalog mismatch: unlisted={missing}, missing_directories={extra}")
+
+    for alias, expected in sorted(_compatibility_aliases().items()):
+        alias_path = PROJECT_SKILLS / alias
+        if not alias_path.is_symlink():
+            errors.append(f"compatibility alias missing symlink: {alias_path.relative_to(ROOT)}")
+        elif alias_path.resolve() != expected.resolve():
+            errors.append(
+                f"compatibility alias target mismatch: {alias_path.relative_to(ROOT)} "
+                f"-> {alias_path.resolve().relative_to(ROOT)}; expected {expected.relative_to(ROOT)}"
+            )
 
     for skill_dir in skill_dirs:
         skill_path = skill_dir / "SKILL.md"
@@ -125,8 +150,9 @@ def audit_skills(*, check_scripts: bool = False) -> list[str]:
             errors.append(f"{relative}: SKILL.md exceeds 500 lines")
         for asset_path in _portable_text_assets(skill_dir):
             asset_text = asset_path.read_text(encoding="utf-8")
+            portable_path_text = URL_PATTERN.sub("", asset_text)
             asset_relative = asset_path.relative_to(ROOT)
-            for match in HOST_PATH_PATTERN.finditer(asset_text):
+            for match in HOST_PATH_PATTERN.finditer(portable_path_text):
                 errors.append(f"{asset_relative}: host-specific path {match.group(0)!r}")
             if "/opt/schrodinger" in asset_text.lower():
                 errors.append(f"{asset_relative}: hard-coded Schrödinger installation path")
@@ -187,7 +213,10 @@ def main() -> int:
         for error in errors:
             print(f"ERROR: {error}")
         return 1
-    print(f"OK: {len(_active_skill_dirs())} top-level skills passed")
+    print(
+        f"OK: {len(MASTER_CATEGORIES)} master skills and "
+        f"{sum(len(children) for children in MASTER_CATEGORIES.values())} child skills passed"
+    )
     return 0
 
 

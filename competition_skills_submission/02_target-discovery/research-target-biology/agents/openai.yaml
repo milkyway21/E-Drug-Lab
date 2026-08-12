@@ -1,0 +1,4 @@
+interface:
+  display_name: Research Target Biology
+  short_description: Orchestrate biology, pharmacology, and computational evidence
+  default_prompt: Resolve this target, run the biomedical, pharmacology, structure, and computational-route skills, separate support from opposition, and write an auditable target dossier.

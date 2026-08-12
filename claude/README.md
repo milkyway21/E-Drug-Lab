@@ -7,6 +7,7 @@ rather than duplicating.
 
 ## Index
 
+- [allin-multimodal-fix-audit.md](allin-multimodal-fix-audit.md) — **ALLIN 多模态修复审计冻结**（docx 对照缺口；代码准备 vs 等 SP）。
 - [project.md](project.md) — **项目现状 + 数据地图真源**（ALLIN=`ginl_pc_gl` 主线路径、对接覆盖、特征表、缺口/待办）。找东西先读这个。旁路入口：`binding_RL/PROJECT.md`、`ALLIN/docs/project.md`。
 - [glare-multimodal-rl-status.md](glare-multimodal-rl-status.md) — **残差多模态落地状态**；**ALLIN 命名**=`ginl_pc_gl`（图+理化+Glide SP 三类联合，E47–E52 数字）。
 - [data-storage-binding-rl.md](data-storage-binding-rl.md) — **Glide / MD / 101D 列级详表**（`binding_RL` + `features_v1` + round2/3 docking + `PAT_training_database_101D.csv`），含 QC 与列清单。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Assess Computational Pharmacology"
+  short_description: "Choose a defensible computational discovery route"
+  default_prompt: "Assess structural and ligand-based feasibility, applicability limits, and the appropriate computational route for this target."

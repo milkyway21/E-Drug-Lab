@@ -1,0 +1,4 @@
+interface:
+  display_name: Time Scheduler
+  short_description: Adaptive monitoring and 48-hour recovery
+  default_prompt: Schedule adaptive Hermes wake-ups, keep the local funnel watchdog alive, and resume long tasks from validated artifacts without duplicate jobs.

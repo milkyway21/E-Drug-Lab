@@ -16,9 +16,7 @@ cd Scientist_In_E-Drug-Lab
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Hermes 不随仓库发布（见 vendor/README.md）
-mkdir -p vendor
-git clone --depth 1 https://github.com/NousResearch/hermes-agent.git vendor/hermes-agent
+# Hermes 源码已随仓库放在 vendor/hermes-agent/
 pip install -e ./vendor/hermes-agent
 
 cp .env.example .env   # 填 OPENAI_API_KEY；可选 OPENAI_BASE_URL
@@ -39,7 +37,6 @@ cd Scientist_In_E-Drug-Lab
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -e ".[dev]"
-git clone --depth 1 https://github.com/NousResearch/hermes-agent.git vendor/hermes-agent
 pip install -e ".\vendor\hermes-agent"
 masld-agent offline-demo --fixture tests/fixtures/hsd17b13 --output runs
 ```
@@ -60,9 +57,11 @@ hermes model
 ## Skills（项目顶层技能库）
 
 ```bash
-python scripts/import_drug_skills.py   # 从 skills/ 链接到 .hermes/skills + skills_pack/
-# funnel×14 | ddfast×4 | drug-design×3 | campaign×3 | evidence×8
-# 自动导入所有顶层 skills/*/SKILL.md；嵌套兼容工作流不会发布
+python scripts/import_drug_skills.py   # 导入 canonical skills 到 .hermes/skills + skills_pack/
+# 8 个主类 | 38 个 canonical 子 skills
+# drug-discovery-orchestrator / target-discovery / dd-generation / virtual-docking
+# featurehit-finding / admet / molecular-dynamics / all-analysis
+# 旧名称仅保留兼容入口，不作为重复 skill 发布
 ```
 
 ## CLI（科学管线）

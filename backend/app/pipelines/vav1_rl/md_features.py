@@ -28,7 +28,16 @@ COMBINED = MD_ROOT / "COMBINED"
 CONSENSUS_CSV = BINDING_RL / "patent_screening" / "results" / "md_vav1_consensus_weights.csv"
 OUT_DIR = BINDING_RL / "features_v1" / "md"
 
+# occupancy / interaction / frame IFP 实际覆盖的 11 个关键残基（上游 DESMOND 统计范围）
 KEY_RESIDUES = [796, 797, 798, 799, 800, 815, 816, 817, 818, 820, 831]
+
+# dynamic_window / mmgbsa 表覆盖的 19 个残基（energy/rmsf 可扩展到的全部残基）
+# 并集：KEY_RESIDUES 11 + dynamic_window 独有 8（793,801,813,819,821,822,832,833）
+DYN_RESIDUES = [793, 796, 797, 798, 799, 800, 801, 813, 815, 816, 817, 818, 819, 820, 821, 822, 831, 832, 833]
+
+# 特征工程覆盖的残基集合：energy/rmsf 扩展到 DYN_RESIDUES 全部 19 个
+# occupancy 仍以 KEY_RESIDUES 为准（上游无数据），其余残基 occupancy 填 0
+FEATURE_RESIDUES = DYN_RESIDUES
 
 INTERACTION_CANON = {
     "HBA": "HBAcceptor",
@@ -66,15 +75,19 @@ def _norm_mol_id(x: Any) -> str:
 
 
 def load_consensus_weights(path: Path = CONSENSUS_CSV) -> dict[int, float]:
+    """加载 MD 共识权重（occupancy 归一化）。
+
+    返回覆盖 FEATURE_RESIDUES 19 个残基的权重字典，缺失残基权重=0；
+    归一化只在有权重的 11 个残基上做，保持相对比例不变。
+    """
     df = pd.read_csv(path)
     col_res = "canonical_res_num" if "canonical_res_num" in df.columns else df.columns[0]
     col_w = "weight" if "weight" in df.columns else df.columns[1]
     w = {int(r[col_res]): float(r[col_w]) for _, r in df.iterrows()}
-    # 只保留 KEY_RESIDUES；缺省极小权重
-    out = {r: float(w.get(r, 0.0)) for r in KEY_RESIDUES}
+    out = {r: float(w.get(r, 0.0)) for r in FEATURE_RESIDUES}
     s = sum(out.values())
     if s <= 0:
-        out = {r: 1.0 / len(KEY_RESIDUES) for r in KEY_RESIDUES}
+        out = {r: 1.0 / len(FEATURE_RESIDUES) for r in FEATURE_RESIDUES}
     else:
         out = {r: v / s for r, v in out.items()}
     return out
@@ -111,24 +124,24 @@ def _read_parquet(name: str) -> pd.DataFrame:
 def _feature_spec() -> dict[str, Any]:
     names: list[str] = []
     defs: dict[str, str] = {}
-    for r in KEY_RESIDUES:
+    for r in FEATURE_RESIDUES:
         n = f"occ_r{r}"
         names.append(n)
-        defs[n] = f"VAV1 残基 {r} 的 any_interaction_occupancy（轨迹级）"
+        defs[n] = f"VAV1 残基 {r} 的 any_interaction_occupancy（轨迹级，MD 无数据残基为 0）"
     names.append("occ_w")
     defs["occ_w"] = "关键残基加权占有 Σ w_r·occ_r"
     for t in TYPE_ORDER:
         n = f"type_{t}"
         names.append(n)
         defs[n] = f"关键残基上 {t} 相互作用平均 occupancy"
-    for r in KEY_RESIDUES:
+    for r in FEATURE_RESIDUES:
         n = f"energy_r{r}"
         names.append(n)
         defs[n] = f"残基 {r} ΔTDC_total 均值经 tanh 有界（仅 observed）"
     names += ["energy_w", "energy_cover"]
     defs["energy_w"] = "关键残基能量加权和（tanh 空间）"
     defs["energy_cover"] = "关键残基能量观测覆盖率"
-    for r in KEY_RESIDUES:
+    for r in FEATURE_RESIDUES:
         n = f"rmsf_r{r}"
         names.append(n)
         defs[n] = f"残基 {r} RMSF(Å)，仅 observed"
@@ -146,7 +159,7 @@ def _feature_spec() -> dict[str, Any]:
         "dim": len(names),
         "names": names,
         "definitions": defs,
-        "key_residues": KEY_RESIDUES,
+        "key_residues": FEATURE_RESIDUES,
         "type_order": TYPE_ORDER,
         "protein_component": "VAV1",
     }
@@ -260,7 +273,7 @@ def build_md8_features(
 
     # filter VAV1 key
     def _vav1_key(df: pd.DataFrame) -> pd.DataFrame:
-        m = (df["protein_component"] == "VAV1") & (df["canonical_res_num"].isin(KEY_RESIDUES))
+        m = (df["protein_component"] == "VAV1") & (df["canonical_res_num"].isin(FEATURE_RESIDUES))
         return df.loc[m].copy()
 
     occ_k = _vav1_key(occ)
@@ -281,15 +294,17 @@ def build_md8_features(
             for _, r in sub.iterrows()
             if pd.notna(r["any_interaction_occupancy"])
         }
-        for r in KEY_RESIDUES:
+        for r in FEATURE_RESIDUES:
             if r in occ_map:
                 feat[f"occ_r{r}"] = occ_map[r]
                 observed_flags[f"occ_r{r}"] = 1
             else:
                 feat[f"occ_r{r}"] = 0.0
                 observed_flags[f"occ_r{r}"] = 0
-        cover_occ = sum(observed_flags[f"occ_r{r}"] for r in KEY_RESIDUES) / len(KEY_RESIDUES)
-        feat["occ_w"] = float(sum(weights[r] * feat[f"occ_r{r}"] for r in KEY_RESIDUES))
+        # cover_occ 仅按实际有 occupancy 数据的 11 个关键残基计算，避免扩集导致 md_mask 失效
+        occ_cover_base = [r for r in KEY_RESIDUES if r in FEATURE_RESIDUES]
+        cover_occ = sum(observed_flags[f"occ_r{r}"] for r in occ_cover_base) / max(len(occ_cover_base), 1)
+        feat["occ_w"] = float(sum(weights[r] * feat[f"occ_r{r}"] for r in FEATURE_RESIDUES))
 
         # C interaction types
         isub = ix_k[ix_k["molecule_id"] == mid]
@@ -308,7 +323,7 @@ def build_md8_features(
         dsub = dyn_k[dyn_k["molecule_id"] == mid]
         e_map: dict[int, float] = {}
         e_obs: dict[int, int] = {}
-        for r in KEY_RESIDUES:
+        for r in FEATURE_RESIDUES:
             vals = dsub.loc[dsub["canonical_res_num"] == r, "mmgbsa_total_mean"]
             vals = vals[vals.notna()]
             if len(vals):
@@ -322,11 +337,11 @@ def build_md8_features(
                 e_obs[r] = 0
             feat[f"energy_r{r}"] = e_map[r]
             observed_flags[f"energy_r{r}"] = e_obs[r]
-        energy_cover = sum(e_obs.values()) / len(KEY_RESIDUES)
+        energy_cover = sum(e_obs.values()) / len(FEATURE_RESIDUES)
         feat["energy_cover"] = float(energy_cover)
         if energy_cover > 0:
             feat["energy_w"] = float(
-                sum(weights[r] * e_map[r] for r in KEY_RESIDUES if e_obs[r]) / max(sum(weights[r] for r in KEY_RESIDUES if e_obs[r]), 1e-8)
+                sum(weights[r] * e_map[r] for r in FEATURE_RESIDUES if e_obs[r]) / max(sum(weights[r] for r in FEATURE_RESIDUES if e_obs[r]), 1e-8)
             )
         else:
             feat["energy_w"] = 0.0
@@ -334,7 +349,7 @@ def build_md8_features(
         # E RMSF
         rsub = rmsf_k[rmsf_k["molecule_id"] == mid]
         rmsf_map: dict[int, float] = {}
-        for r in KEY_RESIDUES:
+        for r in FEATURE_RESIDUES:
             vals = rsub.loc[rsub["canonical_res_num"] == r, "rmsf_A"]
             vals = vals[vals.notna()]
             if len(vals):
@@ -344,10 +359,10 @@ def build_md8_features(
                 rmsf_map[r] = 0.0
                 observed_flags[f"rmsf_r{r}"] = 0
             feat[f"rmsf_r{r}"] = rmsf_map[r]
-        if any(observed_flags[f"rmsf_r{r}"] for r in KEY_RESIDUES):
+        if any(observed_flags[f"rmsf_r{r}"] for r in FEATURE_RESIDUES):
             feat["rmsf_w"] = float(
-                sum(weights[r] * rmsf_map[r] for r in KEY_RESIDUES if observed_flags[f"rmsf_r{r}"])
-                / max(sum(weights[r] for r in KEY_RESIDUES if observed_flags[f"rmsf_r{r}"]), 1e-8)
+                sum(weights[r] * rmsf_map[r] for r in FEATURE_RESIDUES if observed_flags[f"rmsf_r{r}"])
+                / max(sum(weights[r] for r in FEATURE_RESIDUES if observed_flags[f"rmsf_r{r}"]), 1e-8)
             )
         else:
             feat["rmsf_w"] = 0.0
@@ -368,8 +383,9 @@ def build_md8_features(
                 persist_early = float(dsub["any_interaction_occupancy"].dropna().mean() or 0.0)
                 persist_late = persist_early
             # complete_rate: fraction of key×window with non-null occupancy
+            # occupancy 仅 KEY_RESIDUES 有数据，expected 按其计算
             expected = len(KEY_RESIDUES) * max(n_w, 1)
-            got = dsub["any_interaction_occupancy"].notna().sum()
+            got = dsub[dsub["canonical_res_num"].isin(KEY_RESIDUES)]["any_interaction_occupancy"].notna().sum()
             complete_rate = float(got / max(expected, 1))
         else:
             persist_early = persist_late = 0.0

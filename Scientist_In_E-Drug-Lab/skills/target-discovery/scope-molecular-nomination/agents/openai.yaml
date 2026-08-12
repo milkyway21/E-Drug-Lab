@@ -1,0 +1,4 @@
+interface:
+  display_name: Scope Molecular Nomination
+  short_description: Lock nomination inputs and evidence policy
+  default_prompt: Define E0 for this nomination task, validate the official library, and report the locked plan before computation.

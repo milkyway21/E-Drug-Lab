@@ -1,0 +1,4 @@
+interface:
+  display_name: Nominate Lipid Modulators
+  short_description: Rank low-tox lipid-modulating candidates
+  default_prompt: Run deterministic evidence-weighted nomination and explain each candidate's score, toxicity, mechanism, uncertainty, and validation path.

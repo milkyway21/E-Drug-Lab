@@ -447,6 +447,42 @@ def cmd_funnel_autopilot_status(
     raise SystemExit(0 if payload.get("status") != "error" else 1)
 
 
+@funnel_app.command("monitor-plan")
+def cmd_funnel_monitor_plan(
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+    stage: Optional[str] = typer.Option(None, "--stage"),
+) -> None:
+    """Compute the next adaptive agent wake interval for a funnel stage."""
+    from masld_agent.funnel.manifest import load_manifest
+    from masld_agent.funnel.time_scheduler import build_monitor_plan, monitor_prompt
+
+    loaded = load_manifest(manifest)
+    payload = build_monitor_plan(loaded, stage=stage)
+    payload["manifest"] = str(manifest.resolve())
+    payload["prompt"] = monitor_prompt(loaded, payload)
+    _json_print(payload)
+
+
+@funnel_app.command("report-update")
+def cmd_funnel_report_update(
+    stage: str = typer.Option(..., "--stage"),
+    manifest: Path = typer.Option(..., "--manifest", exists=True, dir_okay=False),
+    profile: str = typer.Option("full", "--profile"),
+    analysis: Optional[str] = typer.Option(None, "--analysis"),
+) -> None:
+    """Update the single consolidated H0-H10 report."""
+    from masld_agent.reporting.funnel_report import update_funnel_report
+
+    payload = update_funnel_report(
+        manifest,
+        stage=stage,
+        profile=profile,
+        analysis=analysis,
+    )
+    _json_print(payload)
+    raise SystemExit(0 if payload.get("status") in {"ok", "partial"} else 1)
+
+
 @funnel_app.command("inspect-sdf")
 def cmd_funnel_inspect_sdf(
     input_path: Path = typer.Option(..., "--input", exists=True, dir_okay=False),
@@ -556,10 +592,22 @@ def cmd_diffdynamic_status() -> None:
 
 @app.command("diffdynamic-generate")
 def cmd_diffdynamic_generate(
-    protein: Path = typer.Option(..., "--protein"),
-    ligand: Path = typer.Option(..., "--ligand"),
+    protein: Path = typer.Option(
+        ...,
+        "--protein",
+        help="Coordinate-cleaned receptor PDB; .pdb required",
+    ),
+    ligand: Path = typer.Option(
+        ...,
+        "--ligand",
+        help="Native/reference ligand SDF; .sdf required",
+    ),
     mode: str = typer.Option("denovo_fast", "--mode"),
-    molecule: Optional[Path] = typer.Option(None, "--molecule"),
+    molecule: Optional[Path] = typer.Option(
+        None,
+        "--molecule",
+        help="Scaffold SDF; .sdf required in scaffold mode",
+    ),
     target_name: str = typer.Option("target", "--target-name"),
     batch_size: int = typer.Option(20, "--batch-size"),
     sample_only: bool = typer.Option(True, "--sample-only/--no-sample-only"),
@@ -568,7 +616,7 @@ def cmd_diffdynamic_generate(
     gpus: Optional[str] = typer.Option(None, "--gpus"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
-    """Gated DiffDynamic generate (sample_only default; large batch needs --confirm)."""
+    """Generate from a clean receptor PDB and native ligand SDF."""
     from masld_agent.platform.diffdynamic_tools import diffdynamic_generate
 
     payload = diffdynamic_generate(

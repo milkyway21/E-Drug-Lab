@@ -1,0 +1,4 @@
+interface:
+  display_name: Qualify Binding Pocket
+  short_description: Gate docking on biological pocket evidence
+  default_prompt: Evaluate this selected structure and return a qualified pocket or a documented do-not-dock decision.
