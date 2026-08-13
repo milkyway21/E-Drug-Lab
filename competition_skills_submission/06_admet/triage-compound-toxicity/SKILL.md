@@ -1,9 +1,45 @@
 ---
 name: triage-compound-toxicity
-description: Use during candidate nomination to separate observed cytotoxicity and organ-toxicity evidence from QikProp or structure-based predictions, prioritize safer compounds, and preserve unknowns.
+description: Use to triage observed and predicted toxicity evidence.
 ---
 
 # Triage Compound Toxicity
+
+Rank safety evidence by relevance and quality while separating matched cytotoxicity,
+organ-toxicity evidence, assay alerts, predictions, and unknowns.
+
+## When to Use
+
+Use after compound evidence enrichment and prediction, during candidate nomination and
+experimental validation design.
+
+## Prerequisites
+
+- Stable compound IDs and enriched evidence JSONL.
+- Prediction rows with backend/applicability and observed records with endpoint/exposure context.
+- Assay-specific viability policy, false-positive rule, and uncertainty scoring method.
+
+## How to Run
+
+Use the registered triage operation for an agent task. Standalone mode joins explicit QikProp
+and observed-evidence tables by stable parent/library ID under the same hierarchy.
+
+## Quick Reference
+
+| Evidence level | Example | Label |
+| --- | --- | --- |
+| Matched experiment | Cell viability at relevant exposure | `observed` |
+| Curated organ/safety assay | DILI, hERG assay, cardiotoxicity | `observed` |
+| Model or alert | QikProp, SMARTS alert | `predicted_only` |
+| No usable record | Missing or unmatched | `unknown` |
+
+## Procedure
+
+1. Join exact compound identities and reject ambiguous mappings.
+2. Classify each evidence row by observation/prediction and applicability.
+3. Preserve endpoint, concentration, exposure, species/system, and citation.
+4. Calculate a reproducible safety rationale without converting unknowns to safe.
+5. Link lipid efficacy to matched viability and flag cell-loss false positives.
 
 Call `toxicity_triage` after compound evidence enrichment. For full computational runs,
 reuse the existing QikProp skill and import its outputs rather than substituting another ADMET model.
@@ -85,3 +121,15 @@ context, source/citation IDs, applicability, alert rationale, and a reproducible
 score. Use `jq`, a CSV tool, or a small versioned Python/R script for the join; do not
 classify a missing database result as safe and do not call a structural alert observed
 cytotoxicity. Reject rows whose parent ID or structure hash cannot be matched.
+
+## Pitfalls
+
+- Spontaneous adverse-event counts do not establish compound-specific causality.
+- Structural alerts and QikProp properties are predictions, not observed cell death.
+- Lipid reduction accompanied by material viability loss is a likely false positive.
+
+## Verification
+
+Require one row per stable input ID, identity/hash match, evidence class, endpoint and exposure,
+source/citation, applicability, observed/predicted/unknown label, alert rationale, uncertainty,
+and a matched lipid/viability decision for phenotype nominations.

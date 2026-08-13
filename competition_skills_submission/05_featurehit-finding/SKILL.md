@@ -1,9 +1,45 @@
 ---
 name: featurehit-finding
-description: Expands validated poses through pharmacophore, topology, and shape-library screening. Use for H3 feature-hit finding and compound-library expansion.
+description: Use to route pose-seeded compound-library expansion.
 ---
 
 # FeatureHit Finding
+
+Route topology, pharmacophore, and three-dimensional shape searches from validated ligand poses
+to a frozen, lineage-complete library hit set.
+
+## When to Use
+
+Use after primary Glide pose selection when a fixed compound library must be searched for
+topologically, pharmacophorically, or shape-related candidates.
+
+## Prerequisites
+
+- Ligand-only query poses with parent, prepared-state, pose, grid, and score lineage.
+- Immutable source library with stable IDs, record count, and hash.
+- Explicit backend, score semantics, exact-N policy, resources, and output directory.
+
+## How to Run
+
+Use the manifest to coordinate selected child backends. Standalone work calls the native
+RDKit, Phase, QuickShape, or GPU Shape path appropriate to the declared evidence type.
+
+## Quick Reference
+
+| Evidence arm | Backend | Score meaning |
+| --- | --- | --- |
+| Topology | RDKit Morgan | Fingerprint Tanimoto |
+| Pharmacophore | Phase screen | Hypothesis match score |
+| 3D shape | QuickShape or Shape GPU | Shape similarity |
+| Fusion | Deterministic exact-N policy | Selection provenance |
+
+## Procedure
+
+1. Extract and validate ligand-only best poses from the pose viewer.
+2. Freeze library identity and probe the exact installed backend and format.
+3. Run each evidence arm independently and preserve invalid/rejected records.
+4. Aggregate best score per stable library ID and canonical structure.
+5. Fuse under the declared policy and validate exact-N rows and structures.
 
 This main skill coordinates H3 without replacing the exact-N validators or plot recipes.
 
@@ -103,3 +139,16 @@ PYTHON="${PYTHON:-python3}"
 
 Only merge ranked tables after parsing valid records, preserving query/parent/library
 lineage, and applying the declared exact-N policy.
+
+## Pitfalls
+
+- Morgan topology similarity is not a pharmacophore or 3D-shape result.
+- A receptor-containing pose viewer is not a ligand query file.
+- `.1dbin` and GPU `.bin` databases are not interchangeable by renaming or symlinking.
+- Query records and prepared states can inflate output counts unless explicitly removed.
+
+## Verification
+
+Require query and library hashes/counts, backend versions and parameters, score columns,
+JobDJ completion where applicable, invalid/rejection rows, stable query-parent-library joins,
+canonical uniqueness, and exact agreement between frozen manifest rows and SDF records.

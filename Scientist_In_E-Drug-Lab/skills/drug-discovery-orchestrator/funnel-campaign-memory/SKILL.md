@@ -1,9 +1,42 @@
 ---
 name: funnel-campaign-memory
-description: Read and update structured task state in CAMPAIGN.md without enabling Hermes native memory. Use before execution, after every stage decision, and when resuming a task; never treat chat text as scientific completion evidence.
+description: Use to persist and resume evidence-backed campaign state.
 ---
 
 # Funnel Campaign Memory
+
+Persist resumable campaign state without treating state metadata as scientific evidence.
+Keep immutable attempts and append-only decisions wherever possible.
+
+## When to Use
+
+Use before any command, after submission, after validation, at stage transitions, and when
+an agent or monitor restarts.
+
+## Prerequisites
+
+Require a stable task root and task ID. Record schema version, target/library identity,
+profile, requested final count, created time, current stage, and report location.
+
+## How to Run
+
+Prefer campaign memory tools or manifest status. A generic agent may maintain atomic JSON
+or Markdown state with temporary-file replacement. State writes must never alter scientific
+artifacts or hide older attempts.
+
+## Quick Reference
+
+Each stage record must include status, attempt, command, cwd, input hashes, output hashes,
+job/process ID, planned/observed/validated counts, resources, timestamps, validator result,
+reuse decision, warnings, and next allowed stage.
+
+## Procedure
+
+1. Read state and reconcile it against files and live job state.
+2. Mark stale metadata without deleting it.
+3. Decide reuse/resume/rerun/block and append the reason.
+4. Write state atomically after submission and after validation.
+5. Preserve relative paths so the task directory remains portable.
 
 ## Concrete Operation Procedure
 
@@ -77,3 +110,13 @@ Store input/output hashes, exact command or job ID, planned versus observed coun
 validation result, reuse decision, and next allowed stage in the same state record. This
 state is a resume aid, not proof of completion; validators and artifacts remain the
 source of truth.
+
+## Pitfalls
+
+Do not infer completion from `.done`, a PID file, chat history, or a stale database row.
+Do not overwrite an attempt directory or erase a failed decision.
+
+## Verification
+
+Re-read the state, validate its schema, resolve every relative artifact path, compare
+hashes, and ensure exactly one current stage/attempt is marked active.

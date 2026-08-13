@@ -1,9 +1,43 @@
 ---
 name: research-target-biology
-description: Use before structure or pocket selection to orchestrate target identity resolution, reproducible biomedical evidence search, pharmacology assessment, computational-route assessment, and an auditable supporting, opposing, and unresolved target dossier.
+description: Use to build an evidence-balanced target biology dossier.
 ---
 
 # Research Target Biology
+
+Build a target dossier that explains both why an intervention may work and why it may fail.
+Do not collapse association, expression, perturbation, and causal evidence into one score.
+
+## When to Use
+
+Use after scope lock and before selecting a computational route, receptor, or mechanism.
+
+## Prerequisites
+
+Require target aliases, organism, disease/phenotype, tissue/cell context, and intended
+intervention direction if known. Resolve a reviewed canonical protein and retain isoform
+uncertainty.
+
+## How to Run
+
+Query UniProt, NCBI Gene, Ensembl, Open Targets, Reactome, GO, pathway databases, expression
+resources, and literature using stable IDs. Store raw responses and normalize claims into
+source, model, intervention, direction, endpoint, effect, evidence level, and date.
+
+## Quick Reference
+
+Grade evidence as human genetics/clinical, human tissue, in vivo perturbation, cellular
+perturbation, biochemical, observational association, or prediction. Keep supporting,
+opposing, context-dependent, and unresolved records separate.
+
+## Procedure
+
+1. Resolve gene/protein/isoform identity and cellular function.
+2. Map tissue, cell type, subcellular localization, complexes, and pathways.
+3. Collect disease association and perturbation direction.
+4. Identify safety liabilities, essential functions, paralogs, and compensatory pathways.
+5. Write a mechanism chain, alternatives, and falsifiers.
+6. Hand the dossier to pharmacology and route-assessment skills.
 
 Call `target_biology_search` first for target-based work, then route through the specialized
 skills rather than treating its initial card as complete.
@@ -90,3 +124,15 @@ Normalize each result into identity, support, opposition, unresolved question, s
 query, access date, and citation fields. Separate target biology from computational
 predictions. Write a decision record for the intervention direction and falsifiers; a
 failed or contradictory source is retained as evidence, not silently omitted.
+
+## Pitfalls
+
+Do not use an alias without ID resolution, treat increased expression as proof that
+inhibition is beneficial, mix model organisms without translation caveats, or omit null
+and contradictory results.
+
+## Verification
+
+Require canonical IDs, source/query provenance, evidence-level labels, intervention
+direction, safety context, opposing evidence, alternative mechanism, falsifier, and an
+explicit confidence statement.

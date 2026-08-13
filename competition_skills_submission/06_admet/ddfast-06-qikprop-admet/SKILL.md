@@ -1,9 +1,43 @@
 ---
 name: ddfast-06-qikprop-admet
-description: Run Schrödinger LigPrep and QikProp ADMET with parent-state lineage, strict numeric validation, and deterministic exact-N selection. Use for the funnel H4 ADMET gate; do not use DrugFlow, mock values, or RDKit descriptors as substitutes.
+description: Use to run LigPrep and QikProp ADMET prediction.
 ---
 
 # Schrödinger QikProp ADMET
+
+Prepare ligand states and calculate validated QikProp descriptors while preserving parent
+identity, failed rows, prediction semantics, and deterministic selection.
+
+## When to Use
+
+Use for the H4 prediction gate when the selected and licensed backend is Schrödinger QikProp.
+
+## Prerequisites
+
+- Frozen source SDF with stable parent/library IDs and structure hash.
+- LigPrep ionization, tautomer, stereochemistry, pH, and state-selection policy.
+- Resolved QikProp/LigPrep release, resource settings, descriptor rules, and exact-N target.
+
+## How to Run
+
+Use manifest-declared native argv in the agent workflow. Standalone runs use `ligprep` with a
+typed structure input flag and pass the prepared structure file as QikProp's final argument.
+
+## Quick Reference
+
+| Tool | Correct input form | Common error |
+| --- | --- | --- |
+| LigPrep | `-isd in.sdf -osd out.sdf` | Untracked state policy |
+| QikProp | Options then positional structure file | Passing raw SMILES or `-inp` |
+| Selection | One deterministic state per parent | Counting states as parents |
+
+## Procedure
+
+1. Probe installed help and record product/version details.
+2. LigPrep the frozen library under an explicit state-generation policy.
+3. Select or preserve states deterministically and write the parent-state map.
+4. Strip excessive SD fields into a minimal lineage-preserving QikProp input if needed.
+5. Run QikProp, validate numeric fields, apply frozen rules, and freeze exact N.
 
 Use this skill for H4. The backend must be the installed Schrödinger QikProp;
 do not substitute DrugFlow, a mock, or RDKit descriptors.
@@ -151,3 +185,16 @@ completed log rather than guessing. Export the QikProp table with the native out
 format, join rows to the parent-state table, and apply the fixed filters in this skill.
 `qikprop -inp` and a QikProp `-osd` output flag are not part of the tested interface;
 probe `-h` before adapting to another release.
+
+## Pitfalls
+
+- QikProp does not accept raw SMILES as the structure input in this workflow.
+- Hundreds of upstream SD properties can cause parse rejection; preserve a full evidence copy.
+- Do not loosen filters or substitute RDKit fields to fill an exact-N shortfall.
+- Missing numeric output is an explicit failed/incompatible state, not a favorable value.
+
+## Verification
+
+Require source and minimal-input hashes, help/version logs, parent-state lineage, input/output
+counts, required numeric columns, incompatible/failed rows, rule failures, deterministic sort,
+exact-N manifest/SDF agreement, and explicit labeling of every field as a prediction.

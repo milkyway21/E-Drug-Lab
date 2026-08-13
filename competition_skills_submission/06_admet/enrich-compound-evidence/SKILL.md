@@ -1,9 +1,45 @@
 ---
 name: enrich-compound-evidence
-description: Use after candidate generation or library screening to normalize official-library identities and enrich compounds with properties, assays, targets, pathways, literature, and provenance without merging incompatible evidence.
+description: Use to normalize identities and enrich compound evidence.
 ---
 
 # Enrich Compound Evidence
+
+Resolve official compound identities and attach assay, target, pathway, property, literature,
+and provenance records without collapsing incompatible evidence.
+
+## When to Use
+
+Use after generation or library screening and before toxicity triage, mechanism ranking, or
+final candidate nomination.
+
+## Prerequisites
+
+- Frozen compound file with official IDs, source, count, and hash.
+- Parent-standardization policy and access to authoritative source APIs or snapshots.
+- Target/disease context, evidence schema, query date, and output JSONL path.
+
+## How to Run
+
+Use the registered enrichment operation when available. Standalone mode queries source APIs by
+exact identifier/structure and writes one provenance-complete JSONL record per input compound.
+
+## Quick Reference
+
+| Evidence | Preserve | Never merge blindly |
+| --- | --- | --- |
+| Identity | Library ID, parent InChIKey, stereo | Salts/states without lineage |
+| Activity | Endpoint, relation, value, unit, assay | `Ki`, `IC50`, phenotype |
+| Literature | Citation and claim context | Mention as direct activity |
+| Prediction | Backend and applicability | Observation or causal proof |
+
+## Procedure
+
+1. Validate each input ID and normalize the parent under a declared policy.
+2. Resolve exact external identifiers without similarity-based identity substitution.
+3. Collect source records with endpoint, assay, target, organism, document, and date.
+4. Classify direct activity, phenotype, annotation, literature, and prediction separately.
+5. Write one input-linked JSONL row and explicit unknown values.
 
 Use `compound_evidence_enrich` for local identity normalization or
 `nominate_compounds` for the complete E0-E6 workflow.
@@ -81,3 +117,15 @@ assay endpoint/value/unit/context, target/pathway, citation ID, query timestamp,
 explicit `unknown` value for every field that was not found. Validate record count and
 stable-ID uniqueness before passing `compound_evidence.jsonl` to toxicity triage; never
 replace an unavailable evidence service with a guessed annotation.
+
+## Pitfalls
+
+- PubChem identity lookup is not proof of target activity or mechanism.
+- Raw SMILES alone is an unstable join key across salts, states, and stereoisomers.
+- Missing evidence must remain unknown rather than becoming a negative result.
+
+## Verification
+
+Confirm one row per input ID, unique parent lineage, source record and citation IDs, query date,
+raw assay context, explicit evidence classes, unknown fields, quarantined invalid structures,
+and no incompatible endpoint/unit aggregation.

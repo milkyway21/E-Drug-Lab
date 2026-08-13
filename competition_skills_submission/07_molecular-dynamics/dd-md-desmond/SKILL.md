@@ -1,11 +1,45 @@
 ---
 name: "dd-md-desmond"
-description: "Run or resume Schrödinger Desmond MD on docked protein-ligand complexes, including corrected-pose system preparation, production validation, and SEA routing. Use after validated docking poses or when diagnosing pose-frame MD failures; prefer funnel-desmond-short-md/long-md for H8/H9 and do not use for FEP or DiffDynamic sampling."
+description: "Use for cross-cutting Desmond MD operations."
 ---
 
-⚠ Superseded note: for flowchart-track H work, prefer `funnel-desmond-short-md` / `funnel-desmond-long-md`. This skill holds cross-cutting MD operations knowledge.
+# DD MD Desmond - Post-Docking Molecular Dynamics
 
-# DD MD Desmond — Post-Docking Molecular Dynamics
+Apply reusable Desmond system, GPU, launch, recovery, and validation rules shared by short and
+long production stages. Prefer the stage-specific funnel skills for H8/H9 policy.
+
+## When to Use
+
+Use for corrected-pose system preparation, launch diagnostics, GPU assignment, checkpoint
+recovery, or cross-stage MD troubleshooting after validated docking poses.
+
+## Prerequisites
+
+- Stable parent/pose/complex identity and validated full-system inputs.
+- Existing MSJ protocol, explicit component expectations, ASLs, duration, and frame interval.
+- Resolved Desmond launchers, owned GPU/host, attempt directory, and recovery policy.
+
+## How to Run
+
+Use this skill inside a manifest for shared operations, or invoke the native multisim command
+shown below. It does not set H8/H9 duration or candidate-selection policy.
+
+## Quick Reference
+
+| Operation | Rule |
+| --- | --- |
+| System reuse | Keep validated CMS and all components |
+| GPU launch | Set both CUDA visibility variables |
+| Recovery | Resume exact checkpoint/attempt only |
+| Analysis | Validate trajectory before SEA |
+
+## Procedure
+
+1. Validate complex pose/frame, CMS components, protocol, and selectors.
+2. Resolve multisim/jobcontrol and probe installed help.
+3. Launch one isolated attempt on one approved physical GPU.
+4. Record and monitor exact job/process IDs plus file progress.
+5. Validate trajectory and route only valid runs to SEA.
 
 ## Concrete Operation Procedure
 
@@ -96,3 +130,15 @@ SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
 Keep one attempt per physical GPU, record JobDJ IDs and input hashes, and validate
 continuity, topology, and final CMS/DTR before running SEA. Do not hand-write a new MSJ
 to compensate for a failed monitor.
+
+## Pitfalls
+
+- Do not use this stage-policy-neutral skill as a replacement for H8/H9 gates.
+- Do not hand-write a production MSJ when an approved protocol already exists.
+- Do not rebuild or resubmit because an unrelated monitor or shell exited.
+
+## Verification
+
+Confirm corrected-pose lineage, full-system component checks, MSJ/input hashes, exact GPU and
+job ownership, attempt isolation, normal completion, valid CMS/DTR duration and topology, and
+an explicit SEA handoff or documented failure reason.

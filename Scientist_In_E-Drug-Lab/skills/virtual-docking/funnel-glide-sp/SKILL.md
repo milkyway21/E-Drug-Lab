@@ -1,9 +1,45 @@
 ---
 name: funnel-glide-sp
-description: Run H2 or H5 LigPrep and Glide SP with parent-state lineage, non-interactive launch safeguards, and deterministic parent ranking. Use with a validated existing receptor grid; do not rebuild the grid or rank prepared states as independent parents.
+description: Use to prepare ligands and run validated Glide SP.
 ---
 
 # Glide SP
+
+Prepare ligand states and run Glide standard-precision docking against a validated receptor
+grid, then rank deterministic best poses at the parent-compound level.
+
+## When to Use
+
+Use for primary H2 docking or H5 redocking/refinement after a qualified pocket and validated
+grid exist.
+
+## Prerequisites
+
+- Grid ZIP tied to a prepared receptor and qualified pocket.
+- Frozen input SDF with stable parent IDs and preparation-state policy.
+- LigPrep, Glide, Job Control, host allocation, and numbered output directory.
+
+## How to Run
+
+Use manifest-declared LigPrep and Glide argv by default. Standalone mode resolves the licensed
+installation and runs native `ligprep` followed by `glide` from an isolated working directory.
+
+## Quick Reference
+
+| Input or option | Purpose | Gate |
+| --- | --- | --- |
+| `-isd` / `-osd` | LigPrep SDF input/output | Parent-state map |
+| `GRIDFILE` | Prepared receptor grid | Hash/frame match |
+| `PRECISION SP` | Standard precision | Do not substitute XP |
+| `_pv.maegz` | Receptor plus poses | Readable records and scores |
+
+## Procedure
+
+1. Validate the frozen parent set and receptor-grid compatibility.
+2. Probe LigPrep/Glide, prepare states, and write parent-to-state lineage.
+3. Run a one-state noninteractive probe in the final launch pattern.
+4. Run the full set, wait for exact JobDJ completion, and recover outputs if needed.
+5. Parse numeric scores and freeze the lowest score pose per parent.
 
 Use stage H2 for primary SP and H5 for refined SP. Reuse the manifest grid; do not
 rebuild it when a validated ZIP already exists. Preserve `parent_id -> prepared_state`
@@ -164,3 +200,16 @@ The grid ZIP must have been generated for the same prepared receptor and pocket.
 the LigPrep parent/state table, pose viewer, score CSV, job log, and rejected records.
 Select the lowest numeric `r_i_glide_gscore` per parent only after checking completed
 subjobs and readable poses; a non-empty output file is not completion.
+
+## Pitfalls
+
+- Do not put `JOBNAME` in both Glide input and CLI arguments.
+- Do not count protonation, tautomer, or stereochemical states as separate parent hits.
+- A score table without its corresponding readable pose viewer is incomplete.
+- Do not rebuild a valid grid merely because a wrapper or output-path check failed.
+
+## Verification
+
+Require input/grid hashes, LigPrep policy and parent-state table, probe success, exact job ID,
+finished parent/subjobs, numeric `r_i_glide_gscore`, readable pose viewer, rejected states,
+one deterministic pose per parent, and observed parent count matching the frozen result.

@@ -1,9 +1,45 @@
 ---
 name: rdkit
-description: Perform reproducible local cheminformatics with RDKit, including structure parsing, canonicalization, physicochemical descriptors, Morgan similarity, and SMARTS filtering. Use for ligand-table preparation and library triage; do not substitute RDKit descriptors for QikProp, docking, or MD evidence.
+description: Use for reproducible RDKit parsing and ligand triage.
 ---
 
 # RDKit Cheminformatics
+
+Apply portable structure parsing, descriptors, canonicalization, Morgan similarity, and SMARTS
+filtering while preserving invalid records and chemical lineage.
+
+## When to Use
+
+Use for ligand-table preparation, local physicochemical triage, topology similarity,
+substructure filters, canonical deduplication, and structure validation.
+
+## Prerequisites
+
+- Python environment with a recorded RDKit version.
+- Explicit input format, ID field, salt/stereo/tautomer policy, and immutable source file.
+- Frozen descriptor, fingerprint, threshold, SMARTS, and output-count policy.
+
+## How to Run
+
+Prefer existing reusable command-line utilities. When using the RDKit API directly, implement
+the same validation and lineage contract in a versioned shared program, not an inline snippet.
+
+## Quick Reference
+
+| Operation | Typical method | Required provenance |
+| --- | --- | --- |
+| Physchem | MW, LogP, TPSA, HBD/HBA | RDKit version and definitions |
+| Similarity | Morgan radius 2, 2048 bits | Metric, query, winning score |
+| Filter | Explicit SMARTS | Pattern, mode, match reason |
+| Deduplication | Declared canonical key | Parent-to-record lineage |
+
+## Procedure
+
+1. Detect format and stable ID field before parsing.
+2. Parse every record and preserve failures with reasons.
+3. Apply the declared chemistry policy before descriptors or fingerprints.
+4. Run the selected operation with frozen parameters and stable tie-breaking.
+5. Validate counts, uniqueness, provenance, and exact-N status.
 
 Prefer the bundled command-line utilities over one-off Python programs. Set
 `SKILLS_ROOT` to the root of the installed shared skill tree and choose any Python
@@ -157,3 +193,15 @@ mkdir -p "$OUT_DIR"
 Use the bundled `substructure_filter.py` for SMARTS exclusions, preserve parse failures,
 and record RDKit version, fingerprint settings, threshold, canonicalization policy, and
 input/output counts. Do not relax a threshold or fill a shortfall with duplicate records.
+
+## Pitfalls
+
+- RDKit suppliers can yield `None`; silent iteration drops invalid library records.
+- Canonical SMILES does not preserve a prepared protonation, tautomer, stereo, or 3D state.
+- RDKit descriptors do not replace QikProp, docking, experimental ADMET, or MD evidence.
+
+## Verification
+
+Require RDKit version, input hash and count, stable IDs, valid/invalid/rejected counts, all
+parameters, deterministic ordering, parent/canonical lineage, unique output structures, and
+exact agreement between declared and observed output records.

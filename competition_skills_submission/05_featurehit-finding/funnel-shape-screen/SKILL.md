@@ -1,9 +1,45 @@
 ---
 name: funnel-shape-screen
-description: Run H3 pose-based Schrödinger Shape screening from extracted best Glide poses with version-aware command validation and recoverable outputs. Use for pose-shape expansion; do not treat JobDJ submission or wrapper exit as completion.
+description: Use to run recoverable pose-based Shape screening.
 ---
 
 # Shape Screen
+
+Screen an immutable compound library against real ligand-only poses with the installed
+Schrödinger Shape backend and recover asynchronous outputs without recomputation.
+
+## When to Use
+
+Use when H3 requires 3D shape expansion from validated docking poses rather than topology-only
+or pharmacophore-only ranking.
+
+## Prerequisites
+
+- Frozen ligand-only query SDF and immutable source library or supported Shape database.
+- Stable query, parent, pose, and library IDs plus an exact-N policy.
+- Licensed Shape/QuickShape/Job Control tools, hosts, scratch, and output CWD.
+
+## How to Run
+
+Use the manifest for backend and resource routing. Standalone mode chooses the native command
+from the actual database format after probing the installed help.
+
+## Quick Reference
+
+| Database | Native route | Do not do |
+| --- | --- | --- |
+| Source SDF/SMI | `shape_screen_gpu generate` | Assume it is pre-indexed |
+| GPU `.bin` | `shape_screen_gpu run` | Rename `.1dbin` to `.bin` |
+| Phase `.1dbin` | `quick_shape` or 1D tool | Pass to GPU `.bin` reader |
+| SDFGZ result | Binary gzip parse | Count query records as hits |
+
+## Procedure
+
+1. Freeze one ligand-only query pose per selected parent.
+2. Probe the exact tool and route by source/database format.
+3. Run a one-query probe, then the full screen from the final output CWD.
+4. Wait for exact JobDJ completion and recover completed files without resubmission.
+5. Parse numeric Shape scores, aggregate library IDs, deduplicate, and freeze exact N.
 
 Extract real best Glide poses before screening. Resolve Shape tools from the platform
 registry and probe the resolved executables before building the command. Under
@@ -176,3 +212,16 @@ For the combined 1D-to-3D route use QuickShape instead:
 Use `-ocsv` instead of `-osd`, never both. Wait for the exact JobDJ ID if the native
 tool submits asynchronously, then require `r_phase_Shape_Sim`, source library ID,
 winning query ID, readable output, and exact-N canonical deduplication.
+
+## Pitfalls
+
+- Do not pass both `-osd` and `-ocsv` when the installed version treats them as exclusive.
+- `JobId:` or a successful outer process means submission, not scientific completion.
+- Output may restore to launch CWD; wrong-path validation is not a reason to recompute.
+- Shape-aligned states are evidence artifacts, not replacements for source-library identity.
+
+## Verification
+
+Require query count and coordinates, database format and hash, installed CLI/version, exact
+job and subjob completion, numeric `r_phase_Shape_Sim`, source library and winning query IDs,
+removed query/invalid records, canonical uniqueness, and exact-N table/SDF agreement.

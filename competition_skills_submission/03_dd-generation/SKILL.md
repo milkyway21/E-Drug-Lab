@@ -1,9 +1,45 @@
 ---
 name: dd-generation
-description: Runs the validated DiffDynamic generation and Prudent optimization handoff. Use for H1 de novo generation after target and pocket gates pass.
+description: Use to route validated DiffDynamic generation stages.
 ---
 
 # DD Generation
+
+Route pocket-conditioned generation and Prudent post-processing with strict structure,
+resource, lineage, resume, and no-Vina analysis contracts.
+
+## When to Use
+
+Use after the target, selected structure, native ligand, and pocket gates pass, and before
+Glide SP or feature/library expansion.
+
+## Prerequisites
+
+- Clean receptor PDB and same-frame native-ligand SDF from structure preparation.
+- Qualified pocket, requested output count, task-local config, seeds, GPUs, and disk budget.
+- Resolvable DiffDynamic Python, sampler, weights, evaluator, and output directories.
+
+## How to Run
+
+Use the manifest path for agent orchestration. A public standalone run resolves the same
+installation from environment or registry and invokes the native Python scripts directly.
+
+## Quick Reference
+
+| Stage | Native mode | Completion evidence |
+| --- | --- | --- |
+| H1a de novo | `sample_diffusion.py ... --mode dynamic` | Parsed PT and lineage |
+| H1b Prudent | Installed Prudent runner/config | Parsed PT and logs |
+| Physchem | Evaluator with `--vina-modes none` | SDF, CSV, rejection table |
+| Handoff | Canonical deduplication | Frozen unique set |
+
+## Procedure
+
+1. Resolve and probe the installed scripts and model assets.
+2. Derive stage targets and split independent seeds across available GPUs.
+3. Run H1a/H1b in isolated attempt directories and monitor exact workers.
+4. Reconstruct, calculate physicochemical properties, and deduplicate without Vina.
+5. Validate observed counts and lineage before freezing the Glide SP input.
 
 This main skill routes H1a/H1b while preserving the strict protein/ligand handoff and
 validated molecule lineage.
@@ -166,3 +202,16 @@ parse failures, and canonical unique count must be written before the next stage
 reconstruction-only analysis, pass the explicit receptor and
 native ligand and add `--vina-modes none`; this is the no-Vina physchem route, not a
 claim that the generator itself has no internal Prudent scoring.
+
+## Pitfalls
+
+- `--batch_size` controls a sampling memory batch, not the requested molecule count.
+- MAE/MAEGZ, ligand PDB, or an untouched protein-ligand complex violates the input contract.
+- A requested or planned count is not an observed valid unique count.
+- Do not rerun a valid PT because reconstruction or report generation failed downstream.
+
+## Verification
+
+Require input hashes, config and seed provenance, exact commands, GPU assignment, readable PT,
+reconstructed and unique counts, invalid and duplicate tables, `vina_modes=none`, no new Vina
+execution in analysis logs, and a frozen H2 handoff with stable molecule IDs.

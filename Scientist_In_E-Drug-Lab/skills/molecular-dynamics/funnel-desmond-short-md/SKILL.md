@@ -1,9 +1,45 @@
 ---
 name: funnel-desmond-short-md
-description: Run the H8 corrected-pose Desmond short-MD gate with manifest-defined duration, hard CMS/DTR validation, and official SEA. Use after MMGBSA selection; do not infer completion from submission, dry preparation, or a readable CMS alone.
+description: Use to run the corrected-pose Desmond short-MD gate.
 ---
 
 # H8 Short MD
+
+Run a manifest-defined short Desmond production from a corrected pose, validate the real
+trajectory, and apply official SEA before deciding whether a candidate advances.
+
+## When to Use
+
+Use after validated MMGBSA/pose selection for a pilot or standard short-MD gate whose duration
+and recording interval are explicitly declared.
+
+## Prerequisites
+
+- Corrected-pose full-system CMS or authorized build command and stable parent/pose lineage.
+- Validated short-production MSJ, explicit duration/interval, ASLs, and pass criteria.
+- One approved GPU/host, disk/runtime budget, attempt root, and explicit compute confirmation.
+
+## How to Run
+
+Use the H8 manifest stage or invoke native multisim with `-m MSJ -o final.cms input.cms`, then
+run the trajectory validator with the exact requested duration and interval.
+
+## Quick Reference
+
+| State | Meaning |
+| --- | --- |
+| Dry preparation | Inputs/protocol staged only |
+| Submitted | Job exists but is not complete |
+| Trajectory valid | Duration, frames, interval, topology pass |
+| H8 pass | Valid trajectory plus SEA/pocket criteria |
+
+## Procedure
+
+1. Validate H7 handoff, corrected frame, system components, protocol, and selectors.
+2. Resolve multisim/jobcontrol, isolate an attempt, and verify GPU ownership.
+3. Launch, record exact job ID, and monitor process plus artifact progress.
+4. Validate actual duration, frame spacing, continuity, topology, and final CMS/DTR.
+5. Run SEA and freeze PASS/FAIL with pocket/contact rationale.
 
 ## Concrete Operation Procedure
 
@@ -18,7 +54,7 @@ masld-agent funnel validate --manifest "$MANIFEST" --stage H7
 
 Use the declared 10/50 ns duration, interval, corrected CMS, ASLs, MSJ, host, and GPU.
 After dry preparation and confirmation submit `"$MULTISIM" -WAIT -HOST "$HOST_SPEC"
--maxjob 1 -o "$ATTEMPT_DIR" "$CMS" "$MSJ"`; record the job ID and set both CUDA
+-maxjob 1 -m "$MSJ" -o "$FINAL_CMS" "$CMS"`; record the job ID and set both CUDA
 variables. Validate with explicit `--minimum-ns "$DURATION_NS"` and
 `--expected-interval-ps "$INTERVAL_PS"`, then run SEA QC.
 
@@ -53,8 +89,8 @@ is:
 ```bash
 MULTISIM="$(masld-agent platform-resolve --id sz.bin.multisim)"
 "$MULTISIM" -WAIT -HOST "$HOST_SPEC" -maxjob 1 \
-  -o "{campaign_root}/08_h8_short/$MOLECULE_ID" \
-  "{campaign_root}/inputs/${MOLECULE_ID}_cms" "$MANIFEST_MSJ"
+  -m "$MANIFEST_MSJ" -o "{campaign_root}/08_h8_short/${MOLECULE_ID}-out.cms" \
+  "{campaign_root}/inputs/${MOLECULE_ID}.cms"
 ```
 
 Use the installed multisim help and project launcher to resolve the exact input order.
@@ -109,3 +145,15 @@ SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
 Validate with the exact requested `--minimum-ns` and `--expected-interval-ps`; then run
 SEA using explicit protein and ligand ASLs. Keep partial trajectories as failed evidence,
 not as PASS results.
+
+## Pitfalls
+
+- Dry prep, JobDJ submission, or a readable CMS alone is not a short-MD PASS.
+- Do not use validator defaults when duration and interval are task inputs.
+- Do not promote on RMSD alone without pocket/contact and continuity evidence.
+
+## Verification
+
+Require corrected input/protocol hashes, component QC, GPU/job/attempt lineage, normal exit,
+valid CMS/DTR, actual nanoseconds and frames, exact interval, monotonic/topology checks, SEA
+outputs, pocket/contact rationale, and one explicit H8 PASS/FAIL per candidate.

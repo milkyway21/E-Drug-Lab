@@ -1,9 +1,46 @@
 ---
 name: time-scheduler
-description: Use when an E-Drug Lab task needs adaptive agent wake-ups, local watchdog liveness, 48-hour stage timeouts, and resume-first recovery by composing campaign memory, Desmond, JobDJ, and Hermes cron behavior.
+description: Use to monitor and resume long jobs without duplication.
 ---
 
 # Time Scheduler
+
+Monitor long-running local or scheduler-backed work for up to 48 hours while keeping
+supervision independent from conversation context.
+
+## When to Use
+
+Use for any asynchronous stage, slow external service, JobDJ job, DiffDynamic generation,
+shape screen, or Desmond simulation that outlives one interactive turn.
+
+## Prerequisites
+
+Require exact job/process ID, backend, submit time, expected duration, hard timeout,
+heartbeat or progress source, output directory, retry policy, and task state path.
+
+## How to Run
+
+Prefer the backend's job controller and a persistent local watchdog. Use model wakeups
+only to interpret state and report transitions. Start with a short confirmation interval,
+then increase toward a maximum of 900 seconds for stable long jobs unless the backend
+requires a tighter interval.
+
+## Quick Reference
+
+- `queued`: inspect scheduler ownership; do not resubmit.
+- `running`: compare heartbeat, resource placement, and expected outputs.
+- `stalled`: require repeated unchanged heartbeat plus exceeded threshold.
+- `finished`: validate outputs before marking the stage valid.
+- `failed`: recover exact attempt or resume checkpoint; never broad-kill processes.
+
+## Procedure
+
+1. Capture job ID and initial state immediately after submission.
+2. Confirm process and GPU/CPU placement once without launching another job.
+3. Poll with bounded adaptive intervals and persist every state transition.
+4. At expected completion, inspect logs and artifacts before invoking a validator.
+5. On monitor failure, reconstruct state from backend job records and task artifacts.
+6. Stop monitoring only at validated, failed, blocked, canceled, or timed-out state.
 
 ## Concrete Operation Procedure
 
@@ -117,3 +154,14 @@ On each wakeup compare the reported job/stage ID with the last state, inspect on
 declared outputs, and resume from validated artifacts. Do not launch a duplicate job
 because a status query is delayed; write a gate and escalate only after the recorded
 timeout or explicit failure condition.
+
+## Pitfalls
+
+Do not use one fixed tight interval for 48 hours, rely on model memory as a watchdog,
+interpret a temporarily unavailable API as job failure, or use `pkill`/`killall`.
+
+## Verification
+
+Require a complete timestamped lifecycle, one job ID per attempt, no overlapping duplicate
+attempt, timeout enforcement, final validator result, and a stage report describing runtime
+and resource use.

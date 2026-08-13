@@ -1,9 +1,45 @@
 ---
 name: molecular-dynamics
-description: Runs corrected-pose Desmond short and long MD with recovery and trajectory QC. Use for H8-H9 after validated docking complexes and explicit compute authorization.
+description: Use to route validated Desmond MD and trajectory QC.
 ---
 
 # Molecular Dynamics
+
+Route corrected-pose Desmond system checks, short and long production, recovery, trajectory
+validation, SEA, figures, and evidence-grounded stability classification.
+
+## When to Use
+
+Use after validated docking/MMGBSA complex selection when explicit resources and production
+authorization are available.
+
+## Prerequisites
+
+- Corrected-pose complex or validated full-system CMS with protein/ligand lineage.
+- Explicit MSJ, duration, frame interval, ASLs, ensemble, force field, and system composition.
+- Approved GPU/host allocation, disk budget, monitor cadence, retry policy, and output root.
+
+## How to Run
+
+Use registered submit/status tools or a manifest command for orchestration. Standalone users
+invoke native `multisim -m protocol.msj -o output.cms input.cms`, then validate CMS/DTR.
+
+## Quick Reference
+
+| Phase | Required evidence | Gate |
+| --- | --- | --- |
+| System | Full component and pose continuity | Build QC |
+| Short MD | Declared duration and interval | Hard trajectory validation |
+| Long MD | Short-MD-qualified start | Independent long-run validation |
+| Analysis | Official SEA and pocket/contact QC | Valid CMS/DTR only |
+
+## Procedure
+
+1. Validate pose frame, full-system composition, protocol, and resource ownership.
+2. Dry-prepare or reuse a validated CMS and isolate one attempt per job/GPU.
+3. Launch native multisim, record exact JobDJ/process IDs, and monitor artifact progress.
+4. Validate actual duration, frames, interval, continuity, topology, and normal exit.
+5. Run SEA and pocket/contact analysis, classify outcomes, and append one report section.
 
 ## Concrete Operation Procedure
 
@@ -113,3 +149,16 @@ SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
 Validate the CMS/DTR pair with the shared campaign validator before SEA, then use the
 native SEA adapter and the declared protein/ligand ASLs. A readable CMS or a submitted
 job is not a completed simulation; report observed trajectory time and frame spacing.
+
+## Pitfalls
+
+- A submitted job, readable CMS, stopped PID, or duration-like filename is not completion.
+- Do not start from a frame-mismatched pose or drop membrane, solvent, ions, or cofactors.
+- Do not rerun valid production because monitoring, SEA, plotting, or reporting restarted.
+- Never kill broad process patterns; verify exact job ownership and artifact progress first.
+
+## Verification
+
+Require input/protocol hashes, component QC, GPU and job IDs, attempt lineage, normal exit,
+readable CMS/DTR, observed nanoseconds and frame interval, monotonic/topology checks, SEA rows,
+pocket/contact classification, figures, failed cases, and relative report paths.

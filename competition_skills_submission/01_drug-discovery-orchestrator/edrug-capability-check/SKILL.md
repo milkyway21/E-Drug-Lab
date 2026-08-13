@@ -1,9 +1,42 @@
 ---
 name: "edrug-capability-check"
-description: "Run the project capability harness for platform APIs, registered agent tools, UI command routing, and MD dry-prep contracts. Use for capability checks, TOOL_CAPABILITY reports, environment diagnosis, or pre-task harness validation; it does not execute production science stages."
+description: "Use to verify tools, services, resources, and licenses."
 ---
 
 # E-Drug Capability Check
+
+Inventory what the current machine and agent can actually execute. This skill diagnoses
+capability; it never substitutes for a scientific stage validator.
+
+## When to Use
+
+Use before a new task, after changing models/providers, after software upgrades, or when a
+stage fails because a tool, service, license, or resource may be unavailable.
+
+## Prerequisites
+
+Know the requested stages and required backends. Do not require optional tools unrelated
+to the task. Avoid printing credential values; report only presence and source class.
+
+## How to Run
+
+Check registry first, then environment variables, `PATH`, executable help/version, service
+health, license checkout, GPU visibility, CPU, RAM, disk, network, and output writability.
+For a non-project agent, run the same checks directly with the terminal.
+
+## Quick Reference
+
+Return one row per capability with `ready`, `degraded`, `blocked`, or `not_applicable`,
+plus resolved executable/service, version, license, resource need, probe result, and fix.
+
+## Procedure
+
+1. Map enabled stages to required and optional capabilities.
+2. Resolve each binary or service without hard-coded installation paths.
+3. Run read-only help/health probes and a license check where supported.
+4. Inventory approved GPU IDs, CPU cores, RAM, free disk, and expected wall time.
+5. Validate task directory access and network endpoints.
+6. Write a capability matrix and block only affected stages.
 
 ## Concrete Operation Procedure
 
@@ -96,3 +129,13 @@ Record the selected case file, backend versions, environment probes, exact API r
 and `PASS/PARTIAL/GATE/FAIL` result. A disabled or unavailable case is a capability gate,
 not evidence that a scientific stage completed. Re-run only the failed or gated case
 after the external capability changes.
+
+## Pitfalls
+
+Do not expose secrets, create replacement environments automatically, assume a visible GPU
+is free, or mark a backend ready because its directory exists.
+
+## Verification
+
+Require successful executable help or API health, version capture, license status where
+applicable, writable output, sufficient free resources, and no secret values in the report.

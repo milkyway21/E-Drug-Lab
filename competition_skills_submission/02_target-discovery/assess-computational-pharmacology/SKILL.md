@@ -1,9 +1,45 @@
 ---
 name: assess-computational-pharmacology
-description: Use after biological and pharmacological target assessment, together with structure reconnaissance when available, to choose and justify a structure-based, ligand-based, hybrid, or evidence-only computational drug-discovery route and define its applicability limits.
+description: Use to choose a defensible computational discovery route.
 ---
 
 # Assess Computational Pharmacology
+
+Choose a computational route from target, structure, ligand, and validation evidence rather
+than forcing every target through docking.
+
+## When to Use
+
+Use after target pharmacology assessment and before receptor preparation, docking, QSAR,
+generation, or library expansion.
+
+## Prerequisites
+
+- Target biology and pharmacology evidence cards.
+- Ranked structure candidates and identity-resolved known ligands when available.
+- Explicit validation controls, leakage policy, uncertainty, and failure thresholds.
+
+## How to Run
+
+Run the manifest path for an orchestrated campaign or build the same route-decision bundle
+from explicit files. This skill decides applicability; it does not launch downstream models.
+
+## Quick Reference
+
+| Route | Minimum support | Required validation |
+| --- | --- | --- |
+| Structure-based | Qualified pocket and usable receptor | Redocking or pose recovery |
+| Ligand-based | Consistent target-specific series | Scaffold-aware held-out split |
+| Hybrid | Both independent evidence types | Separate validation for each branch |
+| Evidence-only | No defensible model domain | Document blockers and stop |
+
+## Procedure
+
+1. Verify target construct, state, sequence, and ligand identity.
+2. Inventory usable structural and ligand evidence.
+3. Select exactly one declared route with a written evidence basis.
+4. Lock controls, leakage prevention, uncertainty, and stop criteria.
+5. Emit the next allowed skill and blockers before any expensive computation.
 
 Run after `assess-target-pharmacology`. When structure-based work is possible, consume the
 `structure_search_rank` result before calling `structure_prepare_native` or `pocket_qualify`.
@@ -96,3 +132,15 @@ Replace the empty fields from the actual evidence and validation design. Accept
 positive/negative controls, leakage policy, held-out design, uncertainty, and failure
 threshold. A missing qualified pocket is a clean gate; it is not permission to start
 docking from a guessed center.
+
+## Pitfalls
+
+- AlphaFold confidence does not establish a druggable or ligand-supported pocket.
+- Random train/test splits can leak close analogues and inflate ligand-model performance.
+- A docking score is not target activity, selectivity, or disease efficacy.
+
+## Verification
+
+Require one of `structure_based`, `ligand_based`, `hybrid`, or `evidence_only`, with input
+IDs, applicability domain, controls, held-out design, uncertainty, failure threshold,
+blockers, and one unambiguous next action.

@@ -1,9 +1,44 @@
 ---
 name: prepare-native-protein-ligand
-description: Use after selecting a ligand-bound RCSB structure to download coordinates and CCD topology, clean the target protein, extract the correct native ligand instance without moving it, validate receptor-ligand coordinate consistency, and expose a strict DiffDynamic handoff using clean receptor PDB plus native ligand SDF.
+description: Use to prepare same-frame protein and ligand files.
 ---
 
 # Prepare Native Protein Ligand
+
+Produce coordinate-consistent receptor PDB and native-ligand SDF artifacts from a selected
+deposited complex while preserving provenance and the original coordinate frame.
+
+## When to Use
+
+Use after structure ranking and before pocket qualification, DiffDynamic generation, receptor
+preparation, grid generation, redocking, or any pose-dependent analysis.
+
+## Prerequisites
+
+- Selected PDB ID, model, protein chains, ligand CCD ID, and exact ligand instance.
+- Explicit cofactors, metals, waters, modified residues, and covalent-link policy.
+- A structure-aware parser that reads mmCIF and CCD bond topology.
+
+## How to Run
+
+Prefer the registered coordinate-preserving preparation command. A standalone workflow may
+download RCSB mmCIF and CCD files, but it must use a structural parser rather than text filters.
+
+## Quick Reference
+
+| Consumer | Protein input | Ligand input |
+| --- | --- | --- |
+| DiffDynamic | Clean receptor `.pdb` | Deposited-pose `.sdf` |
+| Pocket qualification | Receptor plus manifest | Native ligand plus manifest |
+| Glide | Separately prepared `.maegz` | LigPrep-ready ligand library |
+
+## Procedure
+
+1. Download and hash deposited mmCIF plus CCD topology.
+2. Select the exact model, target chains, ligand instance, and retained cofactors.
+3. Extract receptor and ligand without translation, rotation, or minimization.
+4. Build SDF bonds from CCD topology while retaining deposited coordinates.
+5. Validate atom counts, exclusions, coordinate delta, paths, and handoff formats.
 
 Call `structure_prepare_native` after `structure_search_rank` and before `pocket_qualify`.
 Do not replace this step with manual `grep HETATM`, ligand centering, or a newly written
@@ -145,3 +180,16 @@ PREPWIZARD="${PREPWIZARD:-$SCHRODINGER/utilities/prepwizard}"
   -epik_pH "${EPIK_PH:-7.0}" -fillsidechains -disulfides \
   -propka_pH "${PROPKA_PH:-7.0}" -captermini -WAIT
 ```
+
+## Pitfalls
+
+- `grep HETATM` loses chemistry, alternate-location, model, and connectivity semantics.
+- Ideal CCD coordinates provide topology but are not the deposited binding pose.
+- Protein Preparation Wizard output is a Glide receptor artifact, not a DiffDynamic input.
+- Generic preparation must stop for an explicit covalent protein-ligand connection.
+
+## Verification
+
+Require source hashes, selected instance, receptor and ligand atom counts, retained cofactors,
+water and ligand exclusion, `same_coordinate_frame=true`, no rigid transformation, coordinate
+delta at most 0.001 A, and nonempty `.pdb` plus `.sdf` DiffDynamic inputs.

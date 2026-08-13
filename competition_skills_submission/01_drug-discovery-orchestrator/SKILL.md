@@ -1,9 +1,61 @@
 ---
 name: drug-discovery-orchestrator
-description: Orchestrates the evidence-gated H0-H10 drug-discovery workflow. Use when a task needs target setup, generation, screening, ADMET, MD, monitoring, and one final report.
+description: Use to route an evidence-gated drug-discovery workflow.
 ---
 
 # Drug Discovery Orchestrator
+
+Route a discovery request from biological scope to final nomination. Do not execute a
+scientific stage until its inputs, backend, resources, and completion test are explicit.
+
+## When to Use
+
+Use this master skill when a request spans at least two child categories or when the user
+provides only a target, phenotype, library, or requested final count. Delegate each
+scientific operation to the corresponding child skill and keep this skill responsible for
+order, gates, quantities, resource allocation, and cumulative reporting.
+
+## Prerequisites
+
+- Obtain the requested final count, target or phenotype, official library if supplied,
+  allowed online access, compute limits, maximum duration, and output language.
+- Default to the full profile. Select a test profile only when the user explicitly asks
+  for a smoke or test run.
+- Resolve tools and licenses before planning GPU work. Preserve unavailable capabilities
+  as gates rather than silently choosing replacements.
+
+## How to Run
+
+Prefer `masld-agent funnel plan` and `funnel autopilot` when available. Otherwise create
+the same stage plan and call each child's standalone procedure. Keep manifest and native
+routes behaviorally equivalent: same inputs, planned counts, validation gates, lineage,
+and report sections.
+
+## Quick Reference
+
+| Need | Delegate |
+|---|---|
+| Scope, biology, structure, pocket | `target-discovery` |
+| Pocket-conditioned generation | `dd-generation` |
+| SP, XP, MMGBSA | `virtual-docking` |
+| Topology, pharmacophore, shape | `featurehit-finding` |
+| QikProp and safety evidence | `admet` |
+| Short/long Desmond and SEA | `molecular-dynamics` |
+| Final ranking and report | `all-analysis` |
+
+## Procedure
+
+1. Lock task scope and stable identifiers before downloading or generating data.
+2. Derive stage targets backward from the requested final count using explicit retention
+   assumptions; revise later targets from observed pass rates without changing the final
+   request.
+3. Allocate CPUs, GPUs, memory, disk, wall time, and licenses per stage. Never reserve a
+   GPU for database search, reporting, or another CPU-only step.
+4. Execute one enabled stage at a time, validate real artifacts, and write a stage report
+   before releasing the next stage.
+5. Resume from hashes and validated outputs. Do not recompute a completed stage merely
+   because the conversation or supervising process restarted.
+6. Finish with one ranking, one cumulative report, and a machine-readable provenance set.
 
 ## Concrete Operation Procedure
 
@@ -129,3 +181,17 @@ The entry is generic and does not select a target-specific path or fixed counts.
 stage then follows its native command section (DiffDynamic, Glide, Shape/Phase, QikProp,
 Desmond, and report export). Keep the printed task root, job IDs, stage counts, hashes,
 and report path as the handoff to the next stage.
+
+## Pitfalls
+
+- Do not convert a requested final count into a fixed benchmark funnel without recording
+  retention assumptions.
+- Do not treat job submission, a non-empty file, or a chat statement as completion.
+- Do not mix parent molecules, prepared states, poses, and MD systems as one identity.
+- Do not allow a favorable docking score to erase contradictory biology or toxicity.
+
+## Verification
+
+Require a task plan, capability matrix, stage target table, resource allocation, stable-ID
+lineage, validator result for every enabled stage, and one cumulative report. Human-readable
+reports default to Chinese; use `language=en` or `--language en` only when requested.

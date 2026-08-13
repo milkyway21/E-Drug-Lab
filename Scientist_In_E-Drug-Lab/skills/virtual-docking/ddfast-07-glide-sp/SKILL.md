@@ -1,9 +1,42 @@
 ---
 name: ddfast-07-glide-sp
-description: Compatibility alias for single-receptor LigPrep and Glide SP after QikProp filtering. Use only when an existing task names ddfast-07; route new H2/H5 work to funnel-glide-sp and never use this alias for multi-receptor or HSV workflows.
+description: Use to resume legacy DDFast Glide SP stages.
 ---
 
 # DDFast 07 Glide SP Compatibility
+
+Preserve old stage identifiers while delegating all chemistry, job-control, lineage, and
+validation behavior to the general Glide SP procedure.
+
+## When to Use
+
+Use only when an existing manifest already names `ddfast-07-glide-sp`; new work uses
+`funnel-glide-sp`.
+
+## Prerequisites
+
+- Existing legacy manifest with a validated receptor grid and frozen ligand set.
+- Parent IDs, prepared-state policy, output directory, and licensed Glide installation.
+
+## How to Run
+
+Validate and resume through the existing stage name, or use the native standalone SP command
+shown below. Do not add target-specific behavior to this compatibility alias.
+
+## Quick Reference
+
+| Situation | Action |
+| --- | --- |
+| Existing legacy task | Validate, resume, preserve attempt lineage |
+| New task | Route to `funnel-glide-sp` |
+| Valid docking, failed parser | Reuse pose viewer and rerun parsing |
+
+## Procedure
+
+1. Confirm the old manifest and validated inputs are unchanged.
+2. Reuse LigPrep/grid outputs when their hashes and validators pass.
+3. Run or recover Glide SP through the standard job-control contract.
+4. Rank one best numeric pose per parent and retain all failures.
 
 Use `funnel-glide-sp` for all new work. Keep this skill only to resume manifests that
 already identify the stage as `ddfast-07-glide-sp`.
@@ -85,3 +118,15 @@ cp "$GRID_ZIP" "$OUT_DIR/grid.zip"
 Parse the pose viewer and score table by stable ligand ID, retain input/grid hashes and
 job status, and never treat an SP score as measured affinity. Use `PRECISION XP` only in
 the XP skill.
+
+## Pitfalls
+
+- Do not select this alias merely because a task resembles an older benchmark.
+- Do not recreate a validated grid or prepared library during resume.
+- Do not preserve obsolete path assumptions from a legacy manifest.
+
+## Verification
+
+Confirm unchanged input hashes, finished job state, readable pose viewer, numeric scores,
+one best pose per stable parent, exact output counts, and a recorded route to the current
+`funnel-glide-sp` behavior.

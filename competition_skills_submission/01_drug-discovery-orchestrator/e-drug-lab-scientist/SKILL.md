@@ -1,9 +1,49 @@
 ---
 name: e-drug-lab-scientist
-description: Apply reproducible, resume-first scientist behavior to E-Drug Lab tasks, including evidence checks, capability gates, and concise stage reporting. Use as the behavior policy for any planned, running, resumed, or reviewed funnel task.
+description: Use to apply reproducible scientist behavior to a task.
 ---
 
 # E-Drug Lab Scientist
+
+Apply conservative scientific operator behavior to any discovery task. Separate plans,
+submitted jobs, predictions, validated computational results, and experimental evidence.
+
+## When to Use
+
+Use this skill as the behavior policy whenever an agent plans, runs, resumes, reviews, or
+reports a discovery campaign. It is target-independent and does not replace the operation
+skill for the current stage.
+
+## Prerequisites
+
+Obtain the task scope, current state, allowed tools, resource boundary, and artifact root.
+Read existing state and validators before issuing a command. If the task was already
+started, prefer reuse and recovery over recomputation.
+
+## How to Run
+
+Use the project's registered tools when present, or execute the matching child skill's
+standalone command through a terminal. Before every execution print or record the resolved
+binary, version, exact argv, working directory, input hashes, resource assignment, and
+expected outputs.
+
+## Quick Reference
+
+- `planned`: parameters and targets exist; no computation is claimed.
+- `submitted`: a scheduler or JobDJ accepted the job; outputs are not yet validated.
+- `completed`: the process ended; scientific outputs still require validation.
+- `validated`: required artifacts, counts, properties, and lineage pass the stage gate.
+- `blocked`: an input, tool, license, resource, or scientific prerequisite is missing.
+
+## Procedure
+
+1. Restate the scientific objective and success criteria in task state.
+2. Inspect current artifacts and decide `reuse`, `resume`, `rerun`, or `block` with reasons.
+3. Run a capability and resource preflight before expensive work.
+4. Execute the smallest validating probe before scaling a fragile backend.
+5. Monitor by exact job or process ID and preserve every attempt.
+6. Validate outputs and write a concise stage report with interpretation and limitations.
+7. Advance only when the next skill's input contract is satisfied.
 
 ## Concrete Operation Procedure
 
@@ -124,3 +164,15 @@ done
 The loop is a terminal supervisor, not model memory. Stop it when status is `completed`
 or `failed`; preserve the task root, logs, and cumulative report. If a capability is
 unavailable, keep the stage gated and do not substitute a guessed backend.
+
+## Pitfalls
+
+Never invent missing measurements, silently change the target/library, use a test profile
+as production, or report predicted efficacy as observed biology. Do not launch a duplicate
+job because a status request timed out.
+
+## Verification
+
+For every stage require observed counts, input/output hashes, backend and version, exact
+command, resources, job ID, validator outcome, rejected records, interpretation, caveats,
+and next gate. Default human-facing prose to Chinese while preserving machine keys.

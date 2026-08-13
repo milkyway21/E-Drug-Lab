@@ -1,9 +1,45 @@
 ---
 name: desmond-membrane-md-ops
-description: Build, validate, launch, resume, and monitor Schrödinger Desmond membrane MD across local GPUs using manifest-defined protocols and system-specific QC expectations. Use for POPC or other membrane systems; do not assume target-specific residue counts, ligand ASL, paths, or GPU IDs.
+description: Use to operate validated Desmond membrane systems.
 ---
 
 # Desmond Membrane MD Operations
+
+Build, validate, launch, resume, and monitor membrane Desmond systems without assuming a lipid,
+ligand selector, component count, force field, host, or GPU.
+
+## When to Use
+
+Use when the selected protein-ligand system requires an explicit membrane environment and
+system-specific composition QC.
+
+## Prerequisites
+
+- Corrected complex pose and declared membrane orientation/composition.
+- Force field, solvent, ions, cofactors, ASLs, build protocol, and component expectations.
+- Approved GPU/host resources, production protocol, monitor cadence, and output root.
+
+## How to Run
+
+Use the manifest and shared campaign tools to build and validate, or launch a prepared native
+CMS/MSJ pair directly with multisim after component and topology checks.
+
+## Quick Reference
+
+| Gate | Validate |
+| --- | --- |
+| Orientation | Protein/membrane placement and pocket access |
+| Composition | Protein, ligand, lipids, solvent, ions, cofactors |
+| GPU | Exact ownership and both CUDA variables |
+| Trajectory | Duration, interval, continuity, topology |
+
+## Procedure
+
+1. Freeze membrane/system chemistry and expected component ranges.
+2. Build or reuse the full system and run structure/topology/composition QC.
+3. Allocate one owned GPU and launch an isolated attempt.
+4. Monitor exact job/process IDs and artifacts; resume only failed units.
+5. Hard-validate the trajectory before SEA or interpretation.
 
 ## Concrete Operation Procedure
 
@@ -152,3 +188,15 @@ or environment rather than embedding host paths, and wait on the returned job ID
 CMS plus trajectory duration, frame interval, monotonicity, component continuity, and
 required membrane/protein/ligand selections before SEA or interpretation. A failed build
 is a gate, not an MD result.
+
+## Pitfalls
+
+- Do not assume POPC, `UNK`, target-specific residue counts, or a particular chain layout.
+- Loss of a membrane, ion, cofactor, or component ordering invalidates continuity.
+- A successful system build is not production MD completion.
+
+## Verification
+
+Require membrane orientation/composition provenance, component ranges and observed counts,
+CMS/MSJ hashes, topology checks, owned GPU/job IDs, attempt history, normal exit, valid duration
+and interval, continuity, and explicit protein/ligand/membrane selections before SEA.

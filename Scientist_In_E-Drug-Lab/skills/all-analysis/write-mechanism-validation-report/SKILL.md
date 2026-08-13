@@ -1,9 +1,45 @@
 ---
 name: write-mechanism-validation-report
-description: Use after compound ranking or H10 analysis to write an auditable nomination report with causal mechanisms, alternatives, falsifiers, dual-readout experiments, citations, uncertainty, and reproducibility artifacts.
+description: Use to write mechanism hypotheses and validation plans.
 ---
 
 # Write Mechanism Validation Report
+
+Convert a candidate ranking into evidence-linked, falsifiable mechanism hypotheses and a
+practical experimental validation section without overstating computational results.
+
+## When to Use
+
+Use after nomination and again after material docking, MMGBSA, MD, toxicity, or biological
+evidence changes the mechanism or validation priority.
+
+## Prerequisites
+
+- Final candidates and complete score decomposition.
+- Biological, pharmacology, toxicity, computational, and literature evidence IDs.
+- Assay context, controls, replicate policy, report destination, and output language.
+
+## How to Run
+
+Use the registered validation-report operation inside the cumulative reporting workflow.
+Standalone mode appends the same evidence fields to an existing Markdown report and exports it.
+
+## Quick Reference
+
+| Layer | Required content |
+| --- | --- |
+| Hypothesis | Compound, action, target/pathway, direction, phenotype |
+| Alternative | Competing mechanism and discriminating observation |
+| Primary assay | Concentration-response lipid plus matched viability |
+| Follow-up | Target engagement, pathway, expression, phosphorylation, or flux |
+
+## Procedure
+
+1. State the preferred mechanism as a directional, testable chain.
+2. Cite the evidence level and preserve uncertainty.
+3. Provide at least one plausible competing mechanism and falsifier.
+4. Design matched efficacy and viability measurements with controls and replicates.
+5. Append the section and verified figures to the cumulative report.
 
 Call `build_validation_report` after nomination and after any later H10 evidence update.
 
@@ -84,3 +120,15 @@ Replace the placeholder paragraph with evidence-backed rows from the nomination,
 pharmacology, toxicity, docking, and MD tables. Keep observed results, predictions,
 unknowns, alternative mechanisms, and falsifiers as separate fields. Do not turn a
 plausible mechanism into a causal claim, and do not create a second per-stage report.
+
+## Pitfalls
+
+- Pathway membership does not prove that a compound modulates that pathway.
+- Lipid loss caused by cell death is not a valid lipid-lowering effect.
+- A report that lacks alternatives or falsifiers is not a mechanism validation plan.
+
+## Verification
+
+Check each candidate for stable identity, preferred and alternative mechanism, evidence IDs,
+directionality, uncertainty, falsifier, concentration-response lipid and viability readouts,
+controls, replicates, follow-up readouts, relative artifacts, and limitations.

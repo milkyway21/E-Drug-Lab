@@ -1,9 +1,45 @@
 ---
 name: desmond-md-campaign
-description: End-to-end Schrödinger Desmond campaign workflow for corrected-pose audits, late-trajectory medoid full-system CMS extraction, resumable multi-GPU 2+50 ns or 2+200 ns production, hard trajectory validation, SEA extraction, pocket/contact-aware A/B/C/D classification, incremental candidate merging, and publication RMSD plates. Use when an agent must prepare, launch, recover, monitor, validate, analyze, rank, or plot a protein-ligand MD campaign after docking/IFD, especially membrane systems or campaigns with many ligands; do not use for FEP or DiffDynamic sampling.
+description: Use to operate resumable multi-ligand Desmond campaigns.
 ---
 
 # Desmond MD Campaign
+
+Operate multi-ligand Desmond campaigns from corrected poses through resource scheduling,
+long-running monitoring, hard validation, SEA, classification, figures, and cumulative reporting.
+
+## When to Use
+
+Use when multiple docked complexes require coordinated preparation, short/long production,
+resume, analysis, or comparison, especially for multi-GPU or membrane campaigns.
+
+## Prerequisites
+
+- Frozen candidate/pose manifest and validated corrected-pose or medoid full-system starts.
+- Approved protocols, ASLs, durations, intervals, classification rules, and figure policy.
+- GPU inventory, one-job-per-GPU policy, disk/runtime estimates, monitor cadence, and retries.
+
+## How to Run
+
+Use registered submission/status tools for supported jobs and the existing campaign scripts for
+validation, SEA, analysis, and plots. Standalone mode uses the same native multisim and scripts.
+
+## Quick Reference
+
+| Unit | Resume evidence | Completion evidence |
+| --- | --- | --- |
+| Build | Valid full-system CMS | Component/topology QC |
+| Production | Checkpoint and exact job ID | Valid duration and DTR |
+| SEA | EAF/analysis artifacts | Numeric frame-grounded tables |
+| Report | Existing cumulative document | Updated section and figures |
+
+## Procedure
+
+1. Freeze candidate starts, protocols, resources, and validation thresholds.
+2. Allocate one isolated attempt per ligand/GPU and record exact ownership.
+3. Monitor jobs and artifact growth at the declared cadence for up to the task horizon.
+4. Resume checkpoints or downstream units without rebuilding valid work.
+5. Validate, run SEA/analysis, classify, plot, merge candidates, and update one report.
 
 ## Concrete Operation Procedure
 
@@ -236,3 +272,16 @@ SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
 Run `run_sea.py`, `analyze_md200.py`, and plotting only after `validation.json` says
 `valid=true`. Preserve corrected-pose lineage, ASLs, attempt ID, active GPU, observed
 frames, and all failed rows.
+
+## Pitfalls
+
+- Process absence alone cannot distinguish completion, scheduler transfer, and failure.
+- Do not launch duplicate work when a checkpoint, live subjob, or valid output already exists.
+- Do not classify by RMSD alone; include pocket retention, contacts, convergence, and continuity.
+- Long monitoring must persist state on disk so agent compaction or restart does not lose work.
+
+## Verification
+
+Require queue and attempt manifests, resource/GPU ownership, commands and checkpoints, monitor
+timestamps, normal exits, hard trajectory JSONs, observed frames/time, SEA and contact tables,
+classification rationale, figures, exclusions, incremental merge, and cumulative report links.

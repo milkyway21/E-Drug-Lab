@@ -1,9 +1,45 @@
 ---
 name: funnel-diffdynamic-prudent
-description: Run H1b DiffDynamic Prudent generation, no-Vina physicochemical reconstruction, and canonical deduplication with resume-first behavior. Use for the prudent branch before Glide SP; do not execute Vina docking, scoring, or minimization.
+description: Use to run Prudent generation and no-Vina analysis.
 ---
 
 # H1b DiffDynamic Prudent
+
+Run the installed Prudent path, reconstruct generated structures, calculate physicochemical
+properties, and freeze unique ligands without launching a second docking backend.
+
+## When to Use
+
+Use after a validated H1a handoff or as the configured H1 generation branch, immediately
+before Glide SP preparation.
+
+## Prerequisites
+
+- Clean receptor PDB, same-frame native ligand SDF, and task-local Prudent configuration.
+- Resolved Prudent runner, evaluator/extractor, Python environment, GPU, and output contract.
+- Explicit PT selection, target count, timeouts, deduplication policy, and resume state.
+
+## How to Run
+
+Use the manifest's separate generation and physchem units by default. Standalone users invoke
+the installed Prudent Python runner and evaluator directly with `--vina-modes none`.
+
+## Quick Reference
+
+| Unit | Required action | Resume boundary |
+| --- | --- | --- |
+| Generation | Run Prudent config | Valid PT |
+| Reconstruction | Parse PT to structures | Readable SDF |
+| Physchem | QED, SA, MW, LogP, TPSA | Complete table |
+| Freeze | Canonical deduplication | Unique CSV/SDF |
+
+## Procedure
+
+1. Validate exact structure inputs and resolve installed scripts.
+2. Encode requested amount in the task-local Prudent configuration.
+3. Run generation and preserve PT, config, command, seed, and logs.
+4. Evaluate the selected PT with explicit `--vina-modes none`.
+5. Record invalid and duplicate structures, freeze unique outputs, then start Glide SP.
 
 Before generation, read the E2b structure manifest. DiffDynamic protein input must be the
 coordinate-cleaned receptor file ending in `.pdb`, and ligand input must be the native ligand
@@ -222,3 +258,16 @@ used, put `--vina-modes none` after the `--` separator so it is forwarded explic
 Search the evaluator log for `dock`, `score_only`, and `minimize`; no new Vina call is
 allowed in this branch. Keep every PT, SDF, CSV, rejection table, and command log under
 the numbered output directory, and report shortfalls instead of duplicating molecules.
+
+## Pitfalls
+
+- An empty parsed Vina-mode tuple must not fall back to legacy default docking modes.
+- Do not choose a PT with an unchecked glob or empty shell variable.
+- Reconstruction failure does not justify rerunning a validated generation attempt.
+- Embedded historical Vina metadata is provenance, not a newly executed analysis result.
+
+## Verification
+
+Require the selected PT hash, parseable structures, physicochemical columns, invalid and
+duplicate reasons, row/SDF count agreement, unique IDs and structures, explicit
+`vina_executed=false`, no dock/score/minimize execution in logs, and a frozen H2 input.

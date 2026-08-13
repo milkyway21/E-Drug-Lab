@@ -1,6 +1,6 @@
 ---
 name: target-discovery
-description: Builds an auditable target, biology, structure, ligand, and pocket dossier. Use before docking or when a task asks which target or protein structure to use.
+description: Use to build a target, structure, and pocket dossier.
 ---
 
 # Target Discovery
@@ -8,6 +8,39 @@ description: Builds an auditable target, biology, structure, ligand, and pocket 
 Use this main skill before H0 whenever the task starts from a biological target or a
 compound-nomination question. It owns evidence envelope E0-E3 and decides whether a
 structure-based branch is scientifically applicable.
+
+## When to Use
+
+Use when a task starts from a gene, protein, disease, phenotype, pathway, or an unknown
+choice of receptor/pocket. Skip only when validated target, structure, ligand, and pocket
+artifacts are already supplied and their provenance is acceptable.
+
+## Prerequisites
+
+Obtain organism, disease or phenotype, desired intervention direction if known, modality,
+official compound library, requested final count, and online/offline policy. Preserve
+review dates because public databases change.
+
+## How to Run
+
+Prefer registered evidence and structure tools. Any agent may instead call official REST,
+GraphQL, or download endpoints and use a structural parser. Preserve raw responses, query
+payloads, endpoint versions, access dates, normalized tables, and citations.
+
+## Quick Reference
+
+Use UniProt for protein identity, Open Targets for target-disease evidence and tractability,
+Europe PMC/PubMed for literature, ChEMBL/BindingDB for activities, RCSB Search/Data APIs
+for structures, and CCD/ModelServer for ligand chemistry and coordinate subsets.
+
+## Procedure
+
+1. Lock scope and identifiers.
+2. Build supporting, opposing, contextual, and unresolved biology evidence.
+3. Assess pharmacology and choose structure-, ligand-, hybrid-, or evidence-only route.
+4. Search and rank experimental structures before computed models.
+5. Extract a native ligand and clean receptor without changing their coordinate frame.
+6. Qualify the site and hand off explicit clean PDB/SDF or stop the SBDD branch.
 
 ## Child skills
 
@@ -158,3 +191,15 @@ Rank structures, download the chosen RCSB entry and CCD, extract the exact nativ
 instance without moving coordinates, qualify the pocket from native contacts/literature,
 and only then launch generation. If any gate is unresolved, record `evidence_only` or
 `not_applicable` rather than inventing a pocket or docking input.
+
+## Pitfalls
+
+Do not resolve a family member as the requested target, mix isoforms or species, choose a
+structure by resolution alone, infer a pocket from a ligand name, or move the ligand during
+extraction. Do not treat association scores as causal direction.
+
+## Verification
+
+Require stable target identifiers, query manifests, evidence grading, structure ranking,
+selected/rejected reasons, coordinate-clean receptor, native ligand, pocket manifest,
+hashes, and an explicit computational-route decision.

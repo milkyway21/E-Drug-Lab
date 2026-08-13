@@ -1,9 +1,47 @@
 ---
 name: funnel-orchestrator
-description: Plan, preflight, execute, resume, validate, and report the H0-H10 drug-discovery funnel from a requested final molecule count. Use as the mandatory entrypoint for end-to-end tasks; use the test profile only for explicit smoke or test requests.
+description: Use to plan and run an end-to-end discovery funnel.
 ---
 
 # Funnel Orchestrator
+
+Convert a requested final count into a resource-aware, evidence-gated execution plan. Do
+not assume benchmark quantities, one fixed target, or that every task needs every stage.
+
+## When to Use
+
+Use for any end-to-end or multi-stage task, especially when the user gives only the number
+of final candidates. Use it again when observed pass rates, available resources, or a
+scientific gate requires replanning.
+
+## Prerequisites
+
+Require final count greater than zero, task identity, output root, full/test profile,
+enabled stages, resource limits, and at least one stop condition per stage. Resolve the
+official library before library nomination and a qualified pocket before SBDD stages.
+
+## How to Run
+
+Run `funnel plan` first, inspect stage targets and resources, then dry-run or preflight
+before confirmed execution. Without the CLI, create an equivalent JSON/YAML plan and use
+each child skill's native route in the same order.
+
+## Quick Reference
+
+Compute an upstream target as `ceil(downstream_target / conservative_retention)` and add a
+documented contingency margin. Treat each retention as an assumption until an observed
+pass rate exists. Replan future stages only; never rewrite observed historical counts.
+
+## Procedure
+
+1. Build a DAG from applicable stages and scientific dependencies.
+2. Back-calculate stage targets and estimate runtime, disk, CPU, GPU, and licenses.
+3. Freeze the plan, commands, expected outputs, and validators before execution.
+4. Run readiness probes and one small tool probe for fragile external software.
+5. Start the persistent worker, monitor exact state, and append one report section after
+   each validated stage.
+6. On failure, classify input, capability, execution, monitoring, or validation failure;
+   resume only the affected attempt.
 
 ## Concrete Operation Procedure
 
@@ -127,3 +165,15 @@ masld-agent funnel autopilot-status --target-id "$TARGET_ID"
 Use the stage-specific native sections when an adapter is not available. Do not pass a
 test target, fixed local path, or guessed stage count into a general task. Stop and write
 a gate when an input format, coordinate frame, backend, resource, or validator fails.
+
+## Pitfalls
+
+Do not equate `--batch-size` with generated molecule count, allocate all GPUs by default,
+or rerun upstream work after a monitor restart. Do not shrink the final requested count
+when a stage underperforms; report the deficit and replan authorized upstream work.
+
+## Verification
+
+Check that every enabled stage has inputs, target count, resources, command, timeout,
+outputs, validator, report section, and failure policy. Planned, submitted, observed, and
+validated counts must be separate fields.

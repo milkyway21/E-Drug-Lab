@@ -1,9 +1,46 @@
 ---
 name: nominate-lipid-modulators
-description: Use to rank official-library compounds for lipid-lowering or related phenotypes with configurable evidence weights, uncertainty penalties, safety prioritization, diversity, and testable mechanism hypotheses.
+description: Use to rank low-toxicity phenotype-modulating candidates.
 ---
 
 # Nominate Lipid Modulators
+
+Rank official-library compounds for a low-toxicity lipid phenotype using separated biological,
+chemical, safety, mechanism, and uncertainty evidence.
+
+## When to Use
+
+Use when a task requires candidate nomination for lipid accumulation, metabolic disease, or a
+related phenotype with matched efficacy and cytotoxicity evaluation.
+
+## Prerequisites
+
+- Frozen official library with stable IDs and hash.
+- Target/pathway, literature, activity, toxicity, and computational evidence.
+- Final count, score policy, assay context, and language (`zh` default, `en` optional).
+
+## How to Run
+
+Use the registered nomination command when available. A standalone implementation may use a
+versioned RDKit/data script, but it must preserve the same score decomposition and provenance.
+
+## Quick Reference
+
+| Component | Default weight | Required interpretation |
+| --- | ---: | --- |
+| Lipid phenotype | 30% | Direct or pathway-linked evidence |
+| Mechanism consistency | 20% | Directional, testable hypothesis |
+| Direct activity | 15% | Assay-qualified target evidence |
+| Safety | 20% | Observed, predicted, or unknown |
+| Developability/diversity | 15% | Properties and chemical coverage |
+
+## Procedure
+
+1. Verify every candidate belongs to the frozen official library.
+2. Build separate evidence components and missing/conflict penalties.
+3. Rank deterministically and preserve score components per candidate.
+4. Diversify only under an explicit policy that does not hide rank changes.
+5. Write mechanism, toxicity, uncertainty, falsifier, and assay readouts for each nominee.
 
 Call `nominate_compounds` after E0 inputs are locked. The tool executes E0-E6 and writes a
 report after every stage. Do not reproduce the score manually in conversation.
@@ -93,3 +130,15 @@ separate: structure/property fit, direct or pathway evidence, literature support
 observed/predicted/unknown toxicity, and uncertainty. Export the complete scorecard and
 the top-N table, and include a falsifier plus matched lipid and viability readouts for
 every nominee.
+
+## Pitfalls
+
+- Predicted toxicity is not observed cytotoxicity; label it `predicted_only`.
+- Docking is conditional support and must not penalize biologically inapplicable candidates.
+- Similarity, literature mention, or pathway co-occurrence alone is not direct activity.
+
+## Verification
+
+Require official ID, canonical SMILES, parent InChIKey, library hash and source, complete score
+components, evidence references, toxicity class, mechanism and alternative, uncertainty,
+falsifier, and matched lipid/viability readouts for every final row.

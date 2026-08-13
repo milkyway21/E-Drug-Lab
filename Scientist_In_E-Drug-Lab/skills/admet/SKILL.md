@@ -1,9 +1,45 @@
 ---
 name: admet
-description: Applies evidence enrichment, toxicity triage, and validated ADMET prediction. Use for H4 ADMET or compound nomination safety review.
+description: Use to route ADMET prediction and safety evidence.
 ---
 
 # ADMET
+
+Combine validated property prediction, compound evidence enrichment, and toxicity triage while
+keeping experimental observations, predictions, and unknowns separate.
+
+## When to Use
+
+Use after a frozen candidate/library stage and before later docking refinement, nomination, or
+experimental validation planning.
+
+## Prerequisites
+
+- Frozen structures with stable parent/library IDs and source hash.
+- Declared ADMET backend, preparation-state policy, filters, applicability domain, and exact N.
+- Evidence sources and toxicity schema that distinguish observations from predictions.
+
+## How to Run
+
+The agent defaults to the manifest-selected backend and child skills. Standalone mode invokes
+the native prediction tool and joins its rows to explicit evidence and toxicity tables.
+
+## Quick Reference
+
+| Child skill | Purpose | Evidence class |
+| --- | --- | --- |
+| `ddfast-06-qikprop-admet` | LigPrep and QikProp | Prediction |
+| `enrich-compound-evidence` | IDs, assays, literature | Curated/source evidence |
+| `triage-compound-toxicity` | Safety hierarchy | Observed/predicted/unknown |
+| Compatibility route | Preserve old stage names | Real backend identity |
+
+## Procedure
+
+1. Validate frozen input structures, IDs, count, and hash.
+2. Prepare one declared state per parent and run the selected backend.
+3. Parse numeric and missing rows without inventing values.
+4. Enrich exact identities and triage toxicity by evidence level.
+5. Apply frozen rules, report shortfalls, and freeze survivors with provenance.
 
 This main skill owns H4 and the evidence-side E4/E5 review. It does not substitute a
 Schrodinger or DrugFlow result with an LLM estimate.
@@ -89,3 +125,16 @@ mkdir -p "$OUT"
 Record backend/version, input/output counts, failed rows, prediction fields, observed
 toxicity evidence, unknowns, and the exact selection rule. Never call QikProp a HepG2
 experiment or treat a missing database record as low toxicity.
+
+## Pitfalls
+
+- QikProp predictions are not HepG2 viability or clinical safety observations.
+- Unknown toxicity is not low toxicity, and a database miss is not reassuring evidence.
+- Prepared states must map back to parents before exact-N selection.
+- Do not replace a missing licensed backend with LLM, mock, or unrelated descriptor values.
+
+## Verification
+
+Require input/backend/version hashes, parent-state map, numeric and failed rows, applicability
+and rule columns, observed/predicted/unknown toxicity labels, evidence IDs, deterministic
+selection, exact-N table/SDF agreement, and a report that states all prediction limits.

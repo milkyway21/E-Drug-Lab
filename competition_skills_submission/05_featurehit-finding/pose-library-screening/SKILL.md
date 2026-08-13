@@ -1,9 +1,45 @@
 ---
 name: pose-library-screening
-description: Run reproducible pose-seeded library screening with Morgan, Schrödinger Phase 1D or QuickShape, exact-N canonical freezing, and JobDJ recovery. Use after validated docking-pose extraction to expand a library while preserving query and parent lineage.
+description: Use to fuse reproducible pose-seeded library screens.
 ---
 
 # Pose-Seeded Library Screening
+
+Coordinate independent topology and three-dimensional screening arms, recover asynchronous
+jobs, and freeze an exact-N source-library set with complete query and parent lineage.
+
+## When to Use
+
+Use after validated docking-pose extraction when multiple similarity arms must be compared or
+fused into a deterministic library expansion.
+
+## Prerequisites
+
+- Frozen ligand-only poses and parent/pose selection table.
+- Immutable library with stable IDs, original structures, count, and hash.
+- Selected backends, resource policy, hit caps, fusion rule, and exact-N target.
+
+## How to Run
+
+Use the manifest as the orchestration default. Standalone users extract query poses, run each
+native backend separately, and apply the same stable-ID fusion and validation contract.
+
+## Quick Reference
+
+| Task | Preferred operation | Evidence retained |
+| --- | --- | --- |
+| Query freeze | Best numeric Glide pose per parent | Parent/state/pose/grid |
+| Topology arm | Morgan fingerprint | Similarity and winning query |
+| Shape arm | Native Shape route by format | Similarity and aligned hit |
+| Final freeze | Stable alternating/rank fusion | Arm and selection order |
+
+## Procedure
+
+1. Extract ligand-only query records and validate their lineage.
+2. Freeze and validate the original source library.
+3. Run each backend independently with one real-input probe first.
+4. Recover, parse, aggregate, and deduplicate each ranked arm.
+5. Fuse deterministically and retrieve final structures from the original library.
 
 ## Concrete Operation Procedure
 
@@ -201,6 +237,19 @@ schema, exact-N policy, CPU/GPU resources, and report path. It must declare whet
 3D arm is `shape_screen_gpu`, `quick_shape`, or another installed Phase-compatible tool;
 the skill never infers that choice from a file extension alone.
 
+## Pitfalls
+
+- Do not fetch final structures from aligned Shape states instead of the frozen source library.
+- Do not infer successful completion from wrapper exit or JobDJ submission.
+- Do not resolve score ties from file iteration order.
+- Do not backfill an exact-N shortfall by duplicating structures or changing frozen thresholds.
+
+## Verification
+
+Confirm one query per parent, library count/hash, backend probes and versions, JobDJ completion,
+per-arm score semantics, invalid/query-record exclusions, unique IDs and canonical structures,
+selection order, and exact equality among target N, manifest rows, and source-derived SDF records.
+
 ## Standalone Command-Line Procedure
 
 First extract ligand-only queries from the Glide pose viewer. A PV file contains receptor
@@ -250,17 +299,3 @@ ID/pose ID properties, and one query per frozen parent before Morgan, Phase, or 
 For a topology arm use the shared RDKit utility; for a `.1dbin` use QuickShape or
 `oned_screen`; for a `.bin` use `shape_screen_gpu run`. Keep each ranked table separate
 until exact-N fusion and retrieve final structures from the original frozen library.
-
-## Universal Manifest Invocation
-
-```bash
-bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --dry-run
-bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --validate
-bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --execute --confirm
-bash scripts/run_skill.sh --skill pose-library-screening --manifest MANIFEST --resume --execute --confirm
-```
-
-The manifest explicitly names frozen query poses, source library, backend arm(s), output
-schema, exact-N policy, CPU/GPU resources, and report path. It must declare whether the
-3D arm is `shape_screen_gpu`, `quick_shape`, or another installed Phase-compatible tool;
-the skill never infers that choice from a file extension alone.

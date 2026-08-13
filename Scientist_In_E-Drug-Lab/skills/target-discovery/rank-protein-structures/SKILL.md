@@ -1,9 +1,45 @@
 ---
 name: rank-protein-structures
-description: Use after target biology research to search and rank experimental protein structures by identity, species, construct, coverage, mutation, assembly, ligand state, method, and resolution before pocket selection.
+description: Use to search and rank target protein structures.
 ---
 
 # Rank Protein Structures
+
+Search public structure records, verify target identity, and rank experimentally relevant
+entries before coordinate preparation.
+
+## When to Use
+
+Use after target identity is resolved and whenever a workflow needs a receptor, native
+ligand, supported pocket, or structure-based applicability decision.
+
+## Prerequisites
+
+- Gene symbol plus UniProt accession or sequence identity criteria.
+- Species, isoform, domain, state, cofactor, and construct requirements.
+- Internet access to RCSB Search and Data APIs, or an equivalent local mirror.
+
+## How to Run
+
+Use the registered evidence command in an agent campaign, or call RCSB Search by POST and
+then resolve metadata for every returned PDB entry before ranking.
+
+## Quick Reference
+
+| Field | Prefer | Reject or penalize |
+| --- | --- | --- |
+| Identity | Correct target and species | Family member or wrong domain |
+| Evidence | Experimental holo structure | Unsupported predicted pocket |
+| Construct | Relevant state and assembly | Disruptive mutation or truncation |
+| Coordinates | Good coverage and resolution | Missing pocket residues |
+
+## Procedure
+
+1. Resolve candidate PDB IDs by target identity, not target-name text alone.
+2. Retrieve entry, entity, instance, assembly, ligand, and experimental metadata.
+3. Compare chain coverage, mutations, state, ligand context, and missing residues.
+4. Rank candidates and preserve rejection reasons.
+5. Freeze one selected structure before downloading and preparing coordinates.
 
 Call `structure_search_rank` with the resolved gene or UniProt accession.
 
@@ -79,3 +115,15 @@ polymer/entity and non-polymer component endpoints. Rank target identity, organi
 domain/chain coverage, mutations, assembly, method/resolution, ligand instance/cofactor,
 and missing residues. Write selected and rejected structures with reasons; metadata alone
 does not make a docking-ready receptor.
+
+## Pitfalls
+
+- Full-text search can return homologues, partners, antibodies, or unrelated annotations.
+- The best numerical resolution may represent the wrong domain or biological state.
+- A bound crystallization additive is not automatically a native or drug-like ligand.
+
+## Verification
+
+Check that every candidate has target identity, organism, chain coverage, construct,
+assembly, method, resolution, ligand instance, cofactors, and missing-residue fields. The
+selected JSON must name one entry and explain why alternatives were rejected.

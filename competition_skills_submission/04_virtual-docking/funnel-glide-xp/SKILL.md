@@ -1,9 +1,43 @@
 ---
 name: funnel-glide-xp
-description: Refine the frozen H5 parent set with H6 Glide XP using preserved poses and the same validated receptor grid. Use only after H5 validation; do not redock the entire upstream library.
+description: Use to refine a frozen parent set with Glide XP.
 ---
 
 # H6 Glide XP
+
+Refine only the validated SP-selected parent set with extra-precision docking on the same
+receptor grid and preserve SP-to-XP pose lineage.
+
+## When to Use
+
+Use after H5 SP validation when the funnel requests XP refinement of a frozen subset.
+
+## Prerequisites
+
+- Frozen H5 parent and pose manifest, prepared states, and unchanged grid ZIP.
+- Glide/Job Control executables, host policy, and isolated H6 directory.
+
+## How to Run
+
+Use the manifest stage for normal orchestration or create a native Glide input containing
+`PRECISION XP` and launch it directly with one CLI job name.
+
+## Quick Reference
+
+| Rule | Requirement |
+| --- | --- |
+| Population | H5 frozen parents only |
+| Grid | Same validated H5 grid |
+| Precision | `XP` |
+| Result | Numeric XP score and readable pose per parent |
+
+## Procedure
+
+1. Validate H5 and freeze the exact parent/pose input.
+2. Probe the installed Glide command with one representative pose.
+3. Launch XP on the frozen set and wait for exact job completion.
+4. Join XP rows back to SP parent and pose IDs.
+5. Preserve failed/missing rows and freeze only validated XP results.
 
 Select unique parents from validated H5 SP results, preserve their actual poses and
 reuse the same grid. Configure an existing XP runner as `stages.H6.command`.
@@ -88,3 +122,15 @@ cd "$OUT"
 
 Require a numeric XP score and one readable pose per promoted parent. Preserve missing
 rows and the SP-to-XP join table; never fill a failed XP result from an SP score.
+
+## Pitfalls
+
+- Do not rerun LigPrep or the upstream library at H6.
+- Do not silently substitute an SP score for a missing XP row.
+- Do not change receptor grid, frame, or preparation policy between SP and XP.
+
+## Verification
+
+Confirm identical grid hash, frozen-parent count, probe success, normal JobDJ completion,
+numeric XP scores, readable poses, complete SP-to-XP joins, explicit failed rows, and one
+validated XP result per promoted parent.

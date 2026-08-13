@@ -1,9 +1,44 @@
 ---
 name: all-analysis
-description: Curates evidence, mechanisms, final rankings, and the complete cumulative report. Use for H10, final nomination, or submission-ready analysis.
+description: Use to rank candidates and write the cumulative report.
 ---
 
 # All Analysis
+
+Consolidate validated computational and biological evidence into a reproducible ranking,
+mechanism rationale, experimental plan, and one cumulative report.
+
+## When to Use
+
+Use after the enabled funnel stages finish or when an interim decision requires a joined,
+lineage-aware analysis across generation, screening, ADMET, docking, MMGBSA, and MD.
+
+## Prerequisites
+
+- Validated stage outputs with stable molecule, parent, pose, and library identifiers.
+- Stage summaries, exclusions, uncertainty, figures, and artifact hashes.
+- Reporting root, final candidate count, and output language (`zh` default, `en` optional).
+
+## How to Run
+
+Use the manifest for an orchestrated task. Without a manifest, pass explicit validated tables
+and report paths, perform deterministic joins, and keep all missing evidence visible.
+
+## Quick Reference
+
+| Child skill | Purpose | Main output |
+| --- | --- | --- |
+| `funnel-comprehensive-analysis` | Join cross-stage evidence | Ranked machine table |
+| `nominate-lipid-modulators` | Score efficacy, toxicity, mechanism | Nomination scorecard |
+| `write-mechanism-validation-report` | Design falsifiable validation | Cumulative report section |
+
+## Procedure
+
+1. Validate all enabled upstream stages and lineage keys.
+2. Join evidence without imputing absent rows or silently changing identifiers.
+3. Rank with a transparent score decomposition and uncertainty penalties.
+4. Write mechanism hypotheses, alternatives, falsifiers, and matched assay readouts.
+5. Export one cumulative report plus machine-readable evidence and relative figures.
 
 This main skill turns validated stage outputs into an auditable scientific conclusion. It
 does not create new scores or claim experimental proof.
@@ -88,3 +123,15 @@ validation class, evidence source IDs, and missing-data flags. Write one Markdow
 section per stage plus a final ranking table; export the same Markdown to DOCX/PDF with
 the installed converter and keep figure paths relative to `REPORT_DIR`. A computational
 rank is a nomination, never experimental efficacy.
+
+## Pitfalls
+
+- Row order, raw SMILES, or filenames are not reliable cross-stage join keys.
+- A favorable docking, MMGBSA, or MD value cannot erase contrary toxicity or biology.
+- Computational nomination must not be written as observed efficacy or causal mechanism.
+
+## Verification
+
+Confirm final count, stable lineage, source evidence, exclusions, uncertainty, toxicity class,
+mechanism direction, validation readouts, artifact hashes, relative figure paths, and consistent
+Markdown/DOCX/PDF content.

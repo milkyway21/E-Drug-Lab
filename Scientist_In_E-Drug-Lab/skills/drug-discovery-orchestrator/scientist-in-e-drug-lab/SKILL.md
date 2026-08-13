@@ -1,9 +1,40 @@
 ---
 name: scientist-in-e-drug-lab
-description: Compatibility entrypoint for the generic E-Drug Lab H0-H10 discovery funnel. Use when a user asks the Scientist_In_E-Drug-Lab agent to plan, execute, resume, monitor, or report an end-to-end task; route to e-drug-lab-scientist and funnel-orchestrator.
+description: Use to route requests into the generic discovery funnel.
 ---
 
 # Scientist In E-Drug-Lab
+
+Provide a compatibility name for the general discovery scientist. Route work to the
+current master and child skills instead of embedding a target-specific workflow here.
+
+## When to Use
+
+Use when an external client, older prompt, or slash command invokes the historical
+Scientist In E-Drug-Lab name.
+
+## Prerequisites
+
+Require the same task scope, capabilities, current state, and resource authorization as
+`e-drug-lab-scientist`. Do not use compatibility routing to bypass validation.
+
+## How to Run
+
+Route behavior to `e-drug-lab-scientist`, planning to `funnel-orchestrator`, and each
+scientific operation to the corresponding category child. Use the project CLI if present;
+otherwise follow the child's standalone procedure.
+
+## Quick Reference
+
+Compatibility affects naming only. It must not change stage order, counts, scientific
+methods, output paths, identity lineage, reporting language, or completion criteria.
+
+## Procedure
+
+1. Normalize the request into target/phenotype, library, final count, resources, and output.
+2. Read current task state and identify the next eligible child skill.
+3. Run capability checks and the orchestrator.
+4. Return exact task root, current stage, job ID, observed count, and report path.
 
 ## Concrete Operation Procedure
 
@@ -103,3 +134,13 @@ masld-agent funnel autopilot --target-id "$TARGET_ID" --final-count "$FINAL_COUN
 Use the returned registry IDs and stage outputs to select native binaries. The scientist
 must record tool/version probes, exact argv, input/output hashes, validation status, and
 the cumulative report; it must not claim success from a planned or unavailable job.
+
+## Pitfalls
+
+Do not duplicate the whole funnel inside this compatibility skill, select a hidden workflow,
+or revive retired flat skill names as separate capabilities.
+
+## Verification
+
+Verify that the request resolves to one canonical master/child path and that no duplicate
+Hermes skill name appears. Confirm outputs match the canonical route.

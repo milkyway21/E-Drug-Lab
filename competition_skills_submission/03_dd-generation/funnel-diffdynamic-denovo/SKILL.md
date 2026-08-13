@@ -1,9 +1,45 @@
 ---
 name: funnel-diffdynamic-denovo
-description: Run H1a DiffDynamic pocket-conditioned de novo generation through a reusable manifest-configured runner with strict clean receptor PDB and native ligand SDF inputs. Use when the selected profile enables the de novo branch; do not create a task-local launcher.
+description: Use to run pocket-conditioned DiffDynamic generation.
 ---
 
 # H1a DiffDynamic De Novo
+
+Run native DiffDynamic sampling against a validated pocket while preserving exact inputs,
+configuration, seed, GPU, raw PT output, and molecule lineage.
+
+## When to Use
+
+Use when the computational route enables pocket-conditioned de novo generation and the
+structure-preparation manifest declares compatible PDB/SDF inputs.
+
+## Prerequisites
+
+- Clean receptor `.pdb`, same-frame native ligand `.sdf`, and qualified pocket.
+- Task-local sampling YAML with a declared target count and immutable model checkpoint.
+- Resolved Python environment, sampler, GPUs, seeds, timeout, disk, and attempt directory.
+
+## How to Run
+
+The agent defaults to a manifest command. Any agent or human can instead set `DD_ROOT` and
+invoke `sample_diffusion.py` directly after checking the installed `--help` output.
+
+## Quick Reference
+
+| Parameter | Meaning | Rule |
+| --- | --- | --- |
+| Config count | Requested sampling amount | Set in task-local YAML |
+| `--batch_size` | Per-step GPU memory batch | Do not use as total count |
+| `--device` | One worker device | Isolate output and seed per GPU |
+| `--result_path` | Attempt output | Never overwrite another seed |
+
+## Procedure
+
+1. Validate PDB/SDF suffixes, coordinate frame, hashes, and pocket gate.
+2. Resolve Python, sampler, checkpoint, and config; save their versions and help.
+3. Encode the requested count in a task-local config and set a memory-safe batch.
+4. Launch one isolated process per GPU/seed and monitor exact PIDs or jobs.
+5. Parse every PT and write observed counts, failures, and lineage before handoff.
 
 Use the coordinate-cleaned receptor PDB from E2b, not the untouched complex and not
 PrepWizard output. `inputs.receptor_pdb` must end in `.pdb` and
@@ -172,3 +208,16 @@ merge PT files only after each file passes its own parser and lineage check. Fir
 `"$DD_PYTHON" -u "$DD_SAMPLE" --help`; option spellings differ between DiffDynamic
 forks. Reconstruct and validate with the evaluator command in the Prudent child, using
 `--vina-modes none` when no Vina analysis is authorized.
+
+## Pitfalls
+
+- DiffDynamic forks differ in script location and option spelling; probe the installed CLI.
+- Multiple workers must not write to one PT or output directory.
+- Changing the config, checkpoint, or seed during resume creates a new attempt.
+- A nonempty PT is not valid until the installed reader parses complete molecule records.
+
+## Verification
+
+Confirm immutable input/config/checkpoint hashes, unique seed and GPU per worker, normal worker
+exit, readable PT files, reconciled requested and observed counts, rejection reasons, stable
+generated IDs, and a validated summary before invoking Prudent or docking.

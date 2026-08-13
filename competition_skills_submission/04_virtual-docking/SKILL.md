@@ -1,9 +1,46 @@
 ---
 name: virtual-docking
-description: Routes Glide SP, Glide XP, and MMGBSA refinement with lineage and validation. Use for H2 primary docking or H5-H7 refinement of validated compounds.
+description: Use to route Glide docking and Prime MMGBSA stages.
 ---
 
 # Virtual Docking
+
+Route receptor preparation, grid generation, ligand preparation, Glide SP/XP, and Prime
+MMGBSA while preserving receptor, parent, prepared-state, pose, and job lineage.
+
+## When to Use
+
+Use only after a structure-based route and pocket are qualified, for primary docking or
+refinement of a frozen validated candidate set.
+
+## Prerequisites
+
+- Clean receptor, qualified pocket center/box, retained-cofactor policy, and frame identity.
+- Frozen ligand SDF with stable parent IDs and a declared preparation-state policy.
+- Resolvable licensed Schrödinger installation, hosts, CPUs/GPUs, disk, and Job Control.
+
+## How to Run
+
+The manifest route is the default for the agent. Standalone users can resolve
+`SCHRODINGER` and call PrepWizard, Glide, LigPrep, and Prime commands directly.
+
+## Quick Reference
+
+| Stage | Native tool | Required output |
+| --- | --- | --- |
+| Receptor | `prepwizard` | Prepared receptor MAEGZ |
+| Grid | `glide grid.in` | Grid ZIP and log |
+| Ligands | `ligprep` | Prepared states and lineage |
+| Docking | `glide dock.in` | Pose viewer and numeric scores |
+| Energy | `prime_mmgbsa` | Numeric energy table |
+
+## Procedure
+
+1. Prepare and validate a receptor copy without changing the native extraction artifacts.
+2. Generate a grid from the qualified center and validate receptor/grid compatibility.
+3. LigPrep the frozen parents and map every generated state back to its parent.
+4. Probe then run SP; refine only the frozen subset with XP and MMGBSA.
+5. Wait for real job completion, parse numeric rows, and freeze one best pose per parent.
 
 This main skill owns structure-based ranking after generation or ADMET filtering.
 
@@ -161,3 +198,16 @@ cd "$ROOT/07_mmgbsa"
 Wait on asynchronous jobs with `jobcontrol -wait -int 300 JOB_ID`, inspect `-show` and
 `-files` for recovery, and only promote rows with numeric score/energy fields, readable
 pose viewers, completed subjobs, and intact parent lineage.
+
+## Pitfalls
+
+- A receptor grid cannot be reused across a different receptor frame or preparation state.
+- LigPrep states are not independent parent compounds and must not inflate candidate counts.
+- Job submission, launcher exit, or a nonempty file does not prove JobDJ completion.
+- Docking and MMGBSA scores are ranking evidence, not experimental affinity.
+
+## Verification
+
+Require receptor/grid/input hashes, tool versions and exact commands, finished parent and
+subjobs, readable pose viewers, numeric score/energy rows, parent-state-pose joins, rejected
+rows, deterministic parent ranking, and stage counts matching the frozen handoff.

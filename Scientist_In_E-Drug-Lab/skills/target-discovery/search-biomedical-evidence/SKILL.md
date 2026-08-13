@@ -1,9 +1,43 @@
 ---
 name: search-biomedical-evidence
-description: Use during target identification and validation to run a reproducible, multi-source biomedical literature and database search covering target identity, human genetics, disease biology, tissue context, pathways, perturbation direction, safety, and contradictory evidence.
+description: Use to search biomedical sources with reproducible queries.
 ---
 
 # Search Biomedical Evidence
+
+Run a reproducible multi-source search rather than an unlogged browser session. Preserve
+zero-result and conflicting searches because they define uncertainty.
+
+## When to Use
+
+Use for target validation, mechanism support, safety review, compound evidence, or any
+claim that needs current citations.
+
+## Prerequisites
+
+Require normalized target IDs, disease/phenotype synonyms, organism, intervention question,
+date range if relevant, source list, language limits, and inclusion/exclusion criteria.
+
+## How to Run
+
+Use official APIs or database exports where available. Search each evidence track
+separately, paginate completely, respect rate limits, retry 429/5xx with bounded backoff,
+and save exact query strings/payloads plus access timestamps.
+
+## Quick Reference
+
+Search identity/function, genetics/disease, expression/tissue, pathway/mechanism,
+pharmacology/ligands, safety/toxicity, and contradictory evidence. Deduplicate by DOI,
+PMID, accession, or stable database ID rather than title alone.
+
+## Procedure
+
+1. Expand gene, protein, disease, pathway, and intervention synonyms.
+2. Run source-specific queries and preserve raw JSON/XML/records.
+3. Screen title/abstract, then verify full metadata and primary evidence.
+4. Normalize claims with model, intervention, comparator, dose, endpoint, and direction.
+5. Separate primary studies, reviews, databases, and computational predictions.
+6. Export query manifest, included/excluded table, citations, and evidence matrix.
 
 Run after the initial `target_biology_search` result and before pharmacology or structure
 selection. Treat that tool result as a seed dossier, not a complete literature review.
@@ -112,3 +146,15 @@ For NCBI, use E-utilities with the approved API key/rate policy. Normalize each 
 with source ID, model system, intervention direction, endpoint, effect direction, and
 access time; keep contradictory and zero-result responses rather than filling them from
 memory. Raw JSON is evidence provenance, not a final biological conclusion.
+
+## Pitfalls
+
+Do not cite search-result snippets, infer missing full-text claims, mix preprints and
+peer-reviewed evidence without labels, ignore retractions, or query APIs one record at a
+time when bulk endpoints are required.
+
+## Verification
+
+Require reproducible queries, complete pagination, source IDs, access dates, deduplication,
+included/excluded reasons, citation resolution, evidence levels, and explicit unresolved
+questions.

@@ -1,9 +1,43 @@
 ---
 name: scope-molecular-nomination
-description: Use when starting a compound nomination task to lock the phenotype, library, requested final count, evidence policy, compute profile, and required reports before any biology or chemistry work.
+description: Use to lock nomination scope, resources, and outputs.
 ---
 
 # Scope Molecular Nomination
+
+Freeze the nomination question before gathering evidence or calculating scores. Keep
+target-based and phenotype-first routes explicit because they require different evidence.
+
+## When to Use
+
+Use at the beginning of every new nomination or when the official library, phenotype,
+target, final count, resource boundary, or submission contract changes.
+
+## Prerequisites
+
+Require disease/phenotype, organism and biological system, intended molecule modality,
+official library path/ID, requested final count, online permission, compute authorization,
+deadline, report language, and required experimental readouts.
+
+## How to Run
+
+Prefer the project evidence task planner. Without it, write a versioned JSON/YAML contract
+and hash the official library. Never infer a test profile from a small final count.
+
+## Quick Reference
+
+Separate `requested_final_count`, `planned_stage_count`, `observed_count`, and
+`validated_count`. Record inclusion/exclusion rules, acceptable evidence, stop conditions,
+resource ceilings, and one canonical report location.
+
+## Procedure
+
+1. Normalize target, disease/phenotype, organism, cell context, and modality.
+2. Freeze library identity, file hash, stable compound-ID field, and allowed transformations.
+3. State target-based, phenotype-first, or hybrid mechanism policy.
+4. Define final fields: ranking basis, toxicity, mechanism, uncertainty, validation plan.
+5. Allocate resource ceilings and choose full/test profile explicitly.
+6. Write the task plan before any downstream operation.
 
 Create E0 before invoking target, structure, docking, or screening tools.
 
@@ -81,3 +115,13 @@ Record requested, planned, and observed counts separately, plus library identity
 policy, approved CPU/GPU/memory/disk, report location, and one stop condition per gate.
 Do not use a test profile unless explicitly requested, and never promote a planned count
 to an observed result.
+
+## Pitfalls
+
+Do not silently replace the official library, normalize away a required compound identity,
+assume docking is applicable, or omit negative and unknown evidence from the contract.
+
+## Verification
+
+Validate all required fields, library readability/hash, stable-ID uniqueness, final count,
+resource limits, language, deliverables, and stop conditions before E1 or H0 begins.

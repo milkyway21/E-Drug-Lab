@@ -1,9 +1,45 @@
 ---
 name: assess-target-pharmacology
-description: Use after target biology research to evaluate target class, endogenous and synthetic ligands, intervention direction, quantitative potency, selectivity, assay context, clinical precedent, pharmacological safety, and contradictory drug evidence.
+description: Use to assess pharmacology and intervention direction.
 ---
 
 # Assess Target Pharmacology
+
+Build a source-linked intervention and ligand evidence record without treating database
+co-occurrence, similarity, or docking as measured pharmacology.
+
+## When to Use
+
+Use after target identity and disease context are resolved, and before choosing a
+structure-based, ligand-based, or evidence-only computational route.
+
+## Prerequisites
+
+- Resolved gene, protein, species, isoform, and disease or phenotype.
+- Searchable target identifiers and a source policy for activities and clinical evidence.
+- A declared output directory and language (`zh` by default, `en` when requested).
+
+## How to Run
+
+Prefer the manifest runner for an auditable campaign. For a standalone task, query the
+source APIs directly, preserve their raw records, and normalize only compatible assays.
+
+## Quick Reference
+
+| Need | Primary source or action | Required record |
+| --- | --- | --- |
+| Quantitative activity | ChEMBL, BindingDB, IUPHAR | Relation, value, unit, type, assay |
+| Compound identity | PubChem or source registry | Stable ID, structure, provenance |
+| Clinical precedent | Trial and regulatory sources | Status, intervention, result |
+| Selectivity | Tested counter-target panel | Tested targets and missing coverage |
+
+## Procedure
+
+1. Resolve identity and action direction independently.
+2. Collect raw activities with assay and construct context.
+3. Separate binding, functional, cellular, and phenotypic evidence.
+4. Assess selectivity, safety, and clinical precedent without filling unknowns.
+5. Write the pharmacology decision and contradictions for route selection.
 
 Run after `search-biomedical-evidence` and before choosing a computational discovery route.
 
@@ -97,3 +133,15 @@ Use a chemistry/database client or versioned script to write `target_ligand_evid
 with raw relation, value, unit, activity type, assay ID, construct, species, target form,
 selectivity, clinical status, safety source, and source document. Never combine assay types
 or units into one potency score; keep contradictions and missing panels explicit.
+
+## Pitfalls
+
+- Do not equate binding with agonism, inhibition, degradation, or a cellular phenotype.
+- Do not rank mixed `Ki`, `Kd`, `IC50`, and `EC50` values as one potency column.
+- Do not call a ligand selective when the relevant counter-target panel was not tested.
+
+## Verification
+
+Confirm that both required outputs exist, every quantitative row retains raw assay context,
+source IDs are resolvable, intervention direction is justified, and unknown or contradictory
+evidence remains explicit.

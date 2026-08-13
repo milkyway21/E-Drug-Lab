@@ -1,9 +1,42 @@
 ---
 name: reporting
-description: Use when an E-Drug Lab task needs one evidence-linked H0-H10 funnel report with a section per stage, grounded analysis, reused scientific figures, incremental DOCX/PDF export, and relative-path provenance.
+description: Use to maintain one evidence-linked cumulative task report.
 ---
 
 # Reporting
+
+Maintain one report throughout the task, with one section per stage. Reuse validated
+tables and figures; do not create disconnected stage reports.
+
+## When to Use
+
+Use after planning, every validated or blocked stage, final ranking, and packaging.
+
+## Prerequisites
+
+Require task metadata, stage validator output, observed counts, method/version, resource
+usage, relative artifact paths, and evidence-grounded interpretation. Default prose to
+Chinese; use `language=en` only when requested.
+
+## How to Run
+
+Prefer `funnel report-update`. Without it, update one Markdown source and convert that
+source to DOCX/PDF with an installed converter. Copy only current-task figures into a
+report figure directory and use relative links.
+
+## Quick Reference
+
+Every stage section contains objective, inputs, method and version, exact command or API,
+resources, planned/observed/validated counts, outputs, figure/table, result analysis,
+limitations, failures/recovery, and next gate.
+
+## Procedure
+
+1. Read validator output and source tables; never summarize from chat memory.
+2. Append or replace the stage section deterministically.
+3. Reuse scientific plots only when their data and labels match current artifacts.
+4. Export DOCX/PDF from the same Markdown source.
+5. Validate relative paths, captions, candidate counts, hashes, and language.
 
 ## Concrete Operation Procedure
 
@@ -119,3 +152,14 @@ sha256sum "$REPORT_MD" "$REPORT_DIR"/AUTOPILOT_REPORT.{docx,pdf} 2>/dev/null \
 Replace every placeholder with values from validated stage outputs, copy only current-task
 figures into `figures/<stage>/`, and reference them relatively. Markdown, DOCX, PDF,
 tables, and figure hashes must describe the same data.
+
+## Pitfalls
+
+Do not paste raw logs as analysis, use screenshots as the only numerical evidence, copy a
+figure from another task, or state that a computational candidate is experimentally proven.
+
+## Verification
+
+Require one section for every enabled stage, consistent counts across Markdown/DOCX/PDF,
+readable figures, relative links, artifact hashes, model/tool/token metadata when available,
+and an explicit final limitations section.

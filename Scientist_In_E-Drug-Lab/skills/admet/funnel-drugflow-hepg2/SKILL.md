@@ -1,9 +1,42 @@
 ---
 name: funnel-drugflow-hepg2
-description: Compatibility route for the funnel H4 ADMET stage. Use when an older task names DrugFlow or HepG2; under current test and full profiles, route execution to Schrödinger LigPrep/QikProp and preserve the true backend identity.
+description: Use to resume legacy-named H4 ADMET stages.
 ---
 
 # H4 ADMET Compatibility Route
+
+Preserve historical stage names while executing only the explicitly selected real ADMET backend
+and reporting that backend's actual semantics.
+
+## When to Use
+
+Use only when an existing task names this compatibility route; new workflows select the real
+backend skill directly.
+
+## Prerequisites
+
+- Existing manifest with frozen H3 input, backend identity, lineage, outputs, and validators.
+- Installed and licensed backend or a validated project-owned adapter.
+
+## How to Run
+
+Validate the legacy manifest and delegate to the current backend. For the QikProp route, use the
+native LigPrep/QikProp command sequence documented here and in its child skill.
+
+## Quick Reference
+
+| Legacy text | Actual handling |
+| --- | --- |
+| DrugFlow stage name | Record the real selected backend |
+| HepG2 label | Never fabricate a cell assay |
+| QikProp route | Label `schrodinger_qikprop` prediction |
+
+## Procedure
+
+1. Read and validate the existing backend declaration.
+2. Resolve the real executable/adapter and record its version.
+3. Execute the backend's current general skill and preserve all failures.
+4. Report predictions and observations under separate names.
 
 This skill name is retained for compatibility. It does not authorize DrugFlow,
 mock HepG2 values, or backend substitution.
@@ -77,3 +110,15 @@ mkdir -p "$OUT"
 Label the backend `schrodinger_qikprop`, preserve failed/unknown rows, and route any
 actual experimental HepG2 request to a validated cell assay workflow rather than making
 predictions look like observations.
+
+## Pitfalls
+
+- A compatibility name is not authorization to call an unavailable external service.
+- Do not label QikProp properties as HepG2 cytotoxicity or viability.
+- Do not hide a backend substitution behind the historical stage name.
+
+## Verification
+
+Require explicit real backend identity/version, unchanged frozen input, parent-state lineage,
+numeric and failed rows, prediction labels, exact-N validation when requested, and no fabricated
+experimental endpoints.

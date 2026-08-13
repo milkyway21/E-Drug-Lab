@@ -1,9 +1,45 @@
 ---
 name: dd-md-desmond-sea-qc
-description: Run or resume official Schrödinger Simulation Event Analysis on a hard-validated Desmond CMS/DTR pair, then summarize RMSD and contacts with trajectory-derived frame counts. Use after short or long Desmond production; do not use for unvalidated trajectories or handwritten RMSD/contact analysis.
+description: Use to run official SEA on validated Desmond trajectories.
 ---
 
 # Desmond SEA QC
+
+Run the official Schrödinger Simulation Event Analysis sequence on hard-validated trajectories
+and summarize RMSD and contacts with denominators derived from actual frames.
+
+## When to Use
+
+Use after short or long Desmond production passes duration, interval, continuity, topology,
+and final-CMS validation.
+
+## Prerequisites
+
+- Valid final CMS and trajectory directory with `clickme.dtr`.
+- Validation JSON with `valid=true`, stable molecule ID, and explicit protein/ligand ASLs.
+- Schrödinger `run`, CPU resources, output root, late-window policy, and report destination.
+
+## How to Run
+
+Use the reusable `run_sea.py` adapter under Schrödinger Python, either from the manifest or with
+an explicit sources CSV. Do not replace official SEA with handwritten trajectory calculations.
+
+## Quick Reference
+
+| Output | Check |
+| --- | --- |
+| RMSD data | Numeric rows and actual frame count |
+| Contacts | Unique-frame occupancy denominator |
+| EAF/report | Official sequence completed |
+| Decision | PASS/FAIL with limitations |
+
+## Procedure
+
+1. Reconfirm the hard trajectory validator and input hashes.
+2. Resolve explicit protein and ligand ASLs from the prepared system.
+3. Run SEA as a CPU task in the molecule-specific output directory.
+4. Resume completed EAF/analysis/report units independently.
+5. Parse numeric RMSD/contacts and write frame-grounded QC and figures.
 
 ## Concrete Operation Procedure
 
@@ -158,3 +194,15 @@ CUDA_VISIBLE_DEVICES="" SCHRODINGER_CUDA_VISIBLE_DEVICES="" \
 The CSV must contain `molecule_id,cms,trajectory`. Check numeric RMSD rows, actual frame
 counts, contact occupancy denominator, and report artifacts; SEA cannot rescue invalid
 trajectory topology or an incorrect ligand selector.
+
+## Pitfalls
+
+- A guessed ligand residue name can analyze the wrong atoms or produce empty results.
+- Contact occupancy must use unique observed frames, not an expected frame count.
+- SEA cannot repair a partial, discontinuous, or topology-inconsistent trajectory.
+
+## Verification
+
+Require source CMS/DTR hashes, valid upstream JSON, explicit ASLs, official command sequence,
+numeric RMSD/contact outputs, actual frames and late window, unique-frame denominators, report
+artifacts, and clear PASS/FAIL reasons for every molecule.

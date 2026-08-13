@@ -1,9 +1,44 @@
 ---
 name: funnel-desmond-long-md
-description: Run or resume H9 200 ns Desmond production from short-MD-qualified corrected poses with attempt isolation and hard trajectory validation. Use only for H8-pass candidates and after explicit compute confirmation.
+description: Use to run long Desmond MD after short-MD qualification.
 ---
 
 # H9 Long MD
+
+Run an explicitly authorized long Desmond production from a short-MD-qualified corrected or
+late-medoid full-system start, then validate and classify the complete trajectory.
+
+## When to Use
+
+Use only after H8 PASS and explicit authorization for the declared long production duration.
+
+## Prerequisites
+
+- H8 validator and decision, qualified full-system CMS, stable parent/pose/trajectory lineage.
+- Long-production MSJ, duration, interval, ASLs, contact/pocket criteria, and classification.
+- Owned GPU/host, disk/runtime estimate, attempt root, monitor cadence, and retry policy.
+
+## How to Run
+
+Use the H9 manifest stage or native multisim, then validate with the exact declared duration
+(200 ns only when that is the task protocol) and interval before SEA or promotion.
+
+## Quick Reference
+
+| Evidence | Requirement |
+| --- | --- |
+| Entry gate | H8 PASS and validated start |
+| Completion | Continuous declared duration, not filename |
+| Analysis | SEA plus pocket/contact/convergence |
+| Recovery | Checkpoint or failed unit in new attempt |
+
+## Procedure
+
+1. Validate H8 and freeze the corrected/medoid full-system start.
+2. Confirm long-run resources and launch one isolated authorized attempt.
+3. Persist job IDs, progress timestamps, checkpoints, and artifact growth.
+4. Hard-validate actual duration, interval, continuity, topology, and normal exit.
+5. Run SEA/analysis and classify retained, rearranged, inconclusive, or failed poses.
 
 ## Concrete Operation Procedure
 
@@ -90,3 +125,15 @@ SCHRODINGER_CUDA_VISIBLE_DEVICES="${GPU_ID}" \
 Require at least the declared 200 ns, continuous times, expected frame spacing, readable
 final CMS/DTR, and topology consistency before SEA or promotion. A filename containing
 `200ns` is not completion evidence.
+
+## Pitfalls
+
+- Do not infer completion from `200ns` in a filename or from process absence.
+- Do not submit a long run for candidates that failed the short-MD gate.
+- Do not overwrite prior attempts or recompute valid upstream short MD during recovery.
+
+## Verification
+
+Require H8 provenance, start/protocol hashes, authorization, GPU/job/attempt/checkpoint history,
+normal exit, complete declared duration and frame interval, monotonic/topology validation, SEA
+and pocket/contact metrics, classification rationale, failed rows, and report artifacts.

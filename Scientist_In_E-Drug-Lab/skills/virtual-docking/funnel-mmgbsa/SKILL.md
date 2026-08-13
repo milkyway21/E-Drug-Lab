@@ -1,9 +1,43 @@
 ---
 name: funnel-mmgbsa
-description: Run H7 Prime MMGBSA on frozen validated XP poses while preserving molecule and pose lineage. Use after H6; perform IFD only when explicitly requested and never substitute missing energy rows.
+description: Use to run Prime MMGBSA on validated XP poses.
 ---
 
 # H7 MMGBSA
+
+Estimate Prime MMGBSA energies for a frozen validated pose set while retaining each source
+parent, pose, protocol, unit, and failure state.
+
+## When to Use
+
+Use after Glide XP validation when the funnel requests an energy-based refinement step.
+
+## Prerequisites
+
+- Pose-viewer Maestro input with receptor first and validated ligand poses after it.
+- Parent/pose lineage, Prime protocol, flexibility policy, hosts, and output schema.
+- Resolvable licensed `prime_mmgbsa` executable and completed H6 validator.
+
+## How to Run
+
+Use the registered adapter when available, or call native `prime_mmgbsa` on the pose viewer.
+Use `-ligand` only for complex-per-entry input and an explicit ASL.
+
+## Quick Reference
+
+| Input layout | Native option | Interpretation |
+| --- | --- | --- |
+| Receptor first, poses follow | No `-ligand` | Standard pose-viewer mode |
+| One complex per entry | `-ligand ASL` | Explicit ligand selection |
+| `-csv_output yes` | CSV result | Parse numeric energy rows |
+
+## Procedure
+
+1. Validate H6, input entry ordering, stable pose IDs, and protocol choices.
+2. Probe `prime_mmgbsa -h` and freeze host, flexibility, and job parameters.
+3. Run the native or registered command without adding implicit IFD.
+4. Parse numeric energies and join every row to its XP pose.
+5. Preserve missing/failed rows and report sign, units, and prediction limits.
 
 Run Prime MMGBSA on the frozen XP pose set and join by molecule/parent ID. IFD is not
 part of the default H7 path and must be explicitly requested. Completion requires
@@ -82,3 +116,15 @@ Use `-HOST`, `-NJOBS`, and `-LOCAL` only when supported by the installed help. P
 the generated CSV and retain source pose, parent ID, job name, energy units/sign, and
 failed rows. A numeric MMGBSA prediction is ranking evidence, not an experimental
 binding free energy.
+
+## Pitfalls
+
+- An SDF alone is not the standard Prime MMGBSA receptor-plus-pose input.
+- IFD, flexible residues, minimization, and dielectric changes are explicit protocol choices.
+- More favorable predicted energy is not measured affinity or proof of mechanism.
+
+## Verification
+
+Require completed H6 provenance, readable Maestro input, explicit protocol and host settings,
+normal Prime completion, numeric CSV rows, one source pose per energy, retained failures,
+verified sign/unit convention, and exact parent/pose joins.

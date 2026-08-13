@@ -1,9 +1,44 @@
 ---
 name: qualify-binding-pocket
-description: Use after structure ranking to decide whether a binding pocket and structure-based docking are biologically applicable, evidence-supported, and reproducible.
+description: Use to qualify a binding pocket for structure-based work.
 ---
 
 # Qualify Binding Pocket
+
+Turn structural and mechanistic evidence into an explicit dock, hold, or not-applicable
+decision with a reproducible pocket definition.
+
+## When to Use
+
+Use after coordinate-preserving native-complex preparation and before receptor grid
+generation, docking, pocket-conditioned generation, or pose interpretation.
+
+## Prerequisites
+
+- Target and mechanism evidence with source IDs.
+- Selected structure and validated preparation manifest.
+- Native ligand or independently supported functional-site residues.
+
+## How to Run
+
+Use the registered qualifier in a manifest campaign or inspect explicit preparation and
+evidence files with a validated structural parser. Never infer a center from a gene name.
+
+## Quick Reference
+
+| Evidence state | Decision | Next action |
+| --- | --- | --- |
+| Same-frame native ligand and valid site | `dock` | Build and validate a grid |
+| Site supported but structural defects remain | `hold` | Repair or select another entry |
+| Phenotypic target or unsupported site | `not_applicable` | Use evidence/ligand route |
+
+## Procedure
+
+1. Verify target, assembly, chains, construct, ligand instance, and coordinate frame.
+2. Inspect contacts, missing residues, cofactors, metals, waters, and covalent links.
+3. Define center from the native ligand or explicitly cited site evidence.
+4. Record exclusions, warnings, and a machine-readable qualification decision.
+5. Allow grid generation only when the decision is `dock`.
 
 Call `pocket_qualify` before any Glide stage. For a ligand-supported experimental pocket,
 first require `prepare-native-protein-ligand` to produce a valid
@@ -64,3 +99,15 @@ residue, contact residues, center source, evidence IDs, coordinate delta, exclus
 warnings, and `qualified`/`not_applicable`. Compute a grid center only from the native
 ligand or an explicitly cited site. If frame, identity, or site evidence fails, stop the
 docking branch and preserve the rejection reason.
+
+## Pitfalls
+
+- A geometric cavity without target or mechanism support is not a qualified binding site.
+- A native ligand from another chain or model cannot define the receptor pocket.
+- Missing catalytic or contact residues can invalidate an otherwise attractive structure.
+
+## Verification
+
+Confirm receptor and ligand hashes, target chains, ligand instance, contact residues, center
+source, cofactors, exclusions, coordinate-frame check, evidence IDs, warnings, and one explicit
+`docking_recommendation`. Only `dock` permits grid generation.

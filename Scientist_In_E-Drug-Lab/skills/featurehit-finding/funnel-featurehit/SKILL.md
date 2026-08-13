@@ -1,9 +1,44 @@
 ---
 name: funnel-featurehit
-description: Expand H3 hits from validated seed molecules using an explicitly named Morgan, Phase, or shape backend with deterministic lineage. Use after primary Glide SP selection; do not label topology similarity as pharmacophore evidence.
+description: Use to screen libraries by topology or pharmacophore.
 ---
 
 # FeatureHit
+
+Run one explicitly named topology, pharmacophore, or delegated shape backend and preserve the
+meaning and lineage of every score.
+
+## When to Use
+
+Use after validated query-pose extraction for a Morgan topology screen, Phase pharmacophore
+screen, or explicit routing to the shape-screen child.
+
+## Prerequisites
+
+- Ligand-only query SDF, parent/pose manifest, and immutable library or Phase database.
+- Backend choice, fingerprint or hypothesis parameters, hit cap, and rejection policy.
+- RDKit environment or licensed Phase executable with verified input formats.
+
+## How to Run
+
+Use the manifest backend selector for orchestration. Standalone users call the shared RDKit
+utility or native `phase_screen` positional interface shown below.
+
+## Quick Reference
+
+| Backend | Required input | Required interpretation |
+| --- | --- | --- |
+| `rdkit_morgan` | Query and library structures | Topology similarity only |
+| `schrodinger_phase` | Source plus `.phypo` | Pharmacophore match |
+| `shape_only` | Validated pose and shape library | Delegate to Shape skill |
+
+## Procedure
+
+1. Validate query poses and source-library IDs.
+2. Probe the selected backend and freeze all parameters.
+3. Run one small real-input probe before a large library screen.
+4. Parse scores, failures, duplicates, and winning query IDs.
+5. Write a deterministic ranked table and hand it to exact-N fusion.
 
 Set `stages.H3.backend` to `rdkit_morgan`, `schrodinger_phase`, or
 `shape_only`. Do not call Morgan a pharmacophore result. For Morgan use radius 2,
@@ -115,3 +150,15 @@ Parse the documented Phase score (`PHASE_SCREEN_SCORE`), keep stable library IDs
 winning query/hypothesis IDs, and keep Morgan, Phase, and Shape rankings separate until
 the deterministic exact-N fusion. A Morgan score is topology similarity, not a feature
 match.
+
+## Pitfalls
+
+- Do not call Morgan fingerprint overlap a pharmacophore match.
+- A `.phypo` must be created and scientifically validated before `phase_screen` uses it.
+- Do not merge backend tables before each arm has valid scores and stable IDs.
+
+## Verification
+
+Confirm backend/version, frozen parameters, valid/invalid counts, score property, winning query
+and parent IDs, stable library IDs, deterministic ordering, rejection reasons, and exact
+source-library provenance for every promoted hit.
